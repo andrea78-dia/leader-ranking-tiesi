@@ -31,6 +31,8 @@ export default function Home() {
   const [selectedMonth, setSelectedMonth] = useState('');
   const [availableMonths, setAvailableMonths] = useState([]);
 
+  const [sendStatus, setSendStatus] = useState('');
+
   const handleLogin = () => {
     const u = USERS[loginForm.username.toLowerCase().replace(/\s+/g, '_')];
     if (u && u.password === loginForm.password) { setUser({ ...u, username: loginForm.username }); setLoginError(''); }
@@ -228,6 +230,37 @@ export default function Home() {
   const handleGenerate = () => { const img = generatePNG(); if (img) { setPreviewImage(img); setShowPreview(true); } };
   const download = () => { if (previewImage) { const a = document.createElement('a'); a.download = `classifica_${selectedRanking}_${eventDate.replace(/\s/g,'_')}.png`; a.href = previewImage; a.click(); } };
 
+  const handleSendToBot = async () => {
+    setSendStatus('Invio...');
+    const img = generatePNG();
+    if (!img) { setSendStatus('Errore'); return; }
+    try {
+      await fetch('https://hook.eu1.make.com/yxawj0edtdnd4a7rvap2loca9vqccrk7', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        mode: 'no-cors',
+        body: JSON.stringify({
+          source: 'webapp',
+          ranking_type: selectedRanking,
+          csv_type: csvType,
+          event_name: eventName,
+          event_date: eventDate,
+          exclude_k: excludeK,
+          timestamp: new Date().toISOString(),
+          image_base64: img,
+          top10: getData().slice(0, 10).map(([name, s], i) => ({ pos: i+1, name, v1: s.v1, v2: s.v2, pct: Math.round(s.v2/s.v1*100)||0 })),
+          totals: rankings?.totals,
+          total_participants: getData().length
+        })
+      });
+      setSendStatus('✅ Inviato!');
+      setTimeout(() => setSendStatus(''), 3000);
+    } catch (e) {
+      setSendStatus('❌ Errore');
+      setTimeout(() => setSendStatus(''), 3000);
+    }
+  };
+
   const labels = getLabels(); const colors = getColors();
 
   // LOGIN
@@ -376,9 +409,15 @@ export default function Home() {
               </div>
               
               {(user.role==='admin'||user.role==='assistente') && (
-                <button style={{...S.btn,width:'100%',marginTop:15,background:`linear-gradient(135deg,${colors.p},${colors.s})`}} onClick={handleGenerate}>
-                  📸 Genera PNG ({getData().length} nomi)
-                </button>
+                <div style={{display:'flex',gap:10,marginTop:15,flexWrap:'wrap',alignItems:'center'}}>
+                  <button style={{...S.btn,flex:1,minWidth:120,background:`linear-gradient(135deg,${colors.p},${colors.s})`}} onClick={handleGenerate}>
+                    📸 PNG ({getData().length})
+                  </button>
+                  <button style={{...S.btn,flex:1,minWidth:120,background:'linear-gradient(135deg,#00BFA5,#1DE9B6)'}} onClick={handleSendToBot}>
+                    🤖 Invia a Bot
+                  </button>
+                  {sendStatus && <span style={{fontSize:13,color:sendStatus.includes('✅')?'#4CAF50':sendStatus.includes('❌')?'#f44':'#FFC107'}}>{sendStatus}</span>}
+                </div>
               )}
             </div>
           ) : <div style={{textAlign:'center',padding:60,color:'rgba(255,255,255,0.4)'}}><div style={{fontSize:50}}>📊</div><p>Carica un CSV</p></div>}
