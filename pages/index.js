@@ -14,6 +14,9 @@ const USERS = {
 
 const K_NAMES = ['TIESI PATRIZIO', 'TIESI ANDREA', "MAGRI' THOMAS", 'VENTURA MARCELLO', 'COLLETTA LEONARDO'];
 
+// Etichette predefinite
+const EVENT_TYPES = ['LUCE AMICA', 'FOTOVOLTAICO', 'INSERITI SEMINARIO', 'ATTIVATI', 'FORMAZIONE'];
+
 // Calendario produzione 2025-2026
 const PRODUCTION_CALENDAR = {
   'Gennaio 2025': { start: '2025-01-07 13:00', end: '2025-02-03 11:00' },
@@ -42,7 +45,7 @@ const PRODUCTION_CALENDAR = {
   'Dicembre 2026': { start: '2026-12-01 13:00', end: '2027-01-07 11:00' },
 };
 
-// Genera settimane per un mese
+// Genera settimane per calendario produzione (lun-dom, ultima include fine produzione)
 const getWeeksForMonth = (month) => {
   const cal = PRODUCTION_CALENDAR[month];
   if (!cal) return [];
@@ -50,29 +53,61 @@ const getWeeksForMonth = (month) => {
   const start = new Date(cal.start.replace(' ', 'T'));
   const end = new Date(cal.end.replace(' ', 'T'));
   const weeks = [];
+  
+  // Prima settimana: da inizio produzione a prima domenica
   let weekStart = new Date(start);
-  let weekNum = 1;
+  let weekEnd = new Date(start);
+  
+  // Trova la prima domenica
+  while (weekEnd.getDay() !== 0) {
+    weekEnd.setDate(weekEnd.getDate() + 1);
+  }
+  weekEnd.setHours(23, 59, 59);
+  
+  if (weekEnd > end) weekEnd = new Date(end);
+  
+  weeks.push({
+    num: 1,
+    start: new Date(weekStart),
+    end: new Date(weekEnd),
+    label: `Sett.1 (${weekStart.getDate()}/${weekStart.getMonth()+1} - ${weekEnd.getDate()}/${weekEnd.getMonth()+1})`
+  });
+  
+  // Settimane successive: lun-dom
+  let weekNum = 2;
+  weekStart = new Date(weekEnd);
+  weekStart.setDate(weekStart.getDate() + 1);
+  weekStart.setHours(0, 0, 0);
   
   while (weekStart < end) {
-    let weekEnd = new Date(weekStart);
+    weekEnd = new Date(weekStart);
     weekEnd.setDate(weekEnd.getDate() + 6);
-    if (weekEnd > end) weekEnd = new Date(end);
+    weekEnd.setHours(23, 59, 59);
+    
+    // Ultima settimana include fine produzione
+    if (weekEnd >= end || weekNum >= 5) {
+      weekEnd = new Date(end);
+    }
     
     weeks.push({
       num: weekNum,
       start: new Date(weekStart),
       end: new Date(weekEnd),
-      label: `Sett. ${weekNum} (${weekStart.getDate()}/${weekStart.getMonth()+1} - ${weekEnd.getDate()}/${weekEnd.getMonth()+1})`
+      label: `Sett.${weekNum} (${weekStart.getDate()}/${weekStart.getMonth()+1} - ${weekEnd.getDate()}/${weekEnd.getMonth()+1})`
     });
     
-    weekStart.setDate(weekStart.getDate() + 7);
+    if (weekEnd >= end) break;
+    
+    weekStart = new Date(weekEnd);
+    weekStart.setDate(weekStart.getDate() + 1);
+    weekStart.setHours(0, 0, 0);
     weekNum++;
   }
+  
   return weeks;
 };
 
 export default function Home() {
-  // State
   const [user, setUser] = useState(null);
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState('');
@@ -94,22 +129,21 @@ export default function Home() {
   const [weeks, setWeeks] = useState([]);
   const [sendStatus, setSendStatus] = useState('');
 
-  // ==================== FUNZIONI UTILITY ====================
+  // ==================== PARSER CSV CORRETTO ====================
+  // Usa SOLO punto e virgola come separatore, gestisce virgole nei campi
   const parseCSV = (text) => {
     const lines = text.trim().split('\n');
-    const headers = lines[0].split(/[,;]/).map(h => h.trim().replace(/"/g, '').replace(/^\uFEFF/, ''));
+    const headers = lines[0].split(';').map(h => h.trim().replace(/"/g, '').replace(/^\uFEFF/, ''));
+    
     return lines.slice(1).map(line => {
-      const values = []; let current = ''; let inQuotes = false;
-      for (let c of line) {
-        if (c === '"') inQuotes = !inQuotes;
-        else if ((c === ',' || c === ';') && !inQuotes) { values.push(current.trim()); current = ''; }
-        else current += c;
-      }
-      values.push(current.trim());
+      // Split SOLO per punto e virgola
+      const values = line.split(';').map(v => v.trim().replace(/^"|"$/g, ''));
       const row = {};
-      headers.forEach((h, i) => { row[h] = (values[i] || '').replace(/"/g, ''); });
+      headers.forEach((h, i) => {
+        row[h] = values[i] || '';
+      });
       return row;
-    });
+    }).filter(row => Object.values(row).some(v => v)); // Rimuovi righe vuote
   };
 
   const getRowMonth = (row) => row['Mese di Produzione'] || row['Mese_di_Produzione'] || null;
@@ -131,7 +165,6 @@ export default function Home() {
     });
   };
 
-  // ==================== FILTRI ====================
   const filterByMonth = (data, month) => month ? data.filter(r => getRowMonth(r) === month) : data;
   
   const filterByWeek = (data, week) => {
@@ -156,16 +189,24 @@ export default function Home() {
   };
 
   const handleWeekChange = (weekNum) => {
+    if (!weekNum) {
+      setSelectedWeek(null);
+      if (csvData && selectedMonth) {
+        const filtered = filterByMonth(csvData, selectedMonth);
+        setFilteredData(filtered);
+        generateRankings(filtered, csvType, excludeK);
+        setEventDate(selectedMonth.toUpperCase());
+      }
+      return;
+    }
     const week = weeks.find(w => w.num === parseInt(weekNum));
     setSelectedWeek(week);
-    if (csvData && selectedMonth) {
+    if (csvData && selectedMonth && week) {
       let filtered = filterByMonth(csvData, selectedMonth);
-      if (week) {
-        filtered = filterByWeek(filtered, week);
-        setEventDate(`${selectedMonth.toUpperCase()} - SETT.${week.num}`);
-      }
+      filtered = filterByWeek(filtered, week);
       setFilteredData(filtered);
       generateRankings(filtered, csvType, excludeK);
+      setEventDate(`${selectedMonth.toUpperCase()} - SETT.${week.num}`);
     }
   };
 
@@ -180,7 +221,6 @@ export default function Home() {
     }
   };
 
-  // ==================== LOGIN ====================
   const handleLogin = () => {
     const u = USERS[loginForm.username.toLowerCase().replace(/\s+/g, '_')];
     if (u && u.password === loginForm.password) {
@@ -191,7 +231,6 @@ export default function Home() {
     }
   };
 
-  // ==================== CARICAMENTO FILE ====================
   const processFile = (file) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -205,13 +244,20 @@ export default function Home() {
         setEventDate(months[0].toUpperCase());
         setWeeks(getWeeksForMonth(months[0]));
       }
+      // Auto-detect tipo
       const headers = Object.keys(data[0] || {}).join(' ').toLowerCase();
       let type = 'luce_amica';
       if (headers.includes('presente')) type = 'seminario';
       else if (headers.includes('fv') || headers.includes('fotovoltaico')) type = 'fotovoltaico';
       else if (headers.includes('attivazione') || headers.includes('vipoffice')) type = 'attivazioni';
       setCsvType(type);
-      setEventName(type === 'seminario' ? 'SEMINARIO' : type === 'luce_amica' ? 'LUCE AMICA' : type === 'fotovoltaico' ? 'FOTOVOLTAICO' : 'ATTIVAZIONI');
+      
+      // Auto-detect nome evento
+      if (type === 'seminario') setEventName('INSERITI SEMINARIO');
+      else if (type === 'luce_amica') setEventName('LUCE AMICA');
+      else if (type === 'fotovoltaico') setEventName('FOTOVOLTAICO');
+      else setEventName('ATTIVATI');
+      
       generateRankings(data, type, excludeK);
     };
     reader.readAsText(file, 'UTF-8');
@@ -221,26 +267,72 @@ export default function Home() {
   const generateRankings = (data, type, filterK) => {
     const isK = (name) => K_NAMES.some(k => (name||'').toUpperCase().includes(k));
     const ivd = {}, sdp = {}, nw = {}, k = {};
-    const getF = (row, fields) => { for (let f of fields) if (row[f]?.trim()) return row[f].trim(); return ''; };
+    
+    // Funzione per ottenere campo - SOLO dal nome esatto, no fallback a codici
+    const getField = (row, fieldName) => {
+      const val = row[fieldName];
+      if (!val || val.trim() === '') return '';
+      // Escludi se inizia con NWG (è un codice, non un nome)
+      if (val.trim().toUpperCase().startsWith('NWG')) return '';
+      return val.trim();
+    };
     
     data.forEach(row => {
-      const ivdN = getF(row, ['Nome Intermediario', 'IVD', 'Nome IVD']);
-      const sdpN = getF(row, ['Nome Primo SDP FV', 'Nome Primo SDP LA', 'Nome Primo SDP']);
-      const nwN = getF(row, ['Nome Primo Networker', 'Networker']);
-      const kN = getF(row, ['Nome Primo K', 'Nome Primo Formatore', 'K']);
+      // IVD - Nome Intermediario
+      const ivdN = getField(row, 'Nome Intermediario');
       
-      let isV2 = type === 'seminario' 
-        ? (row['Presente SI'] || '').toLowerCase() === 'si' 
-        : (getF(row, ['Stato NWG Energia', 'Stato NWG Spa', 'Stato', 'Stato Vipoffice IVD']).toLowerCase().match(/accettato|attivo|active|aac/) ? true : false);
+      // SDP - Prima prova FV poi LA
+      let sdpN = getField(row, 'Nome Primo SDP FV');
+      if (!sdpN) sdpN = getField(row, 'Nome Primo SDP LA');
       
-      if (ivdN && (!filterK || !isK(ivdN))) { if (!ivd[ivdN]) ivd[ivdN] = {v1:0,v2:0}; ivd[ivdN].v1++; if (isV2) ivd[ivdN].v2++; }
-      if (sdpN && (!filterK || !isK(sdpN))) { if (!sdp[sdpN]) sdp[sdpN] = {v1:0,v2:0}; sdp[sdpN].v1++; if (isV2) sdp[sdpN].v2++; }
-      if (nwN && (!filterK || !isK(nwN))) { if (!nw[nwN]) nw[nwN] = {v1:0,v2:0}; nw[nwN].v1++; if (isV2) nw[nwN].v2++; }
-      if (kN) { if (!k[kN]) k[kN] = {v1:0,v2:0}; k[kN].v1++; if (isV2) k[kN].v2++; }
+      // Networker
+      const nwN = getField(row, 'Nome Primo Networker');
+      
+      // K - SOLO "Nome Primo K", niente altro!
+      const kN = getField(row, 'Nome Primo K');
+      
+      // Determina se accettato
+      let isV2 = false;
+      if (type === 'seminario') {
+        isV2 = (row['Presente SI'] || '').toLowerCase() === 'si';
+      } else {
+        const stato = (row['Stato NWG Energia'] || row['Stato NWG Spa'] || row['Stato'] || '').toLowerCase();
+        isV2 = stato.includes('accettato') || stato.includes('attivo') || stato.includes('active');
+      }
+      
+      // Popola statistiche
+      if (ivdN && (!filterK || !isK(ivdN))) {
+        if (!ivd[ivdN]) ivd[ivdN] = {v1:0,v2:0};
+        ivd[ivdN].v1++;
+        if (isV2) ivd[ivdN].v2++;
+      }
+      if (sdpN && (!filterK || !isK(sdpN))) {
+        if (!sdp[sdpN]) sdp[sdpN] = {v1:0,v2:0};
+        sdp[sdpN].v1++;
+        if (isV2) sdp[sdpN].v2++;
+      }
+      if (nwN && (!filterK || !isK(nwN))) {
+        if (!nw[nwN]) nw[nwN] = {v1:0,v2:0};
+        nw[nwN].v1++;
+        if (isV2) nw[nwN].v2++;
+      }
+      if (kN) {
+        if (!k[kN]) k[kN] = {v1:0,v2:0};
+        k[kN].v1++;
+        if (isV2) k[kN].v2++;
+      }
     });
 
     const sV1 = (a, b) => b[1].v1 - a[1].v1;
     const sV2 = (a, b) => b[1].v2 - a[1].v2;
+    
+    // Calcola totali corretti
+    const totV1 = data.length;
+    const totV2 = data.filter(row => {
+      const stato = (row['Stato NWG Energia'] || row['Stato NWG Spa'] || row['Stato'] || row['Presente SI'] || '').toLowerCase();
+      return stato.includes('accettato') || stato.includes('attivo') || stato.includes('active') || stato === 'si';
+    }).length;
+    
     setRankings({
       type, excludeK: filterK,
       ivd_inseriti: Object.entries(ivd).sort(sV1),
@@ -249,7 +341,7 @@ export default function Home() {
       sdp_accettati: Object.entries(sdp).filter(([,s]) => s.v2 > 0).sort(sV2),
       nw: Object.entries(nw).sort(sV1),
       k: Object.entries(k).sort(sV1),
-      totals: { v1: data.length, v2: Object.values(ivd).reduce((s, x) => s + x.v2, 0) }
+      totals: { v1: totV1, v2: totV2 }
     });
     setSelectedRanking('ivd_inseriti');
   };
@@ -276,9 +368,12 @@ export default function Home() {
     return c[selectedRanking] || { p: '#7C4DFF', s: '#B388FF', bg: '#0f0f1a' };
   };
 
-  // ==================== GENERAZIONE PNG ====================
-  
-  // Design IMPACT per IVD/SDP (semplice, solo numeri)
+  // Calcola somma contratti dalla classifica
+  const getClassificaTotal = () => {
+    return getData().reduce((sum, [,s]) => sum + s.v1, 0);
+  };
+
+  // ==================== PNG IMPACT (IVD/SDP) ====================
   const generatePNG_Impact = () => {
     const data = getData();
     if (!data.length) return null;
@@ -302,13 +397,15 @@ export default function Home() {
     ctx.fillRect(0, 0, W, H);
     
     // Header bar
-    const hg = ctx.createLinearGradient(0, 0, W, 0);
-    hg.addColorStop(0, colors.p);
-    hg.addColorStop(1, colors.s);
-    ctx.fillStyle = hg;
-    ctx.fillRect(0, 0, W, 5);
+    ctx.fillStyle = colors.p;
+    ctx.fillRect(0, 0, W, 4);
     
-    // Emoji e Titolo
+    // Logo
+    ctx.fillStyle = colors.p;
+    ctx.font = 'bold 12px Arial';
+    ctx.fillText('NWG ITALIA', 25, 25);
+    
+    // Titolo
     const emoji = selectedRanking === 'ivd_inseriti' ? '🟠' : 
                   selectedRanking === 'ivd_accettati' ? '🟢' :
                   selectedRanking === 'sdp_inseriti' ? '🔵' : '🟢';
@@ -320,32 +417,47 @@ export default function Home() {
     };
     
     ctx.fillStyle = '#FFF';
-    ctx.font = 'bold 26px Arial';
-    ctx.fillText(`${emoji} CLASSIFICA ${titles[selectedRanking]}`, 25, 50);
+    ctx.font = 'bold 24px Arial';
+    ctx.fillText(`${emoji} CLASSIFICA ${titles[selectedRanking]}`, 25, 55);
     
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.font = '14px Arial';
-    ctx.fillText(`${eventName} • ${eventDate}`, 25, 75);
+    ctx.font = '13px Arial';
+    ctx.fillText(`${eventName} • ${eventDate}`, 25, 78);
     
-    // Totale box
-    const totVal = isAcc ? rankings.totals.v2 : rankings.totals.v1;
+    // Totali box - mostra somma contratti dalla classifica
+    const classificaTotal = getClassificaTotal();
+    const totAcc = getData().reduce((sum, [,s]) => sum + s.v2, 0);
+    const convPct = Math.round(totAcc / classificaTotal * 100) || 0;
+    
     ctx.fillStyle = 'rgba(255,255,255,0.05)';
     ctx.beginPath();
-    ctx.roundRect(W - 180, 25, 155, 55, 8);
+    ctx.roundRect(W - 220, 18, 195, 65, 8);
     ctx.fill();
     
-    ctx.fillStyle = isAcc ? '#4CAF50' : colors.p;
-    ctx.font = 'bold 28px Arial';
+    ctx.font = 'bold 22px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(totVal.toString(), W - 102, 58);
+    ctx.fillStyle = colors.p;
+    ctx.fillText(classificaTotal.toString(), W - 155, 48);
+    ctx.fillStyle = '#4CAF50';
+    ctx.fillText(totAcc.toString(), W - 85, 48);
+    ctx.fillStyle = convPct >= 60 ? '#4CAF50' : convPct >= 40 ? '#FFC107' : '#FF5722';
+    ctx.fillText(`${convPct}%`, W - 30, 48);
+    
+    ctx.font = '9px Arial';
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.font = '10px Arial';
-    ctx.fillText(`TOTALE ${isAcc ? labels.c2 : labels.c1}`, W - 102, 72);
+    ctx.fillText(labels.c1, W - 155, 65);
+    ctx.fillText(labels.c2, W - 85, 65);
+    ctx.fillText('CONV', W - 30, 65);
     ctx.textAlign = 'left';
+    
+    // Info partecipanti
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '11px Arial';
+    ctx.fillText(`${data.length} partecipanti`, 25, 100);
     
     // Separator
     ctx.fillStyle = 'rgba(255,255,255,0.1)';
-    ctx.fillRect(20, headerH - 20, W - 40, 1);
+    ctx.fillRect(20, headerH - 15, W - 40, 1);
     
     // Rows
     const startY = headerH;
@@ -368,17 +480,17 @@ export default function Home() {
       }
       
       // Position
-      ctx.font = i < 3 ? '16px Arial' : '13px Arial';
+      ctx.font = '14px Arial';
       if (i === 0) ctx.fillText('🥇', 28, y + 24);
       else if (i === 1) ctx.fillText('🥈', 28, y + 24);
       else if (i === 2) ctx.fillText('🥉', 28, y + 24);
-      else { ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.fillText(`${i+1}°`, 30, y + 24); }
+      else { ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '12px Arial'; ctx.fillText(`${i+1}°`, 30, y + 24); }
       
       // Name
       ctx.fillStyle = i < 3 ? '#FFF' : 'rgba(255,255,255,0.85)';
       ctx.font = i < 3 ? 'bold 13px Arial' : '12px Arial';
       const displayName = name.length > 35 ? name.substring(0, 35) + '...' : name;
-      ctx.fillText(displayName.toUpperCase(), 65, y + 24);
+      ctx.fillText(displayName.toUpperCase(), 60, y + 24);
       
       // Value
       ctx.fillStyle = isAcc ? '#4CAF50' : colors.p;
@@ -390,17 +502,17 @@ export default function Home() {
     
     // Footer
     ctx.fillStyle = 'rgba(255,255,255,0.1)';
-    ctx.fillRect(20, H - 45, W - 40, 1);
+    ctx.fillRect(20, H - 40, W - 40, 1);
     ctx.fillStyle = 'rgba(255,255,255,0.4)';
     ctx.font = '11px Arial';
-    ctx.fillText(`📊 ${data.length} partecipanti`, 25, H - 18);
+    ctx.fillText(`📊 ${data.length} partecipanti • ${classificaTotal} contratti`, 25, H - 15);
     ctx.textAlign = 'right';
-    ctx.fillText('LEADER RANKING • TEAM TIESI', W - 25, H - 18);
+    ctx.fillText('LEADER RANKING • TEAM TIESI', W - 25, H - 15);
     
     return canvas.toDataURL('image/png');
   };
 
-  // Design EXCLUSIVE per Networker/K (premium, con barre conversione)
+  // ==================== PNG EXCLUSIVE (NW/K) ====================
   const generatePNG_Exclusive = () => {
     const data = getData();
     if (!data.length) return null;
@@ -411,15 +523,15 @@ export default function Home() {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
-    const W = 800, headerH = 160, footerH = 60;
-    const top3H = 100; // Card top 3
-    const rowH = 44;
+    const W = 800, headerH = 150, footerH = 55;
+    const top3H = 85;
+    const rowH = 40;
     const othersCount = Math.max(0, data.length - 3);
-    const H = headerH + top3H * Math.min(3, data.length) + 20 + (othersCount * rowH) + footerH;
+    const H = headerH + (Math.min(3, data.length) * top3H) + 15 + (othersCount * rowH) + footerH;
     
     canvas.width = W; canvas.height = H;
     
-    // Background premium
+    // Background
     const bg = ctx.createLinearGradient(0, 0, 0, H);
     bg.addColorStop(0, '#0a0a10');
     bg.addColorStop(0.3, colors.bg);
@@ -431,51 +543,45 @@ export default function Home() {
     // Bordo elegante
     ctx.strokeStyle = isK ? 'rgba(255,215,0,0.3)' : 'rgba(156,39,176,0.3)';
     ctx.lineWidth = 2;
-    ctx.strokeRect(15, 15, W - 30, H - 30);
+    ctx.strokeRect(12, 12, W - 24, H - 24);
     
-    // Inner glow
-    ctx.strokeStyle = isK ? 'rgba(255,215,0,0.1)' : 'rgba(156,39,176,0.1)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(20, 20, W - 40, H - 40);
-    
-    // Header gradient bar
+    // Header bar
     const hg = ctx.createLinearGradient(0, 0, W, 0);
     hg.addColorStop(0, 'transparent');
     hg.addColorStop(0.2, colors.p);
     hg.addColorStop(0.8, colors.s);
     hg.addColorStop(1, 'transparent');
     ctx.fillStyle = hg;
-    ctx.fillRect(30, 30, W - 60, 4);
+    ctx.fillRect(25, 25, W - 50, 3);
     
-    // Titolo con stelle
+    // Titolo
     const emoji = isK ? '👑' : '⭐';
     ctx.fillStyle = colors.p;
-    ctx.font = 'bold 28px Arial';
+    ctx.font = 'bold 26px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`${emoji} CLASSIFICA ${isK ? 'K MANAGER' : 'NETWORKER'} ${emoji}`, W/2, 75);
+    ctx.fillText(`${emoji} CLASSIFICA ${isK ? 'K MANAGER' : 'NETWORKER'} ${emoji}`, W/2, 65);
     
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.font = '14px Arial';
-    ctx.fillText(`${eventName} • ${eventDate}`, W/2, 100);
-    ctx.textAlign = 'left';
+    ctx.font = '13px Arial';
+    ctx.fillText(`${eventName} • ${eventDate}`, W/2, 88);
     
-    // Totali box
-    const t = rankings.totals;
-    const pct = Math.round(t.v2 / t.v1 * 100) || 0;
+    // Totali
+    const classificaTotal = getClassificaTotal();
+    const totAcc = getData().reduce((sum, [,s]) => sum + s.v2, 0);
+    const pct = Math.round(totAcc / classificaTotal * 100) || 0;
     
     ctx.fillStyle = 'rgba(255,255,255,0.05)';
     ctx.beginPath();
-    ctx.roundRect(W/2 - 150, 115, 300, 35, 8);
+    ctx.roundRect(W/2 - 140, 100, 280, 32, 6);
     ctx.fill();
     
-    ctx.font = 'bold 14px Arial';
-    ctx.textAlign = 'center';
+    ctx.font = 'bold 13px Arial';
     ctx.fillStyle = colors.p;
-    ctx.fillText(`${t.v1} ${labels.c1}`, W/2 - 80, 138);
+    ctx.fillText(`${classificaTotal} ${labels.c1}`, W/2 - 70, 121);
+    ctx.fillStyle = pct >= 60 ? '#4CAF50' : pct >= 40 ? '#FFC107' : '#FF5722';
+    ctx.fillText(`${pct}%`, W/2, 121);
     ctx.fillStyle = '#4CAF50';
-    ctx.fillText(`${t.v2} ${labels.c2}`, W/2 + 80, 138);
-    ctx.fillStyle = pct >= 65 ? '#4CAF50' : pct >= 45 ? '#FFC107' : '#FF5722';
-    ctx.fillText(`${pct}%`, W/2, 138);
+    ctx.fillText(`${totAcc} ${labels.c2}`, W/2 + 70, 121);
     ctx.textAlign = 'left';
     
     // TOP 3 CARDS
@@ -483,174 +589,166 @@ export default function Home() {
     const top3 = data.slice(0, 3);
     
     top3.forEach(([name, s], i) => {
-      const pct = s.v1 > 0 ? Math.round(s.v2 / s.v1 * 100) : 0;
+      const p = s.v1 > 0 ? Math.round(s.v2 / s.v1 * 100) : 0;
       const cardY = currentY + (i * top3H);
       
-      // Card background
-      const cardGrad = ctx.createLinearGradient(40, cardY, W - 40, cardY);
+      // Card bg
+      const cardGrad = ctx.createLinearGradient(35, cardY, W - 35, cardY);
       if (i === 0) {
-        cardGrad.addColorStop(0, 'rgba(255,215,0,0.15)');
-        cardGrad.addColorStop(1, 'rgba(255,215,0,0.05)');
+        cardGrad.addColorStop(0, 'rgba(255,215,0,0.12)');
+        cardGrad.addColorStop(1, 'rgba(255,215,0,0.03)');
       } else if (i === 1) {
-        cardGrad.addColorStop(0, 'rgba(192,192,192,0.12)');
-        cardGrad.addColorStop(1, 'rgba(192,192,192,0.03)');
+        cardGrad.addColorStop(0, 'rgba(192,192,192,0.10)');
+        cardGrad.addColorStop(1, 'rgba(192,192,192,0.02)');
       } else {
-        cardGrad.addColorStop(0, 'rgba(205,127,50,0.10)');
+        cardGrad.addColorStop(0, 'rgba(205,127,50,0.08)');
         cardGrad.addColorStop(1, 'rgba(205,127,50,0.02)');
       }
       ctx.fillStyle = cardGrad;
       ctx.beginPath();
-      ctx.roundRect(40, cardY + 5, W - 80, top3H - 15, 12);
+      ctx.roundRect(35, cardY + 3, W - 70, top3H - 10, 10);
       ctx.fill();
       
       // Card border
-      ctx.strokeStyle = i === 0 ? 'rgba(255,215,0,0.4)' : i === 1 ? 'rgba(192,192,192,0.3)' : 'rgba(205,127,50,0.3)';
+      ctx.strokeStyle = i === 0 ? 'rgba(255,215,0,0.35)' : i === 1 ? 'rgba(192,192,192,0.25)' : 'rgba(205,127,50,0.25)';
       ctx.lineWidth = 1;
       ctx.stroke();
       
-      // Medal
+      // Medal + Position
       const medals = ['🏆', '🥈', '🥉'];
-      ctx.font = '32px Arial';
-      ctx.fillText(medals[i], 60, cardY + 55);
+      ctx.font = '28px Arial';
+      ctx.fillText(medals[i], 50, cardY + 48);
       
-      // Position
       ctx.fillStyle = i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : '#CD7F32';
-      ctx.font = 'bold 20px Arial';
-      ctx.fillText(`${i + 1}°`, 105, cardY + 52);
+      ctx.font = 'bold 18px Arial';
+      ctx.fillText(`${i + 1}°`, 90, cardY + 45);
       
       // Name
       ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 18px Arial';
-      ctx.fillText(name.toUpperCase(), 145, cardY + 52);
+      ctx.font = 'bold 16px Arial';
+      ctx.fillText(name.toUpperCase(), 125, cardY + 45);
       
       // Stats
       ctx.textAlign = 'right';
       
       // Inseriti
       ctx.fillStyle = colors.p;
-      ctx.font = 'bold 22px Arial';
-      ctx.fillText(s.v1.toString(), W - 280, cardY + 45);
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      ctx.font = '10px Arial';
-      ctx.fillText(labels.c1, W - 280, cardY + 60);
+      ctx.font = 'bold 20px Arial';
+      ctx.fillText(s.v1.toString(), W - 260, cardY + 40);
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.font = '9px Arial';
+      ctx.fillText(labels.c1, W - 260, cardY + 55);
       
-      // Barra conversione
-      const barX = W - 250;
-      const barW = 100;
+      // Barra
+      const barX = W - 230;
+      const barW = 90;
       ctx.fillStyle = 'rgba(255,255,255,0.1)';
       ctx.beginPath();
-      ctx.roundRect(barX, cardY + 35, barW, 16, 4);
+      ctx.roundRect(barX, cardY + 30, barW, 14, 4);
       ctx.fill();
       
-      const barColor = pct >= 70 ? '#4CAF50' : pct >= 50 ? '#FFC107' : '#FF5722';
+      const barColor = p >= 70 ? '#4CAF50' : p >= 50 ? '#FFC107' : '#FF5722';
       ctx.fillStyle = barColor;
       ctx.beginPath();
-      ctx.roundRect(barX, cardY + 35, barW * pct / 100, 16, 4);
+      ctx.roundRect(barX, cardY + 30, barW * p / 100, 14, 4);
       ctx.fill();
       
       ctx.fillStyle = '#FFF';
-      ctx.font = 'bold 11px Arial';
+      ctx.font = 'bold 10px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText(`${pct}%`, barX + barW / 2, cardY + 47);
+      ctx.fillText(`${p}%`, barX + barW / 2, cardY + 42);
       
       // Accettati
       ctx.textAlign = 'right';
       ctx.fillStyle = '#4CAF50';
-      ctx.font = 'bold 22px Arial';
-      ctx.fillText(s.v2.toString(), W - 55, cardY + 45);
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      ctx.font = '10px Arial';
-      ctx.fillText(labels.c2, W - 55, cardY + 60);
+      ctx.font = 'bold 20px Arial';
+      ctx.fillText(s.v2.toString(), W - 50, cardY + 40);
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.font = '9px Arial';
+      ctx.fillText(labels.c2, W - 50, cardY + 55);
       
       ctx.textAlign = 'left';
     });
     
-    // Altri partecipanti
+    // Altri
     if (data.length > 3) {
-      currentY = headerH + (top3H * 3) + 10;
+      currentY = headerH + (top3H * Math.min(3, data.length)) + 8;
       
-      // Separator line
       ctx.fillStyle = 'rgba(255,255,255,0.1)';
-      ctx.fillRect(50, currentY, W - 100, 1);
-      currentY += 15;
+      ctx.fillRect(45, currentY, W - 90, 1);
+      currentY += 12;
       
       data.slice(3).forEach(([name, s], i) => {
         const y = currentY + (i * rowH);
-        const pct = s.v1 > 0 ? Math.round(s.v2 / s.v1 * 100) : 0;
+        const p = s.v1 > 0 ? Math.round(s.v2 / s.v1 * 100) : 0;
         
-        // Alternating bg
         if (i % 2 === 0) {
           ctx.fillStyle = 'rgba(255,255,255,0.02)';
-          ctx.fillRect(40, y, W - 80, rowH);
+          ctx.fillRect(35, y, W - 70, rowH);
         }
         
-        // Position
         ctx.fillStyle = 'rgba(255,255,255,0.5)';
-        ctx.font = '13px Arial';
-        ctx.fillText(`${i + 4}°`, 55, y + 26);
+        ctx.font = '12px Arial';
+        ctx.fillText(`${i + 4}°`, 50, y + 24);
         
-        // Name
         ctx.fillStyle = 'rgba(255,255,255,0.85)';
-        ctx.font = '13px Arial';
-        const displayName = name.length > 25 ? name.substring(0, 25) + '...' : name;
-        ctx.fillText(displayName.toUpperCase(), 95, y + 26);
+        ctx.font = '12px Arial';
+        const displayName = name.length > 28 ? name.substring(0, 28) + '...' : name;
+        ctx.fillText(displayName.toUpperCase(), 85, y + 24);
         
-        // Stats
         ctx.textAlign = 'right';
         ctx.fillStyle = colors.p;
-        ctx.font = 'bold 14px Arial';
-        ctx.fillText(s.v1.toString(), W - 220, y + 26);
+        ctx.font = 'bold 13px Arial';
+        ctx.fillText(s.v1.toString(), W - 200, y + 24);
         
-        // Mini bar
-        const barX = W - 195;
-        const barW = 60;
+        const barX = W - 175;
+        const barW = 55;
         ctx.fillStyle = 'rgba(255,255,255,0.1)';
         ctx.beginPath();
-        ctx.roundRect(barX, y + 15, barW, 12, 3);
+        ctx.roundRect(barX, y + 14, barW, 10, 3);
         ctx.fill();
         
-        const barColor = pct >= 70 ? '#4CAF50' : pct >= 50 ? '#FFC107' : '#FF5722';
+        const barColor = p >= 70 ? '#4CAF50' : p >= 50 ? '#FFC107' : '#FF5722';
         ctx.fillStyle = barColor;
         ctx.beginPath();
-        ctx.roundRect(barX, y + 15, barW * pct / 100, 12, 3);
+        ctx.roundRect(barX, y + 14, barW * p / 100, 10, 3);
         ctx.fill();
         
         ctx.fillStyle = barColor;
         ctx.font = '10px Arial';
-        ctx.fillText(`${pct}%`, W - 115, y + 26);
+        ctx.fillText(`${p}%`, W - 105, y + 24);
         
         ctx.fillStyle = '#4CAF50';
-        ctx.font = 'bold 14px Arial';
-        ctx.fillText(s.v2.toString(), W - 55, y + 26);
+        ctx.font = 'bold 13px Arial';
+        ctx.fillText(s.v2.toString(), W - 50, y + 24);
         
         ctx.textAlign = 'left';
       });
     }
     
     // Footer
-    const footerY = H - 50;
+    const footerY = H - 45;
     ctx.fillStyle = 'rgba(255,255,255,0.1)';
-    ctx.fillRect(50, footerY, W - 100, 1);
+    ctx.fillRect(45, footerY, W - 90, 1);
     
     ctx.fillStyle = 'rgba(255,255,255,0.4)';
     ctx.font = '11px Arial';
-    ctx.fillText(`📊 ${data.length} ${isK ? 'K Manager' : 'Networker'} in classifica`, 55, footerY + 25);
+    ctx.fillText(`📊 ${data.length} ${isK ? 'K Manager' : 'Networker'} • ${classificaTotal} contratti`, 50, footerY + 22);
     ctx.textAlign = 'right';
-    ctx.fillText('LEADER RANKING • TEAM TIESI', W - 55, footerY + 25);
+    ctx.fillText('LEADER RANKING • TEAM TIESI', W - 50, footerY + 22);
     
-    // Bottom gradient bar
+    // Bottom bar
     const fg = ctx.createLinearGradient(0, 0, W, 0);
     fg.addColorStop(0, 'transparent');
     fg.addColorStop(0.2, colors.p);
     fg.addColorStop(0.8, colors.s);
     fg.addColorStop(1, 'transparent');
     ctx.fillStyle = fg;
-    ctx.fillRect(30, H - 20, W - 60, 4);
+    ctx.fillRect(25, H - 18, W - 50, 3);
     
     return canvas.toDataURL('image/png');
   };
 
-  // Scegli il design giusto
   const generatePNG = () => isExclusive() ? generatePNG_Exclusive() : generatePNG_Impact();
 
   const handleGenerate = () => {
@@ -661,16 +759,15 @@ export default function Home() {
   const download = () => {
     if (previewImage) {
       const a = document.createElement('a');
-      a.download = `classifica_${selectedRanking}_${eventDate.replace(/\s/g, '_')}.png`;
+      a.download = `classifica_${selectedRanking}_${eventDate.replace(/\s/g, '_').replace(/\./g, '')}.png`;
       a.href = previewImage;
       a.click();
     }
   };
 
-  // ==================== INVIO A BOT ====================
   const handleSendToBot = async () => {
     setSendStatus('Invio...');
-    const img = generatePNG();
+    const img = previewImage || generatePNG();
     if (!img) { setSendStatus('Errore'); return; }
     try {
       await fetch('https://hook.eu1.make.com/yxawj0edtdnd4a7rvap2loca9vqccrk7', {
@@ -690,7 +787,7 @@ export default function Home() {
             pos: i + 1, name, v1: s.v1, v2: s.v2, 
             pct: Math.round(s.v2 / s.v1 * 100) || 0 
           })),
-          totals: rankings?.totals,
+          totals: { v1: getClassificaTotal(), v2: getData().reduce((sum, [,s]) => sum + s.v2, 0) },
           total_participants: getData().length
         })
       });
@@ -702,11 +799,10 @@ export default function Home() {
     }
   };
 
-  // ==================== RENDER ====================
   const labels = getLabels();
   const colors = getColors();
 
-  // LOGIN SCREEN
+  // ==================== LOGIN ====================
   if (!user) return (
     <>
       <Head><title>Leader Ranking</title><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" /></Head>
@@ -719,13 +815,13 @@ export default function Home() {
           <input style={S.input} type="password" placeholder="Password" value={loginForm.password} onChange={e => setLoginForm({ ...loginForm, password: e.target.value })} onKeyPress={e => e.key === 'Enter' && handleLogin()} />
           {loginError && <p style={{ color: '#f44', fontSize: 13 }}>{loginError}</p>}
           <button style={S.btn} onClick={handleLogin}>ACCEDI</button>
-          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, marginTop: 20 }}>v7.0</p>
+          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, marginTop: 20 }}>v7.1</p>
         </div>
       </div>
     </>
   );
 
-  // PREVIEW SCREEN
+  // ==================== PREVIEW ====================
   if (showPreview && previewImage) return (
     <>
       <Head><title>Anteprima</title></Head>
@@ -733,19 +829,21 @@ export default function Home() {
         <div style={S.previewModal}>
           <h2 style={{ color: '#fff', marginBottom: 5 }}>📸 {isExclusive() ? 'Classifica Exclusive' : 'Classifica'}</h2>
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 15 }}>
-            ✅ {getData().length} partecipanti • {eventDate}
+            ✅ {getData().length} partecipanti • {getClassificaTotal()} contratti • {eventDate}
           </p>
           <div style={S.previewImg}><img src={previewImage} style={{ maxWidth: '100%' }} /></div>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 15 }}>
-            <button style={{ ...S.btn, background: 'transparent', border: '1px solid rgba(255,255,255,0.2)' }} onClick={() => setShowPreview(false)}>Chiudi</button>
-            <button style={{ ...S.btn, background: 'linear-gradient(135deg,#4CAF50,#81C784)' }} onClick={download}>📥 Scarica PNG</button>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 15, flexWrap: 'wrap' }}>
+            <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'transparent', border: '1px solid rgba(255,255,255,0.2)' }} onClick={() => setShowPreview(false)}>Chiudi</button>
+            <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'linear-gradient(135deg,#4CAF50,#81C784)' }} onClick={download}>📥 Scarica</button>
+            <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'linear-gradient(135deg,#00BFA5,#1DE9B6)' }} onClick={handleSendToBot}>🤖 Invia a Bot</button>
           </div>
+          {sendStatus && <p style={{ textAlign: 'center', marginTop: 10, color: sendStatus.includes('✅') ? '#4CAF50' : sendStatus.includes('❌') ? '#f44' : '#FFC107' }}>{sendStatus}</p>}
         </div>
       </div>
     </>
   );
 
-  // DASHBOARD
+  // ==================== DASHBOARD ====================
   return (
     <>
       <Head><title>Leader Ranking</title><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" /></Head>
@@ -754,7 +852,7 @@ export default function Home() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button style={S.menuBtn} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>☰</button>
             <span style={{ fontWeight: 800, color: '#7C4DFF' }}>LEADER RANKING</span>
-            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>v7.0</span>
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>v7.1</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={S.badge}>{user.role.toUpperCase()}</span>
@@ -763,7 +861,6 @@ export default function Home() {
         </header>
 
         <main style={{ display: 'flex' }}>
-          {/* SIDEBAR */}
           <aside style={{ ...S.sidebar, ...(mobileMenuOpen ? { transform: 'translateX(0)' } : {}) }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
               <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', letterSpacing: 1 }}>📊 CLASSIFICHE</span>
@@ -817,7 +914,9 @@ export default function Home() {
                 <div style={S.divider} />
 
                 <p style={S.catLabel}>🏷️ ETICHETTE</p>
-                <input style={S.inputSm} value={eventName} onChange={e => setEventName(e.target.value)} placeholder="Nome evento" />
+                <select style={S.select} value={eventName} onChange={e => setEventName(e.target.value)}>
+                  {EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
                 <input style={S.inputSm} value={eventDate} onChange={e => setEventDate(e.target.value)} placeholder="Periodo" />
               </>
             )}
@@ -825,7 +924,6 @@ export default function Home() {
 
           {mobileMenuOpen && <div style={S.overlay} onClick={() => setMobileMenuOpen(false)} />}
 
-          {/* CONTENT */}
           <section style={S.content}>
             {(user.role === 'admin' || user.role === 'assistente') && (
               <div
@@ -854,13 +952,13 @@ export default function Home() {
                       {selectedRanking === 'k' && '👑 Primo K'}
                     </h2>
                     <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 4 }}>
-                      {getData().length} partecipanti • {eventDate}
+                      {getData().length} partecipanti • {getClassificaTotal()} contratti • {eventDate}
                     </p>
                   </div>
                   <div style={{ display: 'flex', gap: 15 }}>
-                    <div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: colors.p }}>{rankings.totals.v1}</div><div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>{labels.c1}</div></div>
-                    <div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: '#4CAF50' }}>{rankings.totals.v2}</div><div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>{labels.c2}</div></div>
-                    <div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: '#7C4DFF' }}>{Math.round(rankings.totals.v2 / rankings.totals.v1 * 100) || 0}%</div><div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>CONV</div></div>
+                    <div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: colors.p }}>{getClassificaTotal()}</div><div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>{labels.c1}</div></div>
+                    <div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</div><div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>{labels.c2}</div></div>
+                    <div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: '#7C4DFF' }}>{Math.round(getData().reduce((s,[,x])=>s+x.v2,0) / getClassificaTotal() * 100) || 0}%</div><div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>CONV</div></div>
                   </div>
                 </div>
 
@@ -931,7 +1029,6 @@ export default function Home() {
   );
 }
 
-// ==================== STYLES ====================
 const S = {
   loginWrap: { minHeight: '100vh', background: 'linear-gradient(135deg,#1a1a2e,#16213e)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 15, fontFamily: '-apple-system,sans-serif' },
   loginCard: { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '40px 25px', width: '100%', maxWidth: 360, textAlign: 'center', color: '#fff' },
