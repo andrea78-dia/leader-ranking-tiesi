@@ -13,11 +13,9 @@ const USERS = {
 };
 
 const K_NAMES = ['TIESI PATRIZIO', 'TIESI ANDREA', "MAGRI' THOMAS", 'VENTURA MARCELLO', 'COLLETTA LEONARDO'];
-
-// Etichette predefinite
 const EVENT_TYPES = ['LUCE AMICA', 'FOTOVOLTAICO', 'INSERITI SEMINARIO', 'ATTIVATI', 'FORMAZIONE'];
+const WEBHOOK_URL = 'https://hook.eu1.make.com/sm6lrhpoet204lv6xkwj10xiypwnn4qm';
 
-// Calendario produzione 2025-2026
 const PRODUCTION_CALENDAR = {
   'Gennaio 2025': { start: '2025-01-07 13:00', end: '2025-02-03 11:00' },
   'Febbraio 2025': { start: '2025-02-03 13:00', end: '2025-03-03 11:00' },
@@ -45,65 +43,34 @@ const PRODUCTION_CALENDAR = {
   'Dicembre 2026': { start: '2026-12-01 13:00', end: '2027-01-07 11:00' },
 };
 
-// Genera settimane per calendario produzione (lun-dom, ultima include fine produzione)
 const getWeeksForMonth = (month) => {
   const cal = PRODUCTION_CALENDAR[month];
   if (!cal) return [];
-  
   const start = new Date(cal.start.replace(' ', 'T'));
   const end = new Date(cal.end.replace(' ', 'T'));
   const weeks = [];
-  
-  // Prima settimana: da inizio produzione a prima domenica
   let weekStart = new Date(start);
   let weekEnd = new Date(start);
-  
-  // Trova la prima domenica
-  while (weekEnd.getDay() !== 0) {
-    weekEnd.setDate(weekEnd.getDate() + 1);
-  }
+  while (weekEnd.getDay() !== 0) weekEnd.setDate(weekEnd.getDate() + 1);
   weekEnd.setHours(23, 59, 59);
-  
   if (weekEnd > end) weekEnd = new Date(end);
-  
-  weeks.push({
-    num: 1,
-    start: new Date(weekStart),
-    end: new Date(weekEnd),
-    label: `Sett.1 (${weekStart.getDate()}/${weekStart.getMonth()+1} - ${weekEnd.getDate()}/${weekEnd.getMonth()+1})`
-  });
-  
-  // Settimane successive: lun-dom
+  weeks.push({ num: 1, start: new Date(weekStart), end: new Date(weekEnd), label: `Sett.1 (${weekStart.getDate()}/${weekStart.getMonth()+1} - ${weekEnd.getDate()}/${weekEnd.getMonth()+1})` });
   let weekNum = 2;
   weekStart = new Date(weekEnd);
   weekStart.setDate(weekStart.getDate() + 1);
   weekStart.setHours(0, 0, 0);
-  
   while (weekStart < end) {
     weekEnd = new Date(weekStart);
     weekEnd.setDate(weekEnd.getDate() + 6);
     weekEnd.setHours(23, 59, 59);
-    
-    // Ultima settimana include fine produzione
-    if (weekEnd >= end || weekNum >= 5) {
-      weekEnd = new Date(end);
-    }
-    
-    weeks.push({
-      num: weekNum,
-      start: new Date(weekStart),
-      end: new Date(weekEnd),
-      label: `Sett.${weekNum} (${weekStart.getDate()}/${weekStart.getMonth()+1} - ${weekEnd.getDate()}/${weekEnd.getMonth()+1})`
-    });
-    
+    if (weekEnd >= end || weekNum >= 5) weekEnd = new Date(end);
+    weeks.push({ num: weekNum, start: new Date(weekStart), end: new Date(weekEnd), label: `Sett.${weekNum} (${weekStart.getDate()}/${weekStart.getMonth()+1} - ${weekEnd.getDate()}/${weekEnd.getMonth()+1})` });
     if (weekEnd >= end) break;
-    
     weekStart = new Date(weekEnd);
     weekStart.setDate(weekStart.getDate() + 1);
     weekStart.setHours(0, 0, 0);
     weekNum++;
   }
-  
   return weeks;
 };
 
@@ -129,57 +96,41 @@ export default function Home() {
   const [weeks, setWeeks] = useState([]);
   const [sendStatus, setSendStatus] = useState('');
 
-  // ==================== PARSER CSV CORRETTO ====================
-  // Usa SOLO punto e virgola come separatore, gestisce virgole nei campi
+  // Parser CSV - SOLO punto e virgola
   const parseCSV = (text) => {
     const lines = text.trim().split('\n');
     const headers = lines[0].split(';').map(h => h.trim().replace(/"/g, '').replace(/^\uFEFF/, ''));
-    
     return lines.slice(1).map(line => {
-      // Split SOLO per punto e virgola
       const values = line.split(';').map(v => v.trim().replace(/^"|"$/g, ''));
       const row = {};
-      headers.forEach((h, i) => {
-        row[h] = values[i] || '';
-      });
+      headers.forEach((h, i) => { row[h] = values[i] || ''; });
       return row;
-    }).filter(row => Object.values(row).some(v => v)); // Rimuovi righe vuote
+    }).filter(row => Object.values(row).some(v => v));
   };
 
-  const getRowMonth = (row) => row['Mese di Produzione'] || row['Mese_di_Produzione'] || null;
-  
+  const getRowMonth = (row) => row['Mese di Produzione'] || null;
   const getRowDate = (row) => {
-    const dateStr = row['Inserimento'] || row['Data Inserimento'] || '';
-    if (!dateStr) return null;
-    return new Date(dateStr.replace(' ', 'T'));
+    const d = row['Inserimento'] || '';
+    return d ? new Date(d.replace(' ', 'T')) : null;
   };
 
   const extractMonths = (data) => {
     const months = new Set();
     data.forEach(r => { const m = getRowMonth(r); if (m) months.add(m); });
     return Array.from(months).sort((a, b) => {
-      const order = { 'Gennaio':1,'Febbraio':2,'Marzo':3,'Aprile':4,'Maggio':5,'Giugno':6,
-                      'Luglio':7,'Agosto':8,'Settembre':9,'Ottobre':10,'Novembre':11,'Dicembre':12 };
+      const order = { 'Gennaio':1,'Febbraio':2,'Marzo':3,'Aprile':4,'Maggio':5,'Giugno':6,'Luglio':7,'Agosto':8,'Settembre':9,'Ottobre':10,'Novembre':11,'Dicembre':12 };
       const [mA, yA] = a.split(' '); const [mB, yB] = b.split(' ');
       return yA !== yB ? parseInt(yB) - parseInt(yA) : order[mB] - order[mA];
     });
   };
 
   const filterByMonth = (data, month) => month ? data.filter(r => getRowMonth(r) === month) : data;
-  
-  const filterByWeek = (data, week) => {
-    if (!week) return data;
-    return data.filter(r => {
-      const d = getRowDate(r);
-      return d && d >= week.start && d <= week.end;
-    });
-  };
+  const filterByWeek = (data, week) => week ? data.filter(r => { const d = getRowDate(r); return d && d >= week.start && d <= week.end; }) : data;
 
   const handleMonthChange = (month) => {
     setSelectedMonth(month);
     setSelectedWeek(null);
-    const w = getWeeksForMonth(month);
-    setWeeks(w);
+    setWeeks(getWeeksForMonth(month));
     if (csvData && month) {
       const filtered = filterByMonth(csvData, month);
       setFilteredData(filtered);
@@ -223,12 +174,8 @@ export default function Home() {
 
   const handleLogin = () => {
     const u = USERS[loginForm.username.toLowerCase().replace(/\s+/g, '_')];
-    if (u && u.password === loginForm.password) {
-      setUser({ ...u, username: loginForm.username });
-      setLoginError('');
-    } else {
-      setLoginError('Credenziali non valide');
-    }
+    if (u && u.password === loginForm.password) { setUser({ ...u, username: loginForm.username }); setLoginError(''); }
+    else setLoginError('Credenziali non valide');
   };
 
   const processFile = (file) => {
@@ -244,89 +191,50 @@ export default function Home() {
         setEventDate(months[0].toUpperCase());
         setWeeks(getWeeksForMonth(months[0]));
       }
-      // Auto-detect tipo
       const headers = Object.keys(data[0] || {}).join(' ').toLowerCase();
       let type = 'luce_amica';
       if (headers.includes('presente')) type = 'seminario';
       else if (headers.includes('fv') || headers.includes('fotovoltaico')) type = 'fotovoltaico';
-      else if (headers.includes('attivazione') || headers.includes('vipoffice')) type = 'attivazioni';
+      else if (headers.includes('attivazione')) type = 'attivazioni';
       setCsvType(type);
-      
-      // Auto-detect nome evento
       if (type === 'seminario') setEventName('INSERITI SEMINARIO');
-      else if (type === 'luce_amica') setEventName('LUCE AMICA');
       else if (type === 'fotovoltaico') setEventName('FOTOVOLTAICO');
-      else setEventName('ATTIVATI');
-      
+      else setEventName('LUCE AMICA');
       generateRankings(data, type, excludeK);
     };
     reader.readAsText(file, 'UTF-8');
   };
 
-  // ==================== GENERAZIONE CLASSIFICHE ====================
   const generateRankings = (data, type, filterK) => {
     const isK = (name) => K_NAMES.some(k => (name||'').toUpperCase().includes(k));
     const ivd = {}, sdp = {}, nw = {}, k = {};
-    
-    // Funzione per ottenere campo - SOLO dal nome esatto, no fallback a codici
     const getField = (row, fieldName) => {
       const val = row[fieldName];
-      if (!val || val.trim() === '') return '';
-      // Escludi se inizia con NWG (è un codice, non un nome)
-      if (val.trim().toUpperCase().startsWith('NWG')) return '';
+      if (!val || val.trim() === '' || val.trim().toUpperCase().startsWith('NWG')) return '';
       return val.trim();
     };
-    
+
     data.forEach(row => {
-      // IVD - Nome Intermediario
       const ivdN = getField(row, 'Nome Intermediario');
-      
-      // SDP - Prima prova FV poi LA
-      let sdpN = getField(row, 'Nome Primo SDP FV');
-      if (!sdpN) sdpN = getField(row, 'Nome Primo SDP LA');
-      
-      // Networker
+      let sdpN = getField(row, 'Nome Primo SDP FV') || getField(row, 'Nome Primo SDP LA');
       const nwN = getField(row, 'Nome Primo Networker');
-      
-      // K - SOLO "Nome Primo K", niente altro!
       const kN = getField(row, 'Nome Primo K');
       
-      // Determina se accettato
       let isV2 = false;
-      if (type === 'seminario') {
-        isV2 = (row['Presente SI'] || '').toLowerCase() === 'si';
-      } else {
+      if (type === 'seminario') isV2 = (row['Presente SI'] || '').toLowerCase() === 'si';
+      else {
         const stato = (row['Stato NWG Energia'] || row['Stato NWG Spa'] || row['Stato'] || '').toLowerCase();
         isV2 = stato.includes('accettato') || stato.includes('attivo') || stato.includes('active');
       }
       
-      // Popola statistiche
-      if (ivdN && (!filterK || !isK(ivdN))) {
-        if (!ivd[ivdN]) ivd[ivdN] = {v1:0,v2:0};
-        ivd[ivdN].v1++;
-        if (isV2) ivd[ivdN].v2++;
-      }
-      if (sdpN && (!filterK || !isK(sdpN))) {
-        if (!sdp[sdpN]) sdp[sdpN] = {v1:0,v2:0};
-        sdp[sdpN].v1++;
-        if (isV2) sdp[sdpN].v2++;
-      }
-      if (nwN && (!filterK || !isK(nwN))) {
-        if (!nw[nwN]) nw[nwN] = {v1:0,v2:0};
-        nw[nwN].v1++;
-        if (isV2) nw[nwN].v2++;
-      }
-      if (kN) {
-        if (!k[kN]) k[kN] = {v1:0,v2:0};
-        k[kN].v1++;
-        if (isV2) k[kN].v2++;
-      }
+      if (ivdN && (!filterK || !isK(ivdN))) { if (!ivd[ivdN]) ivd[ivdN] = {v1:0,v2:0}; ivd[ivdN].v1++; if (isV2) ivd[ivdN].v2++; }
+      if (sdpN && (!filterK || !isK(sdpN))) { if (!sdp[sdpN]) sdp[sdpN] = {v1:0,v2:0}; sdp[sdpN].v1++; if (isV2) sdp[sdpN].v2++; }
+      if (nwN && (!filterK || !isK(nwN))) { if (!nw[nwN]) nw[nwN] = {v1:0,v2:0}; nw[nwN].v1++; if (isV2) nw[nwN].v2++; }
+      if (kN) { if (!k[kN]) k[kN] = {v1:0,v2:0}; k[kN].v1++; if (isV2) k[kN].v2++; }
     });
 
     const sV1 = (a, b) => b[1].v1 - a[1].v1;
     const sV2 = (a, b) => b[1].v2 - a[1].v2;
-    
-    // Calcola totali corretti
     const totV1 = data.length;
     const totV2 = data.filter(row => {
       const stato = (row['Stato NWG Energia'] || row['Stato NWG Spa'] || row['Stato'] || row['Presente SI'] || '').toLowerCase();
@@ -346,189 +254,264 @@ export default function Home() {
     setSelectedRanking('ivd_inseriti');
   };
 
-  const toggleExcludeK = () => { 
-    const n = !excludeK; 
-    setExcludeK(n); 
-    if (filteredData) generateRankings(filteredData, csvType, n); 
-  };
-  
+  const toggleExcludeK = () => { const n = !excludeK; setExcludeK(n); if (filteredData) generateRankings(filteredData, csvType, n); };
   const getData = () => rankings ? (rankings[selectedRanking] || []) : [];
   const getLabels = () => rankings?.type === 'seminario' ? { c1: 'ISCRITTI', c2: 'PRESENTI' } : { c1: 'INSERITI', c2: 'ACCETTATI' };
   const isExclusive = () => ['nw', 'k'].includes(selectedRanking);
-  
   const getColors = () => {
     const c = {
-      ivd_inseriti: { p: '#FF6B35', s: '#FF8C5A', bg: '#1a0f0a' },
-      ivd_accettati: { p: '#4CAF50', s: '#81C784', bg: '#0a1a0c' },
-      sdp_inseriti: { p: '#2196F3', s: '#64B5F6', bg: '#0a0f1a' },
-      sdp_accettati: { p: '#4CAF50', s: '#81C784', bg: '#0a1a0c' },
-      nw: { p: '#9C27B0', s: '#E040FB', bg: '#1a0a1f' },
-      k: { p: '#FFD700', s: '#FFA000', bg: '#1a1505' }
+      ivd_inseriti: { p: '#FF6B35', s: '#FF8C5A', bg: '#1a0f0a', name: 'IVD' },
+      ivd_accettati: { p: '#4CAF50', s: '#81C784', bg: '#0a1a0c', name: 'IVD' },
+      sdp_inseriti: { p: '#2196F3', s: '#64B5F6', bg: '#0a0f1a', name: 'SDP' },
+      sdp_accettati: { p: '#4CAF50', s: '#81C784', bg: '#0a1a0c', name: 'SDP' },
+      nw: { p: '#9C27B0', s: '#E040FB', bg: '#1a0a1f', name: 'NETWORKER' },
+      k: { p: '#FFD700', s: '#FFA000', bg: '#1a1505', name: 'K MANAGER' }
     };
-    return c[selectedRanking] || { p: '#7C4DFF', s: '#B388FF', bg: '#0f0f1a' };
+    return c[selectedRanking] || { p: '#7C4DFF', s: '#B388FF', bg: '#0f0f1a', name: '' };
+  };
+  const getClassificaTotal = () => getData().reduce((sum, [,s]) => sum + s.v1, 0);
+
+  // Raggruppa per pari merito
+  const groupByValue = (data, useV2 = false) => {
+    const groups = {};
+    data.forEach(([name, s]) => {
+      const val = useV2 ? s.v2 : s.v1;
+      if (!groups[val]) groups[val] = [];
+      groups[val].push({ name, ...s });
+    });
+    return Object.entries(groups)
+      .sort((a, b) => parseInt(b[0]) - parseInt(a[0]))
+      .map(([val, members]) => ({ value: parseInt(val), members }));
   };
 
-  // Calcola somma contratti dalla classifica
-  const getClassificaTotal = () => {
-    return getData().reduce((sum, [,s]) => sum + s.v1, 0);
-  };
-
-  // ==================== PNG IMPACT (IVD/SDP) ====================
+  // ==================== PNG 1080x1080 IVD/SDP ====================
   const generatePNG_Impact = () => {
     const data = getData();
     if (!data.length) return null;
     const colors = getColors();
     const labels = getLabels();
     const isAcc = selectedRanking.includes('accettati');
+    const grouped = groupByValue(data, isAcc);
     
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    
-    const W = 700, headerH = 140, footerH = 50, rowH = 38;
-    const H = headerH + (data.length * rowH) + footerH;
+    const W = 1080, H = 1080;
     canvas.width = W; canvas.height = H;
     
     // Background
     const bg = ctx.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0, '#0a0a12');
+    bg.addColorStop(0, '#0d0d14');
     bg.addColorStop(0.5, colors.bg);
-    bg.addColorStop(1, '#0a0a12');
+    bg.addColorStop(1, '#0d0d14');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
     
+    // Border
+    ctx.strokeStyle = `${colors.p}40`;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(15, 15, W - 30, H - 30);
+    
     // Header bar
     ctx.fillStyle = colors.p;
-    ctx.fillRect(0, 0, W, 4);
+    ctx.fillRect(30, 30, W - 60, 4);
     
     // Logo
     ctx.fillStyle = colors.p;
-    ctx.font = 'bold 12px Arial';
-    ctx.fillText('NWG ITALIA', 25, 25);
+    ctx.font = 'bold 18px Arial';
+    ctx.fillText('NWG ITALIA', 40, 65);
     
-    // Titolo
-    const emoji = selectedRanking === 'ivd_inseriti' ? '🟠' : 
-                  selectedRanking === 'ivd_accettati' ? '🟢' :
-                  selectedRanking === 'sdp_inseriti' ? '🔵' : '🟢';
-    const titles = { 
-      ivd_inseriti: `IVD ${labels.c1}`, 
-      ivd_accettati: `IVD ${labels.c2}`, 
-      sdp_inseriti: `SDP ${labels.c1}`, 
-      sdp_accettati: `SDP ${labels.c2}` 
-    };
-    
+    // Title
+    const emoji = selectedRanking === 'ivd_inseriti' ? '🟠' : selectedRanking === 'ivd_accettati' ? '🟢' : selectedRanking === 'sdp_inseriti' ? '🔵' : '🟢';
     ctx.fillStyle = '#FFF';
-    ctx.font = 'bold 24px Arial';
-    ctx.fillText(`${emoji} CLASSIFICA ${titles[selectedRanking]}`, 25, 55);
+    ctx.font = 'bold 38px Arial';
+    ctx.fillText(`${emoji} CLASSIFICA ${colors.name} ${isAcc ? labels.c2 : labels.c1}`, 40, 115);
     
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.font = '13px Arial';
-    ctx.fillText(`${eventName} • ${eventDate}`, 25, 78);
+    ctx.font = '20px Arial';
+    ctx.fillText(`${eventName} • ${eventDate}`, 40, 150);
     
-    // Totali box - mostra somma contratti dalla classifica
-    const classificaTotal = getClassificaTotal();
+    // Stats box
+    const totIns = getClassificaTotal();
     const totAcc = getData().reduce((sum, [,s]) => sum + s.v2, 0);
-    const convPct = Math.round(totAcc / classificaTotal * 100) || 0;
+    const convPct = Math.round(totAcc / totIns * 100) || 0;
     
-    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
     ctx.beginPath();
-    ctx.roundRect(W - 220, 18, 195, 65, 8);
+    ctx.roundRect(W - 320, 50, 280, 70, 12);
     ctx.fill();
     
-    ctx.font = 'bold 22px Arial';
+    ctx.font = 'bold 32px Arial';
     ctx.textAlign = 'center';
     ctx.fillStyle = colors.p;
-    ctx.fillText(classificaTotal.toString(), W - 155, 48);
+    ctx.fillText(totIns.toString(), W - 230, 95);
     ctx.fillStyle = '#4CAF50';
-    ctx.fillText(totAcc.toString(), W - 85, 48);
-    ctx.fillStyle = convPct >= 60 ? '#4CAF50' : convPct >= 40 ? '#FFC107' : '#FF5722';
-    ctx.fillText(`${convPct}%`, W - 30, 48);
+    ctx.fillText(totAcc.toString(), W - 130, 95);
+    ctx.fillStyle = convPct >= 50 ? '#4CAF50' : '#FFC107';
+    ctx.fillText(`${convPct}%`, W - 50, 95);
     
-    ctx.font = '9px Arial';
+    ctx.font = '12px Arial';
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.fillText(labels.c1, W - 155, 65);
-    ctx.fillText(labels.c2, W - 85, 65);
-    ctx.fillText('CONV', W - 30, 65);
+    ctx.fillText(labels.c1, W - 230, 112);
+    ctx.fillText(labels.c2, W - 130, 112);
+    ctx.fillText('CONV', W - 50, 112);
     ctx.textAlign = 'left';
     
-    // Info partecipanti
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.font = '11px Arial';
-    ctx.fillText(`${data.length} partecipanti`, 25, 100);
+    // Partecipanti count
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = '16px Arial';
+    ctx.fillText(`${data.length} partecipanti in classifica`, 40, 180);
     
     // Separator
-    ctx.fillStyle = 'rgba(255,255,255,0.1)';
-    ctx.fillRect(20, headerH - 15, W - 40, 1);
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillRect(40, 195, W - 80, 2);
     
-    // Rows
-    const startY = headerH;
-    data.forEach(([name, s], i) => {
-      const y = startY + (i * rowH);
-      const val = isAcc ? s.v2 : s.v1;
+    // Rankings
+    let currentY = 220;
+    let position = 1;
+    const maxY = H - 80;
+    
+    grouped.forEach((group, groupIdx) => {
+      if (currentY > maxY) return;
       
-      // Row bg
-      if (i < 3) {
-        const rg = ctx.createLinearGradient(20, y, W - 20, y);
-        rg.addColorStop(0, `${colors.p}20`);
-        rg.addColorStop(1, 'transparent');
-        ctx.fillStyle = rg;
+      const { value, members } = group;
+      const isTop3 = position <= 3;
+      const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : null;
+      
+      if (isTop3 && members.length <= 2) {
+        // TOP 3: Card grande per ogni membro (se pochi)
+        members.forEach((member, mIdx) => {
+          if (currentY > maxY) return;
+          
+          // Card background
+          const cardGrad = ctx.createLinearGradient(40, currentY, W - 40, currentY);
+          cardGrad.addColorStop(0, `${colors.p}25`);
+          cardGrad.addColorStop(1, `${colors.p}08`);
+          ctx.fillStyle = cardGrad;
+          ctx.beginPath();
+          ctx.roundRect(40, currentY, W - 80, 65, 10);
+          ctx.fill();
+          
+          // Medal/Position
+          ctx.font = '36px Arial';
+          ctx.fillText(medal || `${position}°`, 60, currentY + 45);
+          
+          // Name
+          ctx.fillStyle = '#FFF';
+          ctx.font = 'bold 28px Arial';
+          const displayName = member.name.length > 30 ? member.name.substring(0, 28) + '...' : member.name;
+          ctx.fillText(displayName.toUpperCase(), 130, currentY + 43);
+          
+          // Value
+          ctx.fillStyle = isAcc ? '#4CAF50' : colors.p;
+          ctx.font = 'bold 36px Arial';
+          ctx.textAlign = 'right';
+          ctx.fillText(value.toString(), W - 60, currentY + 45);
+          ctx.textAlign = 'left';
+          
+          currentY += 75;
+        });
+      } else if (isTop3) {
+        // TOP 3 con molti pari merito: Card con nomi in riga
+        const cardGrad = ctx.createLinearGradient(40, currentY, W - 40, currentY);
+        cardGrad.addColorStop(0, `${colors.p}25`);
+        cardGrad.addColorStop(1, `${colors.p}08`);
+        ctx.fillStyle = cardGrad;
+        
+        const namesText = members.map(m => m.name.toUpperCase()).join(' • ');
+        const lines = wrapText(ctx, namesText, W - 250, 'bold 22px Arial');
+        const cardHeight = Math.max(65, 40 + lines.length * 28);
+        
         ctx.beginPath();
-        ctx.roundRect(20, y + 1, W - 40, rowH - 2, 4);
+        ctx.roundRect(40, currentY, W - 80, cardHeight, 10);
         ctx.fill();
-      } else if (i % 2 === 0) {
-        ctx.fillStyle = 'rgba(255,255,255,0.02)';
-        ctx.fillRect(20, y, W - 40, rowH);
+        
+        // Medal
+        ctx.font = '36px Arial';
+        ctx.fillText(medal, 60, currentY + 45);
+        
+        // Names
+        ctx.fillStyle = '#FFF';
+        ctx.font = 'bold 22px Arial';
+        lines.forEach((line, i) => {
+          ctx.fillText(line, 130, currentY + 35 + i * 28);
+        });
+        
+        // Value
+        ctx.fillStyle = isAcc ? '#4CAF50' : colors.p;
+        ctx.font = 'bold 36px Arial';
+        ctx.textAlign = 'right';
+        ctx.fillText(value.toString(), W - 60, currentY + 45);
+        ctx.textAlign = 'left';
+        
+        currentY += cardHeight + 10;
+      } else {
+        // Altri: Lista compatta con nomi separati da •
+        ctx.fillStyle = 'rgba(255,255,255,0.04)';
+        ctx.beginPath();
+        
+        const namesText = members.map(m => m.name.toUpperCase()).join(' • ');
+        ctx.font = '18px Arial';
+        const lines = wrapText(ctx, namesText, W - 200, '18px Arial');
+        const blockHeight = Math.max(40, 25 + lines.length * 24);
+        
+        ctx.roundRect(40, currentY, W - 80, blockHeight, 8);
+        ctx.fill();
+        
+        // Position
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.font = 'bold 20px Arial';
+        ctx.fillText(`${position}°`, 55, currentY + 28);
+        
+        // Names
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.font = '18px Arial';
+        lines.forEach((line, i) => {
+          ctx.fillText(line, 100, currentY + 26 + i * 24);
+        });
+        
+        // Value
+        ctx.fillStyle = isAcc ? '#4CAF50' : colors.p;
+        ctx.font = 'bold 26px Arial';
+        ctx.textAlign = 'right';
+        ctx.fillText(value.toString(), W - 55, currentY + 30);
+        ctx.textAlign = 'left';
+        
+        currentY += blockHeight + 8;
       }
       
-      // Position
-      ctx.font = '14px Arial';
-      if (i === 0) ctx.fillText('🥇', 28, y + 24);
-      else if (i === 1) ctx.fillText('🥈', 28, y + 24);
-      else if (i === 2) ctx.fillText('🥉', 28, y + 24);
-      else { ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '12px Arial'; ctx.fillText(`${i+1}°`, 30, y + 24); }
-      
-      // Name
-      ctx.fillStyle = i < 3 ? '#FFF' : 'rgba(255,255,255,0.85)';
-      ctx.font = i < 3 ? 'bold 13px Arial' : '12px Arial';
-      const displayName = name.length > 35 ? name.substring(0, 35) + '...' : name;
-      ctx.fillText(displayName.toUpperCase(), 60, y + 24);
-      
-      // Value
-      ctx.fillStyle = isAcc ? '#4CAF50' : colors.p;
-      ctx.font = i < 3 ? 'bold 18px Arial' : 'bold 15px Arial';
-      ctx.textAlign = 'right';
-      ctx.fillText(val.toString(), W - 30, y + 25);
-      ctx.textAlign = 'left';
+      position++;
     });
     
     // Footer
-    ctx.fillStyle = 'rgba(255,255,255,0.1)';
-    ctx.fillRect(20, H - 40, W - 40, 1);
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.font = '11px Arial';
-    ctx.fillText(`📊 ${data.length} partecipanti • ${classificaTotal} contratti`, 25, H - 15);
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillRect(40, H - 55, W - 80, 2);
+    
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = '16px Arial';
+    ctx.fillText(`📊 ${data.length} partecipanti • ${totIns} contratti`, 45, H - 25);
     ctx.textAlign = 'right';
-    ctx.fillText('LEADER RANKING • TEAM TIESI', W - 25, H - 15);
+    ctx.fillText('LEADER RANKING • TEAM TIESI', W - 45, H - 25);
+    ctx.textAlign = 'left';
+    
+    // Bottom bar
+    ctx.fillStyle = colors.p;
+    ctx.fillRect(30, H - 15, W - 60, 4);
     
     return canvas.toDataURL('image/png');
   };
 
-  // ==================== PNG EXCLUSIVE (NW/K) ====================
+  // ==================== PNG 1080x1080 NETWORKER/K ====================
   const generatePNG_Exclusive = () => {
     const data = getData();
     if (!data.length) return null;
     const colors = getColors();
     const labels = getLabels();
     const isK = selectedRanking === 'k';
+    const grouped = groupByValue(data, false);
     
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    
-    const W = 800, headerH = 150, footerH = 55;
-    const top3H = 85;
-    const rowH = 40;
-    const othersCount = Math.max(0, data.length - 3);
-    const H = headerH + (Math.min(3, data.length) * top3H) + 15 + (othersCount * rowH) + footerH;
-    
+    const W = 1080, H = 1080;
     canvas.width = W; canvas.height = H;
     
     // Background
@@ -540,202 +523,216 @@ export default function Home() {
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
     
-    // Bordo elegante
-    ctx.strokeStyle = isK ? 'rgba(255,215,0,0.3)' : 'rgba(156,39,176,0.3)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(12, 12, W - 24, H - 24);
+    // Double border
+    ctx.strokeStyle = isK ? 'rgba(255,215,0,0.4)' : 'rgba(156,39,176,0.4)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(15, 15, W - 30, H - 30);
+    ctx.strokeStyle = isK ? 'rgba(255,215,0,0.2)' : 'rgba(156,39,176,0.2)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(25, 25, W - 50, H - 50);
     
-    // Header bar
+    // Header gradient bar
     const hg = ctx.createLinearGradient(0, 0, W, 0);
     hg.addColorStop(0, 'transparent');
     hg.addColorStop(0.2, colors.p);
     hg.addColorStop(0.8, colors.s);
     hg.addColorStop(1, 'transparent');
     ctx.fillStyle = hg;
-    ctx.fillRect(25, 25, W - 50, 3);
+    ctx.fillRect(40, 40, W - 80, 5);
     
-    // Titolo
+    // Title
     const emoji = isK ? '👑' : '⭐';
     ctx.fillStyle = colors.p;
-    ctx.font = 'bold 26px Arial';
+    ctx.font = 'bold 42px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`${emoji} CLASSIFICA ${isK ? 'K MANAGER' : 'NETWORKER'} ${emoji}`, W/2, 65);
+    ctx.fillText(`${emoji} CLASSIFICA ${colors.name} ${emoji}`, W/2, 100);
     
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.font = '13px Arial';
-    ctx.fillText(`${eventName} • ${eventDate}`, W/2, 88);
+    ctx.font = '22px Arial';
+    ctx.fillText(`${eventName} • ${eventDate}`, W/2, 135);
     
-    // Totali
-    const classificaTotal = getClassificaTotal();
+    // Stats
+    const totIns = getClassificaTotal();
     const totAcc = getData().reduce((sum, [,s]) => sum + s.v2, 0);
-    const pct = Math.round(totAcc / classificaTotal * 100) || 0;
+    const pct = Math.round(totAcc / totIns * 100) || 0;
     
-    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
     ctx.beginPath();
-    ctx.roundRect(W/2 - 140, 100, 280, 32, 6);
+    ctx.roundRect(W/2 - 200, 155, 400, 50, 10);
     ctx.fill();
     
-    ctx.font = 'bold 13px Arial';
+    ctx.font = 'bold 24px Arial';
     ctx.fillStyle = colors.p;
-    ctx.fillText(`${classificaTotal} ${labels.c1}`, W/2 - 70, 121);
-    ctx.fillStyle = pct >= 60 ? '#4CAF50' : pct >= 40 ? '#FFC107' : '#FF5722';
-    ctx.fillText(`${pct}%`, W/2, 121);
+    ctx.fillText(`${totIns} ${labels.c1}`, W/2 - 100, 188);
+    ctx.fillStyle = pct >= 50 ? '#4CAF50' : '#FFC107';
+    ctx.fillText(`${pct}%`, W/2, 188);
     ctx.fillStyle = '#4CAF50';
-    ctx.fillText(`${totAcc} ${labels.c2}`, W/2 + 70, 121);
+    ctx.fillText(`${totAcc} ${labels.c2}`, W/2 + 100, 188);
     ctx.textAlign = 'left';
     
-    // TOP 3 CARDS
-    let currentY = headerH;
-    const top3 = data.slice(0, 3);
+    // Rankings
+    let currentY = 230;
+    let position = 1;
+    const maxY = H - 80;
     
-    top3.forEach(([name, s], i) => {
-      const p = s.v1 > 0 ? Math.round(s.v2 / s.v1 * 100) : 0;
-      const cardY = currentY + (i * top3H);
+    grouped.forEach((group) => {
+      if (currentY > maxY) return;
       
-      // Card bg
-      const cardGrad = ctx.createLinearGradient(35, cardY, W - 35, cardY);
-      if (i === 0) {
-        cardGrad.addColorStop(0, 'rgba(255,215,0,0.12)');
-        cardGrad.addColorStop(1, 'rgba(255,215,0,0.03)');
-      } else if (i === 1) {
-        cardGrad.addColorStop(0, 'rgba(192,192,192,0.10)');
-        cardGrad.addColorStop(1, 'rgba(192,192,192,0.02)');
+      const { value, members } = group;
+      const isTop3 = position <= 3;
+      const medal = position === 1 ? '🏆' : position === 2 ? '🥈' : position === 3 ? '🥉' : null;
+      
+      if (isTop3) {
+        members.forEach((member) => {
+          if (currentY > maxY) return;
+          
+          // Card
+          const cardGrad = ctx.createLinearGradient(50, currentY, W - 50, currentY);
+          if (position === 1) {
+            cardGrad.addColorStop(0, 'rgba(255,215,0,0.20)');
+            cardGrad.addColorStop(1, 'rgba(255,215,0,0.05)');
+          } else if (position === 2) {
+            cardGrad.addColorStop(0, 'rgba(192,192,192,0.15)');
+            cardGrad.addColorStop(1, 'rgba(192,192,192,0.03)');
+          } else {
+            cardGrad.addColorStop(0, 'rgba(205,127,50,0.12)');
+            cardGrad.addColorStop(1, 'rgba(205,127,50,0.03)');
+          }
+          ctx.fillStyle = cardGrad;
+          ctx.beginPath();
+          ctx.roundRect(50, currentY, W - 100, 120, 15);
+          ctx.fill();
+          
+          ctx.strokeStyle = position === 1 ? 'rgba(255,215,0,0.5)' : position === 2 ? 'rgba(192,192,192,0.4)' : 'rgba(205,127,50,0.4)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          
+          // Medal + Position
+          ctx.font = '48px Arial';
+          ctx.fillText(medal, 75, currentY + 70);
+          
+          ctx.fillStyle = position === 1 ? '#FFD700' : position === 2 ? '#C0C0C0' : '#CD7F32';
+          ctx.font = 'bold 32px Arial';
+          ctx.fillText(`${position}°`, 140, currentY + 65);
+          
+          // Name
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = 'bold 30px Arial';
+          ctx.fillText(member.name.toUpperCase(), 200, currentY + 65);
+          
+          // Stats
+          const pctMember = member.v1 > 0 ? Math.round(member.v2 / member.v1 * 100) : 0;
+          
+          // Inseriti
+          ctx.textAlign = 'center';
+          ctx.fillStyle = colors.p;
+          ctx.font = 'bold 34px Arial';
+          ctx.fillText(member.v1.toString(), W - 320, currentY + 55);
+          ctx.fillStyle = 'rgba(255,255,255,0.4)';
+          ctx.font = '12px Arial';
+          ctx.fillText(labels.c1, W - 320, currentY + 75);
+          
+          // Progress bar
+          const barX = W - 260;
+          const barW = 120;
+          ctx.fillStyle = 'rgba(255,255,255,0.15)';
+          ctx.beginPath();
+          ctx.roundRect(barX, currentY + 40, barW, 22, 6);
+          ctx.fill();
+          
+          const barColor = pctMember >= 60 ? '#4CAF50' : pctMember >= 30 ? '#FFC107' : '#FF5722';
+          ctx.fillStyle = barColor;
+          ctx.beginPath();
+          ctx.roundRect(barX, currentY + 40, barW * pctMember / 100, 22, 6);
+          ctx.fill();
+          
+          ctx.fillStyle = '#FFF';
+          ctx.font = 'bold 14px Arial';
+          ctx.fillText(`${pctMember}%`, barX + barW / 2, currentY + 56);
+          
+          // Accettati
+          ctx.fillStyle = '#4CAF50';
+          ctx.font = 'bold 34px Arial';
+          ctx.fillText(member.v2.toString(), W - 80, currentY + 55);
+          ctx.fillStyle = 'rgba(255,255,255,0.4)';
+          ctx.font = '12px Arial';
+          ctx.fillText(labels.c2, W - 80, currentY + 75);
+          
+          ctx.textAlign = 'left';
+          currentY += 135;
+        });
       } else {
-        cardGrad.addColorStop(0, 'rgba(205,127,50,0.08)');
-        cardGrad.addColorStop(1, 'rgba(205,127,50,0.02)');
-      }
-      ctx.fillStyle = cardGrad;
-      ctx.beginPath();
-      ctx.roundRect(35, cardY + 3, W - 70, top3H - 10, 10);
-      ctx.fill();
-      
-      // Card border
-      ctx.strokeStyle = i === 0 ? 'rgba(255,215,0,0.35)' : i === 1 ? 'rgba(192,192,192,0.25)' : 'rgba(205,127,50,0.25)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      
-      // Medal + Position
-      const medals = ['🏆', '🥈', '🥉'];
-      ctx.font = '28px Arial';
-      ctx.fillText(medals[i], 50, cardY + 48);
-      
-      ctx.fillStyle = i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : '#CD7F32';
-      ctx.font = 'bold 18px Arial';
-      ctx.fillText(`${i + 1}°`, 90, cardY + 45);
-      
-      // Name
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 16px Arial';
-      ctx.fillText(name.toUpperCase(), 125, cardY + 45);
-      
-      // Stats
-      ctx.textAlign = 'right';
-      
-      // Inseriti
-      ctx.fillStyle = colors.p;
-      ctx.font = 'bold 20px Arial';
-      ctx.fillText(s.v1.toString(), W - 260, cardY + 40);
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';
-      ctx.font = '9px Arial';
-      ctx.fillText(labels.c1, W - 260, cardY + 55);
-      
-      // Barra
-      const barX = W - 230;
-      const barW = 90;
-      ctx.fillStyle = 'rgba(255,255,255,0.1)';
-      ctx.beginPath();
-      ctx.roundRect(barX, cardY + 30, barW, 14, 4);
-      ctx.fill();
-      
-      const barColor = p >= 70 ? '#4CAF50' : p >= 50 ? '#FFC107' : '#FF5722';
-      ctx.fillStyle = barColor;
-      ctx.beginPath();
-      ctx.roundRect(barX, cardY + 30, barW * p / 100, 14, 4);
-      ctx.fill();
-      
-      ctx.fillStyle = '#FFF';
-      ctx.font = 'bold 10px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(`${p}%`, barX + barW / 2, cardY + 42);
-      
-      // Accettati
-      ctx.textAlign = 'right';
-      ctx.fillStyle = '#4CAF50';
-      ctx.font = 'bold 20px Arial';
-      ctx.fillText(s.v2.toString(), W - 50, cardY + 40);
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';
-      ctx.font = '9px Arial';
-      ctx.fillText(labels.c2, W - 50, cardY + 55);
-      
-      ctx.textAlign = 'left';
-    });
-    
-    // Altri
-    if (data.length > 3) {
-      currentY = headerH + (top3H * Math.min(3, data.length)) + 8;
-      
-      ctx.fillStyle = 'rgba(255,255,255,0.1)';
-      ctx.fillRect(45, currentY, W - 90, 1);
-      currentY += 12;
-      
-      data.slice(3).forEach(([name, s], i) => {
-        const y = currentY + (i * rowH);
-        const p = s.v1 > 0 ? Math.round(s.v2 / s.v1 * 100) : 0;
+        // Altri: Riga compatta, pari merito insieme
+        const namesText = members.map(m => m.name.toUpperCase()).join(' • ');
+        ctx.font = '20px Arial';
+        const lines = wrapText(ctx, namesText, W - 400, '20px Arial');
+        const blockHeight = Math.max(55, 30 + lines.length * 26);
         
-        if (i % 2 === 0) {
-          ctx.fillStyle = 'rgba(255,255,255,0.02)';
-          ctx.fillRect(35, y, W - 70, rowH);
-        }
+        ctx.fillStyle = 'rgba(255,255,255,0.04)';
+        ctx.beginPath();
+        ctx.roundRect(50, currentY, W - 100, blockHeight, 10);
+        ctx.fill();
         
-        ctx.fillStyle = 'rgba(255,255,255,0.5)';
-        ctx.font = '12px Arial';
-        ctx.fillText(`${i + 4}°`, 50, y + 24);
+        // Position
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.font = 'bold 22px Arial';
+        ctx.fillText(`${position}°`, 70, currentY + 35);
         
-        ctx.fillStyle = 'rgba(255,255,255,0.85)';
-        ctx.font = '12px Arial';
-        const displayName = name.length > 28 ? name.substring(0, 28) + '...' : name;
-        ctx.fillText(displayName.toUpperCase(), 85, y + 24);
+        // Names
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.font = '20px Arial';
+        lines.forEach((line, i) => {
+          ctx.fillText(line, 120, currentY + 32 + i * 26);
+        });
         
-        ctx.textAlign = 'right';
+        // Stats (primo del gruppo come riferimento)
+        const first = members[0];
+        const pctFirst = first.v1 > 0 ? Math.round(first.v2 / first.v1 * 100) : 0;
+        
+        ctx.textAlign = 'center';
         ctx.fillStyle = colors.p;
-        ctx.font = 'bold 13px Arial';
-        ctx.fillText(s.v1.toString(), W - 200, y + 24);
+        ctx.font = 'bold 24px Arial';
+        ctx.fillText(first.v1.toString(), W - 250, currentY + 35);
         
-        const barX = W - 175;
-        const barW = 55;
+        // Mini bar
+        const barX = W - 200;
+        const barW = 80;
         ctx.fillStyle = 'rgba(255,255,255,0.1)';
         ctx.beginPath();
-        ctx.roundRect(barX, y + 14, barW, 10, 3);
+        ctx.roundRect(barX, currentY + 20, barW, 16, 4);
         ctx.fill();
         
-        const barColor = p >= 70 ? '#4CAF50' : p >= 50 ? '#FFC107' : '#FF5722';
+        const barColor = pctFirst >= 60 ? '#4CAF50' : pctFirst >= 30 ? '#FFC107' : '#FF5722';
         ctx.fillStyle = barColor;
         ctx.beginPath();
-        ctx.roundRect(barX, y + 14, barW * p / 100, 10, 3);
+        ctx.roundRect(barX, currentY + 20, barW * pctFirst / 100, 16, 4);
         ctx.fill();
         
         ctx.fillStyle = barColor;
-        ctx.font = '10px Arial';
-        ctx.fillText(`${p}%`, W - 105, y + 24);
+        ctx.font = '14px Arial';
+        ctx.fillText(`${pctFirst}%`, barX + barW / 2, currentY + 33);
         
         ctx.fillStyle = '#4CAF50';
-        ctx.font = 'bold 13px Arial';
-        ctx.fillText(s.v2.toString(), W - 50, y + 24);
+        ctx.font = 'bold 24px Arial';
+        ctx.fillText(first.v2.toString(), W - 70, currentY + 35);
         
         ctx.textAlign = 'left';
-      });
-    }
+        currentY += blockHeight + 10;
+      }
+      
+      position++;
+    });
     
     // Footer
-    const footerY = H - 45;
-    ctx.fillStyle = 'rgba(255,255,255,0.1)';
-    ctx.fillRect(45, footerY, W - 90, 1);
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillRect(50, H - 60, W - 100, 2);
     
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.font = '11px Arial';
-    ctx.fillText(`📊 ${data.length} ${isK ? 'K Manager' : 'Networker'} • ${classificaTotal} contratti`, 50, footerY + 22);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = '18px Arial';
+    ctx.fillText(`📊 ${data.length} ${isK ? 'K Manager' : 'Networker'} • ${totIns} contratti`, 55, H - 30);
     ctx.textAlign = 'right';
-    ctx.fillText('LEADER RANKING • TEAM TIESI', W - 50, footerY + 22);
+    ctx.fillText('LEADER RANKING • TEAM TIESI', W - 55, H - 30);
+    ctx.textAlign = 'left';
     
     // Bottom bar
     const fg = ctx.createLinearGradient(0, 0, W, 0);
@@ -744,9 +741,30 @@ export default function Home() {
     fg.addColorStop(0.8, colors.s);
     fg.addColorStop(1, 'transparent');
     ctx.fillStyle = fg;
-    ctx.fillRect(25, H - 18, W - 50, 3);
+    ctx.fillRect(40, H - 15, W - 80, 5);
     
     return canvas.toDataURL('image/png');
+  };
+
+  // Utility: wrap text
+  const wrapText = (ctx, text, maxWidth, font) => {
+    ctx.font = font;
+    const words = text.split(' ');
+    const lines = [];
+    let currentLine = '';
+    
+    words.forEach(word => {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      const metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidth && currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    });
+    if (currentLine) lines.push(currentLine);
+    return lines;
   };
 
   const generatePNG = () => isExclusive() ? generatePNG_Exclusive() : generatePNG_Impact();
@@ -770,23 +788,15 @@ export default function Home() {
     const img = previewImage || generatePNG();
     if (!img) { setSendStatus('Errore'); return; }
     try {
-      await fetch('https://hook.eu1.make.com/yxawj0edtdnd4a7rvap2loca9vqccrk7', {
+      await fetch(WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         mode: 'no-cors',
         body: JSON.stringify({
-          source: 'webapp',
-          ranking_type: selectedRanking,
-          csv_type: csvType,
-          event_name: eventName,
-          event_date: eventDate,
-          exclude_k: excludeK,
-          timestamp: new Date().toISOString(),
-          image_base64: img,
-          top10: getData().slice(0, 10).map(([name, s], i) => ({ 
-            pos: i + 1, name, v1: s.v1, v2: s.v2, 
-            pct: Math.round(s.v2 / s.v1 * 100) || 0 
-          })),
+          source: 'webapp', ranking_type: selectedRanking, csv_type: csvType,
+          event_name: eventName, event_date: eventDate, exclude_k: excludeK,
+          timestamp: new Date().toISOString(), image_base64: img,
+          top10: getData().slice(0, 10).map(([name, s], i) => ({ pos: i + 1, name, v1: s.v1, v2: s.v2, pct: Math.round(s.v2 / s.v1 * 100) || 0 })),
           totals: { v1: getClassificaTotal(), v2: getData().reduce((sum, [,s]) => sum + s.v2, 0) },
           total_participants: getData().length
         })
@@ -802,10 +812,10 @@ export default function Home() {
   const labels = getLabels();
   const colors = getColors();
 
-  // ==================== LOGIN ====================
+  // LOGIN
   if (!user) return (
     <>
-      <Head><title>Leader Ranking</title><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" /></Head>
+      <Head><title>Leader Ranking</title><meta name="viewport" content="width=device-width,initial-scale=1" /></Head>
       <div style={S.loginWrap}>
         <div style={S.loginCard}>
           <div style={S.logo}><span style={{ color: '#7C4DFF', fontWeight: 800 }}>LEADER</span> <span style={{ fontWeight: 300 }}>RANKING</span></div>
@@ -815,23 +825,21 @@ export default function Home() {
           <input style={S.input} type="password" placeholder="Password" value={loginForm.password} onChange={e => setLoginForm({ ...loginForm, password: e.target.value })} onKeyPress={e => e.key === 'Enter' && handleLogin()} />
           {loginError && <p style={{ color: '#f44', fontSize: 13 }}>{loginError}</p>}
           <button style={S.btn} onClick={handleLogin}>ACCEDI</button>
-          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, marginTop: 20 }}>v7.1</p>
+          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, marginTop: 20 }}>v7.2</p>
         </div>
       </div>
     </>
   );
 
-  // ==================== PREVIEW ====================
+  // PREVIEW
   if (showPreview && previewImage) return (
     <>
       <Head><title>Anteprima</title></Head>
       <div style={S.previewWrap}>
         <div style={S.previewModal}>
-          <h2 style={{ color: '#fff', marginBottom: 5 }}>📸 {isExclusive() ? 'Classifica Exclusive' : 'Classifica'}</h2>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 15 }}>
-            ✅ {getData().length} partecipanti • {getClassificaTotal()} contratti • {eventDate}
-          </p>
-          <div style={S.previewImg}><img src={previewImage} style={{ maxWidth: '100%' }} /></div>
+          <h2 style={{ color: '#fff', marginBottom: 5 }}>📸 Anteprima 1080x1080</h2>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 15 }}>✅ {getData().length} partecipanti • {getClassificaTotal()} contratti</p>
+          <div style={S.previewImg}><img src={previewImage} style={{ maxWidth: '100%', maxHeight: '60vh' }} /></div>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 15, flexWrap: 'wrap' }}>
             <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'transparent', border: '1px solid rgba(255,255,255,0.2)' }} onClick={() => setShowPreview(false)}>Chiudi</button>
             <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'linear-gradient(135deg,#4CAF50,#81C784)' }} onClick={download}>📥 Scarica</button>
@@ -843,16 +851,16 @@ export default function Home() {
     </>
   );
 
-  // ==================== DASHBOARD ====================
+  // DASHBOARD
   return (
     <>
-      <Head><title>Leader Ranking</title><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" /></Head>
+      <Head><title>Leader Ranking</title><meta name="viewport" content="width=device-width,initial-scale=1" /></Head>
       <div style={S.dash}>
         <header style={S.header}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button style={S.menuBtn} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>☰</button>
             <span style={{ fontWeight: 800, color: '#7C4DFF' }}>LEADER RANKING</span>
-            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>v7.1</span>
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>v7.2</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={S.badge}>{user.role.toUpperCase()}</span>
@@ -877,7 +885,7 @@ export default function Home() {
                 <button style={{ ...S.menuItem, ...(selectedRanking === 'sdp_accettati' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('sdp_accettati'); setMobileMenuOpen(false); }}>🟢 {labels.c2} ({rankings.sdp_accettati.length})</button>
                 <p style={S.catLabel}>MANAGER</p>
                 <button style={{ ...S.menuItem, ...(selectedRanking === 'nw' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('nw'); setMobileMenuOpen(false); }}>🟣 Networker ({rankings.nw.length})</button>
-                <button style={{ ...S.menuItem, ...(selectedRanking === 'k' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('k'); setMobileMenuOpen(false); }}>👑 Primo K ({rankings.k.length})</button>
+                <button style={{ ...S.menuItem, ...(selectedRanking === 'k' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('k'); setMobileMenuOpen(false); }}>👑 K Manager ({rankings.k.length})</button>
               </>
             ) : <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>Carica CSV</p>}
 
@@ -893,17 +901,13 @@ export default function Home() {
                 <div style={S.divider} />
 
                 <p style={S.catLabel}>📅 PERIODO</p>
-                <button style={{ ...S.periodBtn, ...(!selectedMonth ? { background: 'rgba(124,77,255,0.2)', color: '#7C4DFF' } : {}) }} onClick={handleShowAll}>
-                  📋 Tutti ({csvData?.length || 0})
-                </button>
-
+                <button style={{ ...S.periodBtn, ...(!selectedMonth ? { background: 'rgba(124,77,255,0.2)', color: '#7C4DFF' } : {}) }} onClick={handleShowAll}>📋 Tutti ({csvData?.length || 0})</button>
                 {availableMonths.length > 0 && (
                   <select style={S.select} value={selectedMonth} onChange={e => handleMonthChange(e.target.value)}>
                     <option value="">-- Mese --</option>
                     {availableMonths.map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
                 )}
-
                 {weeks.length > 0 && (
                   <select style={S.select} value={selectedWeek?.num || ''} onChange={e => handleWeekChange(e.target.value)}>
                     <option value="">-- Settimana --</option>
@@ -926,12 +930,10 @@ export default function Home() {
 
           <section style={S.content}>
             {(user.role === 'admin' || user.role === 'assistente') && (
-              <div
-                style={{ ...S.uploadBox, ...(isDragging ? { borderColor: '#7C4DFF', background: 'rgba(124,77,255,0.1)' } : {}) }}
+              <div style={{ ...S.uploadBox, ...(isDragging ? { borderColor: '#7C4DFF', background: 'rgba(124,77,255,0.1)' } : {}) }}
                 onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
                 onDragLeave={e => { e.preventDefault(); setIsDragging(false); }}
-                onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.csv')) processFile(f); }}
-              >
+                onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.csv')) processFile(f); }}>
                 <input type="file" accept=".csv" id="csv" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processFile(e.target.files[0]); }} />
                 <label htmlFor="csv" style={{ cursor: 'pointer', padding: '10px 20px', background: 'rgba(124,77,255,0.1)', borderRadius: 8, color: '#7C4DFF', fontWeight: 600 }}>
                   {filteredData ? `✅ ${filteredData.length} righe caricate` : '📤 Carica CSV'}
@@ -949,16 +951,13 @@ export default function Home() {
                       {selectedRanking === 'sdp_inseriti' && `🔵 SDP ${labels.c1}`}
                       {selectedRanking === 'sdp_accettati' && `🟢 SDP ${labels.c2}`}
                       {selectedRanking === 'nw' && '🟣 Networker'}
-                      {selectedRanking === 'k' && '👑 Primo K'}
+                      {selectedRanking === 'k' && '👑 K Manager'}
                     </h2>
-                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 4 }}>
-                      {getData().length} partecipanti • {getClassificaTotal()} contratti • {eventDate}
-                    </p>
+                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 4 }}>{getData().length} partecipanti • {getClassificaTotal()} contratti • {eventDate}</p>
                   </div>
                   <div style={{ display: 'flex', gap: 15 }}>
                     <div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: colors.p }}>{getClassificaTotal()}</div><div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>{labels.c1}</div></div>
                     <div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</div><div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>{labels.c2}</div></div>
-                    <div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: '#7C4DFF' }}>{Math.round(getData().reduce((s,[,x])=>s+x.v2,0) / getClassificaTotal() * 100) || 0}%</div><div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>CONV</div></div>
                   </div>
                 </div>
 
@@ -968,15 +967,8 @@ export default function Home() {
                       <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                         <th style={S.th}>#</th>
                         <th style={{ ...S.th, textAlign: 'left' }}>Nome</th>
-                        {isExclusive() ? (
-                          <>
-                            <th style={S.th}>{labels.c1}</th>
-                            <th style={S.th}>%</th>
-                            <th style={S.th}>{labels.c2}</th>
-                          </>
-                        ) : (
-                          <th style={S.th}>{selectedRanking.includes('accettati') ? labels.c2 : labels.c1}</th>
-                        )}
+                        <th style={S.th}>{labels.c1}</th>
+                        {isExclusive() && <><th style={S.th}>%</th><th style={S.th}>{labels.c2}</th></>}
                       </tr>
                     </thead>
                     <tbody>
@@ -986,17 +978,8 @@ export default function Home() {
                           <tr key={name} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', ...(i < 3 ? { background: `${colors.p}10` } : {}) }}>
                             <td style={{ padding: 10, textAlign: 'center' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td>
                             <td style={{ padding: 10, fontWeight: i < 3 ? 700 : 500, fontSize: 13 }}>{name}</td>
-                            {isExclusive() ? (
-                              <>
-                                <td style={{ padding: 10, textAlign: 'center', color: colors.p, fontWeight: 700 }}>{s.v1}</td>
-                                <td style={{ padding: 10, textAlign: 'center', color: p >= 70 ? '#4CAF50' : p >= 50 ? '#FFC107' : '#FF5722', fontSize: 12 }}>{p}%</td>
-                                <td style={{ padding: 10, textAlign: 'center', color: '#4CAF50', fontWeight: 700 }}>{s.v2}</td>
-                              </>
-                            ) : (
-                              <td style={{ padding: 10, textAlign: 'center', color: selectedRanking.includes('accettati') ? '#4CAF50' : colors.p, fontWeight: 700, fontSize: 16 }}>
-                                {selectedRanking.includes('accettati') ? s.v2 : s.v1}
-                              </td>
-                            )}
+                            <td style={{ padding: 10, textAlign: 'center', color: colors.p, fontWeight: 700 }}>{s.v1}</td>
+                            {isExclusive() && <><td style={{ padding: 10, textAlign: 'center', color: p >= 50 ? '#4CAF50' : '#FFC107', fontSize: 12 }}>{p}%</td><td style={{ padding: 10, textAlign: 'center', color: '#4CAF50', fontWeight: 700 }}>{s.v2}</td></>}
                           </tr>
                         );
                       })}
@@ -1006,12 +989,8 @@ export default function Home() {
 
                 {(user.role === 'admin' || user.role === 'assistente') && (
                   <div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${colors.p},${colors.s})` }} onClick={handleGenerate}>
-                      📸 PNG ({getData().length})
-                    </button>
-                    <button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg,#00BFA5,#1DE9B6)' }} onClick={handleSendToBot}>
-                      🤖 Invia a Bot
-                    </button>
+                    <button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${colors.p},${colors.s})` }} onClick={handleGenerate}>📸 PNG 1080x1080</button>
+                    <button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg,#00BFA5,#1DE9B6)' }} onClick={handleSendToBot}>🤖 Invia a Bot</button>
                     {sendStatus && <span style={{ fontSize: 13, color: sendStatus.includes('✅') ? '#4CAF50' : sendStatus.includes('❌') ? '#f44' : '#FFC107' }}>{sendStatus}</span>}
                   </div>
                 )}
@@ -1036,8 +1015,8 @@ const S = {
   input: { width: '100%', padding: '14px 16px', fontSize: 15, border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, background: 'rgba(255,255,255,0.05)', color: '#fff', marginBottom: 12, outline: 'none', boxSizing: 'border-box' },
   btn: { padding: '14px 24px', fontSize: 14, fontWeight: 700, border: 'none', borderRadius: 10, background: 'linear-gradient(135deg,#7C4DFF,#536DFE)', color: '#fff', cursor: 'pointer', width: '100%' },
   previewWrap: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 15 },
-  previewModal: { background: '#1a1a2e', borderRadius: 16, padding: 20, width: '100%', maxWidth: 850, maxHeight: '95vh', display: 'flex', flexDirection: 'column' },
-  previewImg: { background: '#0a0a15', borderRadius: 10, padding: 10, overflow: 'auto', flex: 1, maxHeight: '70vh' },
+  previewModal: { background: '#1a1a2e', borderRadius: 16, padding: 20, width: '100%', maxWidth: 600, maxHeight: '95vh', display: 'flex', flexDirection: 'column' },
+  previewImg: { background: '#0a0a15', borderRadius: 10, padding: 10, overflow: 'auto', flex: 1 },
   dash: { minHeight: '100vh', background: '#0f0f1a', color: '#fff', fontFamily: '-apple-system,sans-serif' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.05)', position: 'sticky', top: 0, zIndex: 100 },
   menuBtn: { background: 'none', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer' },
