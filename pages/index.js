@@ -191,14 +191,6 @@ export default function Home() {
     const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d'), W = 1080, H = 1080;
     canvas.width = W; canvas.height = H;
     
-    // Truncate name function
-    const truncName = (name, maxLen = 22) => name.length > maxLen ? name.substring(0, maxLen - 1) + '…' : name;
-    
-    // Calculate adaptive font size based on total participants
-    const totalP = data.length;
-    const baseFontSize = totalP <= 10 ? 20 : totalP <= 20 ? 18 : totalP <= 40 ? 16 : 14;
-    const top3FontSize = Math.min(24, baseFontSize + 4);
-    
     // Background
     const bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#0a0a12'); bg.addColorStop(0.5, '#12121f'); bg.addColorStop(1, '#0a0a12');
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
@@ -207,114 +199,123 @@ export default function Home() {
     
     // Header
     ctx.fillStyle = config.color; ctx.font = 'bold 16px Arial'; ctx.fillText('LEADER RANKING', 45, 70);
-    ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 36px Arial'; ctx.fillText(`${config.emoji} CLASSIFICA ${config.label}`, 45, 115);
-    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '16px Arial'; ctx.fillText(`${eventName} • ${eventDate}`, 45, 145);
+    ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 38px Arial'; ctx.fillText(`${config.emoji} CLASSIFICA ${config.label}`, 45, 120);
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '18px Arial'; ctx.fillText(`${eventName} • ${eventDate}`, 45, 155);
     
     // Stats box
     const totIns = getClassificaTotal(), totAcc = getData().reduce((sum, [,s]) => sum + s.v2, 0), convPct = Math.round(totAcc / totIns * 100) || 0;
-    ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.roundRect(W - 280, 50, 240, 60, 10); ctx.fill();
-    ctx.font = 'bold 26px Arial'; ctx.textAlign = 'center';
-    ctx.fillStyle = config.color; ctx.fillText(totIns.toString(), W - 195, 88);
-    ctx.fillStyle = '#4CAF50'; ctx.fillText(totAcc.toString(), W - 105, 88);
-    ctx.fillStyle = convPct >= 50 ? '#4CAF50' : '#FFC107'; ctx.fillText(`${convPct}%`, W - 30, 88);
-    ctx.font = '9px Arial'; ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.fillText('INS.', W - 195, 102); ctx.fillText('ACC.', W - 105, 102); ctx.fillText('CONV', W - 30, 102); ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.roundRect(W - 290, 55, 250, 70, 12); ctx.fill();
+    ctx.font = 'bold 28px Arial'; ctx.textAlign = 'center';
+    ctx.fillStyle = config.color; ctx.fillText(totIns.toString(), W - 200, 95);
+    ctx.fillStyle = '#4CAF50'; ctx.fillText(totAcc.toString(), W - 110, 95);
+    ctx.fillStyle = convPct >= 50 ? '#4CAF50' : '#FFC107'; ctx.fillText(`${convPct}%`, W - 35, 95);
+    ctx.font = '10px Arial'; ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillText('INS.', W - 200, 112); ctx.fillText('ACC.', W - 110, 112); ctx.fillText('CONV', W - 35, 112);
+    ctx.textAlign = 'left';
     
     // Participants count
-    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '13px Arial'; ctx.fillText(`${data.length} partecipanti in classifica`, 45, 175);
-    ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(45, 188, W - 90, 1);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '14px Arial';
+    ctx.fillText(`${data.length} partecipanti in classifica`, 45, 185);
+    ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(45, 200, W - 90, 1);
     
-    let currentY = 205;
+    // Calculate available space
+    let currentY = 220;
+    const footerY = H - 60;
+    const availableH = footerY - currentY;
+    
+    // Estimate row heights and adjust font
+    let totalRows = 0;
+    grouped.forEach(g => {
+      const namesJoined = g.members.map(m => m.name).join(' • ');
+      totalRows += Math.ceil(namesJoined.length / 80) + 1; // Rough estimate
+    });
+    
+    // Adaptive sizing
+    const baseFontSize = totalRows <= 8 ? 22 : totalRows <= 15 ? 19 : totalRows <= 25 ? 16 : 14;
+    const lineHeight = baseFontSize + 8;
+    const groupPadding = totalRows <= 15 ? 15 : 10;
+    
     let position = 1;
-    const footerY = H - 55;
-    const availableH = footerY - currentY - 10;
-    const rowsNeeded = grouped.length;
-    const maxRowH = Math.min(70, Math.max(38, availableH / rowsNeeded - 8));
     
     grouped.forEach((group) => {
-      if (currentY > footerY - 40) return;
+      if (currentY > footerY - 50) return;
       const { value, members } = group;
       const isTop3 = position <= 3;
       const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : null;
       
-      // Truncate and format names
-      const truncatedNames = members.map(m => truncName(m.name.toUpperCase()));
-      const fontSize = isTop3 ? top3FontSize : baseFontSize;
+      // Format names with bullet separator
+      const fontSize = isTop3 ? baseFontSize + 2 : baseFontSize;
+      ctx.font = `bold ${fontSize}px Arial`;
       
-      // Calculate how many names per line (2 columns for large groups)
-      let namesPerLine = members.length > 6 ? Math.ceil(members.length / 2) : members.length;
-      let nameLines = [];
+      // Split names into lines that fit
+      const maxLineWidth = W - 180;
+      const allNames = members.map(m => m.name.toUpperCase());
+      const lines = [];
+      let currentLine = '';
       
-      if (members.length <= 3) {
-        nameLines = [truncatedNames.join('  •  ')];
-      } else if (members.length <= 6) {
-        nameLines = [truncatedNames.join('  •  ')];
-        // Wrap if too long
-        ctx.font = `bold ${fontSize}px Arial`;
-        if (ctx.measureText(nameLines[0]).width > W - 200) {
-          const half = Math.ceil(truncatedNames.length / 2);
-          nameLines = [
-            truncatedNames.slice(0, half).join('  •  '),
-            truncatedNames.slice(half).join('  •  ')
-          ];
+      allNames.forEach((name, idx) => {
+        const separator = idx > 0 ? '  •  ' : '';
+        const testLine = currentLine + separator + name;
+        
+        if (ctx.measureText(testLine).width > maxLineWidth && currentLine) {
+          lines.push(currentLine);
+          currentLine = name;
+        } else {
+          currentLine = testLine;
         }
-      } else {
-        // Large group: 2 columns
-        const half = Math.ceil(truncatedNames.length / 2);
-        nameLines = [
-          truncatedNames.slice(0, half).join('  •  '),
-          truncatedNames.slice(half).join('  •  ')
-        ];
-      }
+      });
+      if (currentLine) lines.push(currentLine);
       
-      const lineH = fontSize + 6;
-      const blockH = Math.max(isTop3 ? 50 : 42, 16 + nameLines.length * lineH);
+      // Calculate block height
+      const blockH = Math.max(isTop3 ? 55 : 48, 20 + lines.length * lineHeight);
       
-      if (currentY + blockH > footerY - 25) return;
+      if (currentY + blockH > footerY - 40) return;
       
       // Background
       if (isTop3) {
         const grad = ctx.createLinearGradient(45, currentY, W - 45, currentY);
-        grad.addColorStop(0, `${config.color}25`); grad.addColorStop(1, `${config.color}08`);
+        grad.addColorStop(0, `${config.color}22`); grad.addColorStop(1, `${config.color}08`);
         ctx.fillStyle = grad;
       } else {
         ctx.fillStyle = 'rgba(255,255,255,0.04)';
       }
-      ctx.beginPath(); ctx.roundRect(45, currentY, W - 90, blockH, 8); ctx.fill();
+      ctx.beginPath(); ctx.roundRect(45, currentY, W - 90, blockH, 10); ctx.fill();
       
       // Medal/Position
-      const centerY = currentY + blockH / 2;
+      const textStartY = currentY + (blockH - lines.length * lineHeight) / 2 + fontSize;
+      
       if (medal) {
-        ctx.font = '24px Arial'; ctx.fillText(medal, 55, centerY + 8);
+        ctx.font = '28px Arial';
+        ctx.fillText(medal, 58, textStartY + (lines.length > 1 ? 0 : 5));
       } else {
-        ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = 'bold 15px Arial';
-        ctx.fillText(`${position}°`, 58, centerY + 5);
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.font = 'bold 18px Arial';
+        ctx.fillText(`${position}°`, 60, textStartY + (lines.length > 1 ? 0 : 5));
       }
       
       // Names
       ctx.fillStyle = isTop3 ? '#FFF' : 'rgba(255,255,255,0.88)';
       ctx.font = `bold ${fontSize}px Arial`;
-      const startTextY = currentY + (blockH - nameLines.length * lineH) / 2 + fontSize;
-      nameLines.forEach((line, i) => {
-        ctx.fillText(line, 95, startTextY + i * lineH);
+      lines.forEach((line, i) => {
+        ctx.fillText(line, 100, textStartY + i * lineHeight);
       });
       
       // Value
       ctx.fillStyle = isAcc ? '#4CAF50' : config.color;
-      ctx.font = `bold ${isTop3 ? 28 : 22}px Arial`;
+      ctx.font = `bold ${isTop3 ? 32 : 26}px Arial`;
       ctx.textAlign = 'right';
-      ctx.fillText(value.toString(), W - 55, centerY + 8);
+      ctx.fillText(value.toString(), W - 55, currentY + blockH / 2 + 10);
       ctx.textAlign = 'left';
       
-      currentY += blockH + 8;
+      currentY += blockH + groupPadding;
       position++;
     });
     
     // Footer
     ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(45, footerY, W - 90, 1);
-    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '13px Arial';
-    ctx.fillText(`📊 ${data.length} partecipanti • ${totIns} contratti`, 50, footerY + 25);
-    ctx.textAlign = 'right'; ctx.fillText('LEADER RANKING', W - 50, footerY + 25);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '14px Arial';
+    ctx.fillText(`📊 ${data.length} partecipanti • ${totIns} contratti`, 50, footerY + 28);
+    ctx.textAlign = 'right'; ctx.fillText('LEADER RANKING', W - 50, footerY + 28);
     ctx.textAlign = 'left';
     ctx.fillStyle = config.color; ctx.fillRect(35, H - 18, W - 70, 4);
     
@@ -333,37 +334,30 @@ export default function Home() {
     ctx.strokeStyle = `${config.color}50`; ctx.lineWidth = 3; ctx.strokeRect(18, 18, W - 36, H - 36);
     ctx.strokeStyle = `${config.color}25`; ctx.lineWidth = 1; ctx.strokeRect(28, 28, W - 56, H - 56);
     
-    // Header gradient bar
+    // Header bar
     const hg = ctx.createLinearGradient(0, 0, W, 0); hg.addColorStop(0, 'transparent'); hg.addColorStop(0.15, config.color); hg.addColorStop(0.85, config.color); hg.addColorStop(1, 'transparent');
     ctx.fillStyle = hg; ctx.fillRect(45, 45, W - 90, 4);
     
     // Title
     ctx.fillStyle = config.color; ctx.font = 'bold 40px Arial'; ctx.textAlign = 'center';
-    ctx.fillText(`${config.emoji} CLASSIFICA ${config.label} ${config.emoji}`, W/2, 100);
-    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '17px Arial'; ctx.fillText(`${eventName} • ${eventDate}`, W/2, 130);
+    ctx.fillText(`${config.emoji} CLASSIFICA ${config.label} ${config.emoji}`, W/2, 105);
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '18px Arial';
+    ctx.fillText(`${eventName} • ${eventDate}`, W/2, 138);
     
-    // Stats - inline format
+    // Stats - INLINE format (fix richiesto)
     const totIns = getClassificaTotal(), totAcc = getData().reduce((sum, [,s]) => sum + s.v2, 0), pct = Math.round(totAcc / totIns * 100) || 0;
-    ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.roundRect(W/2 - 160, 150, 320, 38, 8); ctx.fill();
-    ctx.font = 'bold 18px Arial';
-    ctx.fillStyle = config.color; ctx.fillText(`${totIns} INS.`, W/2 - 80, 175);
-    ctx.fillStyle = pct >= 50 ? '#4CAF50' : '#FFC107'; ctx.fillText(`${pct}%`, W/2, 175);
-    ctx.fillStyle = '#4CAF50'; ctx.fillText(`${totAcc} ACC.`, W/2 + 80, 175);
+    ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.roundRect(W/2 - 175, 158, 350, 42, 8); ctx.fill();
+    ctx.font = 'bold 20px Arial';
+    ctx.fillStyle = config.color; ctx.fillText(`${totIns} INS.`, W/2 - 85, 186);
+    ctx.fillStyle = pct >= 50 ? '#4CAF50' : '#FFC107'; ctx.fillText(`${pct}%`, W/2, 186);
+    ctx.fillStyle = '#4CAF50'; ctx.fillText(`${totAcc} ACC.`, W/2 + 85, 186);
     ctx.textAlign = 'left';
     
-    // Calculate card dimensions based on participant count
-    const startY = 205;
-    const footerY = H - 60;
-    const availH = footerY - startY - 10;
-    const cardH = Math.min(130, Math.max(55, availH / data.length - 10));
-    const fontSize = cardH >= 100 ? 26 : cardH >= 70 ? 22 : 18;
-    const numFontSize = cardH >= 100 ? 28 : cardH >= 70 ? 24 : 20;
+    // Cards - ORIGINALE v8.0
+    const startY = 225, footerY = H - 70, availH = footerY - startY - 15, cardH = Math.min(135, availH / data.length - 12);
     
     data.forEach(([name, s], i) => {
-      const y = startY + i * (cardH + 8);
-      if (y + cardH > footerY - 20) return;
-      
-      const isTop3 = i < 3, pctM = s.v1 > 0 ? Math.round(s.v2 / s.v1 * 100) : 0;
+      const y = startY + i * (cardH + 12), isTop3 = i < 3, pctM = s.v1 > 0 ? Math.round(s.v2 / s.v1 * 100) : 0;
       
       // Card background
       const grad = ctx.createLinearGradient(55, y, W - 55, y);
@@ -372,70 +366,65 @@ export default function Home() {
       else if (i === 2) { grad.addColorStop(0, 'rgba(205,127,50,0.12)'); grad.addColorStop(1, 'rgba(205,127,50,0.03)'); }
       else { grad.addColorStop(0, 'rgba(255,255,255,0.05)'); grad.addColorStop(1, 'rgba(255,255,255,0.02)'); }
       
-      ctx.fillStyle = grad; ctx.beginPath(); ctx.roundRect(55, y, W - 110, cardH, 10); ctx.fill();
+      ctx.fillStyle = grad; ctx.beginPath(); ctx.roundRect(55, y, W - 110, cardH, 12); ctx.fill();
       
       if (isTop3) {
         ctx.strokeStyle = i === 0 ? 'rgba(255,215,0,0.5)' : i === 1 ? 'rgba(192,192,192,0.4)' : 'rgba(205,127,50,0.4)';
         ctx.lineWidth = 2; ctx.stroke();
       }
       
-      const centerY = y + cardH / 2;
-      const medals = ['🏆', '🥈', '🥉'];
+      const centerY = y + cardH / 2, medals = ['🏆', '🥈', '🥉'];
       
-      // Medal and position
       if (isTop3) {
-        ctx.font = `${Math.min(36, cardH * 0.4)}px Arial`; ctx.fillText(medals[i], 70, centerY + 12);
+        ctx.font = '38px Arial'; ctx.fillText(medals[i], 75, centerY + 14);
         ctx.fillStyle = i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : '#CD7F32';
       } else {
         ctx.fillStyle = 'rgba(255,255,255,0.5)';
       }
       
-      ctx.font = `bold ${fontSize}px Arial`;
-      ctx.fillText(`${i + 1}°`, isTop3 ? 125 : 75, centerY + 7);
+      ctx.font = 'bold 26px Arial';
+      ctx.fillText(`${i + 1}°`, isTop3 ? 130 : 80, centerY + 10);
       
       // Name
       ctx.fillStyle = isTop3 ? (i === 0 ? '#FFD700' : '#FFF') : 'rgba(255,255,255,0.9)';
-      ctx.font = `bold ${fontSize}px Arial`;
-      const nameX = isTop3 ? 175 : 120;
-      ctx.fillText(name.toUpperCase(), nameX, centerY + 7);
+      ctx.font = 'bold 26px Arial';
+      ctx.fillText(name.toUpperCase(), isTop3 ? 185 : 130, centerY + 10);
       
-      // Stats section - horizontal layout with INS/ACC labels inline
+      // Stats con label INLINE (fix richiesto)
       ctx.textAlign = 'right';
-      
-      // Inseriti with label
       ctx.fillStyle = isTop3 ? (i === 0 ? '#FFD700' : '#FFF') : 'rgba(255,255,255,0.9)';
-      ctx.font = `bold ${numFontSize}px Arial`;
-      ctx.fillText(s.v1.toString(), W - 260, centerY + 3);
-      ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '10px Arial';
-      ctx.fillText('INS.', W - 260, centerY + 18);
+      ctx.font = 'bold 30px Arial';
+      ctx.fillText(`${s.v1}`, W - 300, centerY + 5);
+      ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '11px Arial';
+      ctx.fillText('INS.', W - 300, centerY + 22);
       
       // Progress bar
-      const barX = W - 235, barW = 90;
-      ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.beginPath(); ctx.roundRect(barX, centerY - 8, barW, 16, 4); ctx.fill();
+      const barX = W - 270, barW = 105;
+      ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.beginPath(); ctx.roundRect(barX, centerY - 10, barW, 18, 5); ctx.fill();
       const barC = pctM >= 50 ? '#4CAF50' : pctM >= 20 ? '#FFC107' : '#FF5722';
-      if (pctM > 0) { ctx.fillStyle = barC; ctx.beginPath(); ctx.roundRect(barX, centerY - 8, Math.max(barW * pctM / 100, 16), 16, 4); ctx.fill(); }
-      ctx.fillStyle = '#FFF'; ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center';
+      ctx.fillStyle = barC; ctx.beginPath(); ctx.roundRect(barX, centerY - 10, Math.max(barW * pctM / 100, 1), 18, 5); ctx.fill();
+      ctx.fillStyle = '#FFF'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center';
       ctx.fillText(`${pctM}%`, barX + barW / 2, centerY + 4);
       
-      // Accettati with label
+      // Accettati con label INLINE
       ctx.textAlign = 'right';
-      ctx.fillStyle = '#4CAF50'; ctx.font = `bold ${numFontSize}px Arial`;
-      ctx.fillText(s.v2.toString(), W - 70, centerY + 3);
-      ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '10px Arial';
-      ctx.fillText('ACC.', W - 70, centerY + 18);
+      ctx.fillStyle = '#4CAF50'; ctx.font = 'bold 30px Arial';
+      ctx.fillText(`${s.v2}`, W - 75, centerY + 5);
+      ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '11px Arial';
+      ctx.fillText('ACC.', W - 75, centerY + 22);
       ctx.textAlign = 'left';
     });
     
     // Footer
     ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(55, footerY, W - 110, 1);
-    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '14px Arial';
-    ctx.fillText(`📊 ${data.length} ${config.label} • ${totIns} contratti`, 60, footerY + 25);
-    ctx.textAlign = 'right'; ctx.fillText('LEADER RANKING', W - 60, footerY + 25);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '15px Arial';
+    ctx.fillText(`📊 ${data.length} ${config.label} • ${totIns} contratti`, 60, footerY + 28);
+    ctx.textAlign = 'right'; ctx.fillText('LEADER RANKING', W - 60, footerY + 28);
     ctx.textAlign = 'left';
     
-    // Bottom gradient bar
+    // Bottom bar
     const fg = ctx.createLinearGradient(0, 0, W, 0); fg.addColorStop(0, 'transparent'); fg.addColorStop(0.15, config.color); fg.addColorStop(0.85, config.color); fg.addColorStop(1, 'transparent');
-    ctx.fillStyle = fg; ctx.fillRect(45, H - 16, W - 90, 4);
+    ctx.fillStyle = fg; ctx.fillRect(45, H - 20, W - 90, 4);
     
     return canvas.toDataURL('image/png');
   };
