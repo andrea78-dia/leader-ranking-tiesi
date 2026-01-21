@@ -197,43 +197,29 @@ export default function Home() {
     ctx.strokeStyle = `${config.color}30`; ctx.lineWidth = 2; ctx.strokeRect(20, 20, W - 40, H - 40);
     ctx.fillStyle = config.color; ctx.fillRect(35, 35, W - 70, 4);
     
-    // Header
-    ctx.fillStyle = config.color; ctx.font = 'bold 16px Arial'; ctx.fillText('LEADER RANKING', 45, 70);
-    ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 38px Arial'; ctx.fillText(`${config.emoji} CLASSIFICA ${config.label}`, 45, 120);
-    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '18px Arial'; ctx.fillText(`${eventName} • ${eventDate}`, 45, 155);
+    // Header - più compatto senza stats box
+    ctx.fillStyle = config.color; ctx.font = 'bold 16px Arial'; ctx.fillText('LEADER RANKING', 45, 65);
+    ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 42px Arial'; ctx.fillText(`${config.emoji} CLASSIFICA ${config.label}`, 45, 115);
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '18px Arial'; ctx.fillText(`${eventName} • ${eventDate}`, 45, 148);
     
-    // Stats box
-    const totIns = getClassificaTotal(), totAcc = getData().reduce((sum, [,s]) => sum + s.v2, 0), convPct = Math.round(totAcc / totIns * 100) || 0;
-    ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.roundRect(W - 290, 55, 250, 70, 12); ctx.fill();
-    ctx.font = 'bold 28px Arial'; ctx.textAlign = 'center';
-    ctx.fillStyle = config.color; ctx.fillText(totIns.toString(), W - 200, 95);
-    ctx.fillStyle = '#4CAF50'; ctx.fillText(totAcc.toString(), W - 110, 95);
-    ctx.fillStyle = convPct >= 50 ? '#4CAF50' : '#FFC107'; ctx.fillText(`${convPct}%`, W - 35, 95);
-    ctx.font = '10px Arial'; ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.fillText('INS.', W - 200, 112); ctx.fillText('ACC.', W - 110, 112); ctx.fillText('CONV', W - 35, 112);
-    ctx.textAlign = 'left';
+    // Partecipanti e contratti inline
+    const totIns = getClassificaTotal();
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '16px Arial';
+    ctx.fillText(`${data.length} partecipanti • ${totIns} contratti`, 45, 178);
     
-    // Participants count
-    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '14px Arial';
-    ctx.fillText(`${data.length} partecipanti in classifica`, 45, 185);
-    ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(45, 200, W - 90, 1);
+    // Separator
+    ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(45, 195, W - 90, 2);
     
-    // Calculate available space
-    let currentY = 220;
-    const footerY = H - 60;
+    // Calcola spazio disponibile - ORA HO PIÙ SPAZIO!
+    let currentY = 215;
+    const footerY = H - 55;
     const availableH = footerY - currentY;
     
-    // Estimate row heights and adjust font
-    let totalRows = 0;
-    grouped.forEach(g => {
-      const namesJoined = g.members.map(m => m.name).join(' • ');
-      totalRows += Math.ceil(namesJoined.length / 80) + 1; // Rough estimate
-    });
-    
-    // Adaptive sizing
-    const baseFontSize = totalRows <= 8 ? 22 : totalRows <= 15 ? 19 : totalRows <= 25 ? 16 : 14;
-    const lineHeight = baseFontSize + 8;
-    const groupPadding = totalRows <= 15 ? 15 : 10;
+    // Calcola font size in base ai gruppi
+    const numGroups = grouped.length;
+    const baseFontSize = numGroups <= 5 ? 24 : numGroups <= 8 ? 21 : numGroups <= 12 ? 18 : 16;
+    const lineHeight = baseFontSize + 10;
+    const groupPadding = numGroups <= 8 ? 18 : 12;
     
     let position = 1;
     
@@ -243,12 +229,12 @@ export default function Home() {
       const isTop3 = position <= 3;
       const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : null;
       
-      // Format names with bullet separator
-      const fontSize = isTop3 ? baseFontSize + 2 : baseFontSize;
+      // Font size per questo gruppo
+      const fontSize = isTop3 ? baseFontSize + 3 : baseFontSize;
       ctx.font = `bold ${fontSize}px Arial`;
       
-      // Split names into lines that fit
-      const maxLineWidth = W - 180;
+      // Costruisci linee di nomi
+      const maxLineWidth = W - 170;
       const allNames = members.map(m => m.name.toUpperCase());
       const lines = [];
       let currentLine = '';
@@ -266,45 +252,45 @@ export default function Home() {
       });
       if (currentLine) lines.push(currentLine);
       
-      // Calculate block height
-      const blockH = Math.max(isTop3 ? 55 : 48, 20 + lines.length * lineHeight);
+      // Altezza blocco
+      const blockH = Math.max(isTop3 ? 60 : 52, 22 + lines.length * lineHeight);
       
-      if (currentY + blockH > footerY - 40) return;
+      if (currentY + blockH > footerY - 35) return;
       
       // Background
       if (isTop3) {
         const grad = ctx.createLinearGradient(45, currentY, W - 45, currentY);
-        grad.addColorStop(0, `${config.color}22`); grad.addColorStop(1, `${config.color}08`);
+        grad.addColorStop(0, `${config.color}25`); grad.addColorStop(1, `${config.color}08`);
         ctx.fillStyle = grad;
       } else {
-        ctx.fillStyle = 'rgba(255,255,255,0.04)';
+        ctx.fillStyle = 'rgba(255,255,255,0.05)';
       }
-      ctx.beginPath(); ctx.roundRect(45, currentY, W - 90, blockH, 10); ctx.fill();
+      ctx.beginPath(); ctx.roundRect(45, currentY, W - 90, blockH, 12); ctx.fill();
       
-      // Medal/Position
+      // Medaglia/Posizione
       const textStartY = currentY + (blockH - lines.length * lineHeight) / 2 + fontSize;
       
       if (medal) {
-        ctx.font = '28px Arial';
-        ctx.fillText(medal, 58, textStartY + (lines.length > 1 ? 0 : 5));
+        ctx.font = '32px Arial';
+        ctx.fillText(medal, 60, textStartY + (lines.length > 1 ? 0 : 6));
       } else {
-        ctx.fillStyle = 'rgba(255,255,255,0.5)';
-        ctx.font = 'bold 18px Arial';
-        ctx.fillText(`${position}°`, 60, textStartY + (lines.length > 1 ? 0 : 5));
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.font = 'bold 20px Arial';
+        ctx.fillText(`${position}°`, 62, textStartY + (lines.length > 1 ? 0 : 6));
       }
       
-      // Names
-      ctx.fillStyle = isTop3 ? '#FFF' : 'rgba(255,255,255,0.88)';
+      // Nomi
+      ctx.fillStyle = isTop3 ? '#FFF' : 'rgba(255,255,255,0.9)';
       ctx.font = `bold ${fontSize}px Arial`;
       lines.forEach((line, i) => {
-        ctx.fillText(line, 100, textStartY + i * lineHeight);
+        ctx.fillText(line, 108, textStartY + i * lineHeight);
       });
       
-      // Value
+      // Valore contratti
       ctx.fillStyle = isAcc ? '#4CAF50' : config.color;
-      ctx.font = `bold ${isTop3 ? 32 : 26}px Arial`;
+      ctx.font = `bold ${isTop3 ? 36 : 30}px Arial`;
       ctx.textAlign = 'right';
-      ctx.fillText(value.toString(), W - 55, currentY + blockH / 2 + 10);
+      ctx.fillText(value.toString(), W - 55, currentY + blockH / 2 + 12);
       ctx.textAlign = 'left';
       
       currentY += blockH + groupPadding;
@@ -312,12 +298,12 @@ export default function Home() {
     });
     
     // Footer
-    ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(45, footerY, W - 90, 1);
-    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '14px Arial';
-    ctx.fillText(`📊 ${data.length} partecipanti • ${totIns} contratti`, 50, footerY + 28);
-    ctx.textAlign = 'right'; ctx.fillText('LEADER RANKING', W - 50, footerY + 28);
+    ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(45, footerY, W - 90, 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '15px Arial';
+    ctx.fillText(`📊 ${data.length} partecipanti • ${totIns} contratti`, 50, footerY + 30);
+    ctx.textAlign = 'right'; ctx.fillText('LEADER RANKING', W - 50, footerY + 30);
     ctx.textAlign = 'left';
-    ctx.fillStyle = config.color; ctx.fillRect(35, H - 18, W - 70, 4);
+    ctx.fillStyle = config.color; ctx.fillRect(35, H - 16, W - 70, 4);
     
     return canvas.toDataURL('image/png');
   };
@@ -434,14 +420,72 @@ export default function Home() {
   const download = () => { if (previewImage) { const a = document.createElement('a'); a.download = `classifica_${selectedRanking}_${eventDate.replace(/\s/g, '_').replace(/\./g, '')}.png`; a.href = previewImage; a.click(); } };
 
   const handleSendToBot = async () => {
-    setSendStatus('Invio...'); const img = previewImage || generatePNG(); if (!img) { setSendStatus('Errore'); return; }
+    setSendStatus('Invio...');
+    const img = previewImage || generatePNG();
+    if (!img) { setSendStatus('Errore'); return; }
     const config = getConfig(), totIns = getClassificaTotal(), totAcc = getData().reduce((sum, [,s]) => sum + s.v2, 0);
+    
+    // Upload immagine su imgbb.com per ottenere URL
+    let imageUrl = '';
     try {
-      await fetch(WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, mode: 'no-cors',
-        body: JSON.stringify({ source: 'leader_ranking_app', timestamp: new Date().toISOString(), ranking_type: selectedRanking, ranking_label: config.label, ranking_category: config.category, event_name: eventName, event_date: eventDate, csv_type: csvType, exclude_k: excludeK, image_base64: img, top10: getData().slice(0, 10).map(([name, s], i) => ({ pos: i + 1, name, v1: s.v1, v2: s.v2, pct: Math.round(s.v2 / s.v1 * 100) || 0 })), totals: { v1: totIns, v2: totAcc }, total_participants: getData().length, conversion_pct: Math.round(totAcc / totIns * 100) || 0 })
+      setSendStatus('Upload immagine...');
+      const base64Data = img.split(',')[1]; // Rimuovi prefisso data:image/png;base64,
+      const formData = new FormData();
+      formData.append('key', 'b9e5c1a8e0e6f8a8e0e6f8a8e0e6f8a8'); // API key pubblica demo
+      formData.append('image', base64Data);
+      
+      // Prova imgbb
+      const uploadRes = await fetch('https://api.imgbb.com/1/upload?key=cf5765432de7dce80184381b02832924', {
+        method: 'POST',
+        body: formData
       });
-      setSendStatus('✅ Inviato!'); setTimeout(() => setSendStatus(''), 3000);
-    } catch (e) { setSendStatus('❌ Errore'); setTimeout(() => setSendStatus(''), 3000); }
+      
+      if (uploadRes.ok) {
+        const uploadData = await uploadRes.json();
+        if (uploadData.success) {
+          imageUrl = uploadData.data.url;
+        }
+      }
+    } catch (uploadErr) {
+      console.log('Upload fallito, uso base64:', uploadErr);
+    }
+    
+    setSendStatus('Invio webhook...');
+    
+    try {
+      await fetch(WEBHOOK_URL, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source: 'leader_ranking_app',
+          timestamp: new Date().toISOString(),
+          ranking_type: selectedRanking,
+          ranking_label: config.label,
+          ranking_category: config.category,
+          event_name: eventName,
+          event_date: eventDate,
+          csv_type: csvType,
+          exclude_k: excludeK,
+          image_url: imageUrl,
+          image_base64: img,
+          top10: getData().slice(0, 10).map(([name, s], i) => ({ 
+            pos: i + 1, 
+            name, 
+            v1: s.v1, 
+            v2: s.v2, 
+            pct: Math.round(s.v2 / s.v1 * 100) || 0 
+          })),
+          totals: { v1: totIns, v2: totAcc },
+          total_participants: getData().length,
+          conversion_pct: Math.round(totAcc / totIns * 100) || 0
+        })
+      });
+      setSendStatus('✅ Inviato!'); 
+      setTimeout(() => setSendStatus(''), 3000);
+    } catch (e) { 
+      setSendStatus('❌ Errore'); 
+      setTimeout(() => setSendStatus(''), 3000); 
+    }
   };
 
   const labels = getLabels(), config = getConfig();
