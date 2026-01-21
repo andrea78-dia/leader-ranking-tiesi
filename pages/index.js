@@ -425,16 +425,23 @@ export default function Home() {
     if (!img) { setSendStatus('Errore'); return; }
     const config = getConfig(), totIns = getClassificaTotal(), totAcc = getData().reduce((sum, [,s]) => sum + s.v2, 0);
     
-    // Upload immagine su imgbb.com per ottenere URL
+    // Converti base64 in Blob
+    const base64Data = img.split(',')[1];
+    const byteCharacters = atob(base64Data);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: 'image/png' });
+    
+    // Upload immagine su imgbb
     let imageUrl = '';
     try {
       setSendStatus('Upload immagine...');
-      const base64Data = img.split(',')[1]; // Rimuovi prefisso data:image/png;base64,
       const formData = new FormData();
-      formData.append('key', 'b9e5c1a8e0e6f8a8e0e6f8a8e0e6f8a8'); // API key pubblica demo
       formData.append('image', base64Data);
       
-      // Prova imgbb
       const uploadRes = await fetch('https://api.imgbb.com/1/upload?key=cf5765432de7dce80184381b02832924', {
         method: 'POST',
         body: formData
@@ -442,47 +449,81 @@ export default function Home() {
       
       if (uploadRes.ok) {
         const uploadData = await uploadRes.json();
-        if (uploadData.success) {
+        if (uploadData.success && uploadData.data && uploadData.data.url) {
           imageUrl = uploadData.data.url;
+          console.log('Upload OK:', imageUrl);
         }
       }
     } catch (uploadErr) {
-      console.log('Upload fallito, uso base64:', uploadErr);
+      console.log('Errore upload:', uploadErr);
+    }
+    
+    // Se imgbb fallisce, prova con un altro metodo
+    if (!imageUrl) {
+      try {
+        const formData2 = new FormData();
+        formData2.append('file', blob, 'classifica.png');
+        
+        const uploadRes2 = await fetch('https://tmpfiles.org/api/v1/upload', {
+          method: 'POST',
+          body: formData2
+        });
+        
+        if (uploadRes2.ok) {
+          const uploadData2 = await uploadRes2.json();
+          if (uploadData2.status === 'success' && uploadData2.data && uploadData2.data.url) {
+            // Converti URL da tmpfiles.org in URL diretto
+            imageUrl = uploadData2.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+            console.log('Upload tmpfiles OK:', imageUrl);
+          }
+        }
+      } catch (uploadErr2) {
+        console.log('Errore upload tmpfiles:', uploadErr2);
+      }
     }
     
     setSendStatus('Invio webhook...');
     
     try {
-      await fetch(WEBHOOK_URL, { 
+      const webhookData = {
+        source: 'leader_ranking_app',
+        timestamp: new Date().toISOString(),
+        ranking_type: selectedRanking,
+        ranking_label: config.label,
+        ranking_category: config.category,
+        event_name: eventName,
+        event_date: eventDate,
+        csv_type: csvType,
+        exclude_k: excludeK,
+        image_url: imageUrl || '',
+        top10: getData().slice(0, 10).map(([name, s], i) => ({ 
+          pos: i + 1, 
+          name, 
+          v1: s.v1, 
+          v2: s.v2, 
+          pct: Math.round(s.v2 / s.v1 * 100) || 0 
+        })),
+        totals: { v1: totIns, v2: totAcc },
+        total_participants: getData().length,
+        conversion_pct: Math.round(totAcc / totIns * 100) || 0
+      };
+      
+      // NON includiamo image_base64 per ridurre dimensione
+      
+      const response = await fetch(WEBHOOK_URL, { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          source: 'leader_ranking_app',
-          timestamp: new Date().toISOString(),
-          ranking_type: selectedRanking,
-          ranking_label: config.label,
-          ranking_category: config.category,
-          event_name: eventName,
-          event_date: eventDate,
-          csv_type: csvType,
-          exclude_k: excludeK,
-          image_url: imageUrl,
-          image_base64: img,
-          top10: getData().slice(0, 10).map(([name, s], i) => ({ 
-            pos: i + 1, 
-            name, 
-            v1: s.v1, 
-            v2: s.v2, 
-            pct: Math.round(s.v2 / s.v1 * 100) || 0 
-          })),
-          totals: { v1: totIns, v2: totAcc },
-          total_participants: getData().length,
-          conversion_pct: Math.round(totAcc / totIns * 100) || 0
-        })
+        body: JSON.stringify(webhookData)
       });
-      setSendStatus('✅ Inviato!'); 
+      
+      if (imageUrl) {
+        setSendStatus('✅ Inviato!');
+      } else {
+        setSendStatus('⚠️ Inviato senza immagine');
+      }
       setTimeout(() => setSendStatus(''), 3000);
     } catch (e) { 
+      console.log('Errore webhook:', e);
       setSendStatus('❌ Errore'); 
       setTimeout(() => setSendStatus(''), 3000); 
     }
