@@ -435,54 +435,64 @@ export default function Home() {
     const byteArray = new Uint8Array(byteNumbers);
     const blob = new Blob([byteArray], { type: 'image/png' });
     
-    // Upload immagine su imgbb
+    // Upload immagine su catbox.moe (no CORS issues)
     let imageUrl = '';
     try {
       setSendStatus('Upload immagine...');
       const formData = new FormData();
-      formData.append('image', base64Data);
+      formData.append('reqtype', 'fileupload');
+      formData.append('fileToUpload', blob, 'classifica.png');
       
-      const uploadRes = await fetch('https://api.imgbb.com/1/upload?key=cf5765432de7dce80184381b02832924', {
+      const uploadRes = await fetch('https://catbox.moe/user/api.php', {
         method: 'POST',
         body: formData
       });
       
       if (uploadRes.ok) {
-        const uploadData = await uploadRes.json();
-        if (uploadData.success && uploadData.data && uploadData.data.url) {
-          imageUrl = uploadData.data.url;
-          console.log('Upload OK:', imageUrl);
+        const urlText = await uploadRes.text();
+        if (urlText.startsWith('https://')) {
+          imageUrl = urlText.trim();
+          console.log('Upload Catbox OK:', imageUrl);
         }
       }
     } catch (uploadErr) {
-      console.log('Errore upload:', uploadErr);
+      console.log('Errore upload Catbox:', uploadErr);
     }
     
-    // Se imgbb fallisce, prova con un altro metodo
+    // Se catbox fallisce, prova litterbox (file temporanei 1h)
     if (!imageUrl) {
       try {
+        setSendStatus('Upload alternativo...');
         const formData2 = new FormData();
-        formData2.append('file', blob, 'classifica.png');
+        formData2.append('reqtype', 'fileupload');
+        formData2.append('time', '1h');
+        formData2.append('fileToUpload', blob, 'classifica.png');
         
-        const uploadRes2 = await fetch('https://tmpfiles.org/api/v1/upload', {
+        const uploadRes2 = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
           method: 'POST',
           body: formData2
         });
         
         if (uploadRes2.ok) {
-          const uploadData2 = await uploadRes2.json();
-          if (uploadData2.status === 'success' && uploadData2.data && uploadData2.data.url) {
-            // Converti URL da tmpfiles.org in URL diretto
-            imageUrl = uploadData2.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
-            console.log('Upload tmpfiles OK:', imageUrl);
+          const urlText2 = await uploadRes2.text();
+          if (urlText2.startsWith('https://')) {
+            imageUrl = urlText2.trim();
+            console.log('Upload Litterbox OK:', imageUrl);
           }
         }
       } catch (uploadErr2) {
-        console.log('Errore upload tmpfiles:', uploadErr2);
+        console.log('Errore upload Litterbox:', uploadErr2);
       }
     }
     
     setSendStatus('Invio webhook...');
+    
+    // Se non abbiamo URL, non inviare (evita errori su Make)
+    if (!imageUrl) {
+      setSendStatus('❌ Upload fallito');
+      setTimeout(() => setSendStatus(''), 3000);
+      return;
+    }
     
     try {
       const webhookData = {
@@ -495,7 +505,7 @@ export default function Home() {
         event_date: eventDate,
         csv_type: csvType,
         exclude_k: excludeK,
-        image_url: imageUrl || '',
+        image_url: imageUrl,
         top10: getData().slice(0, 10).map(([name, s], i) => ({ 
           pos: i + 1, 
           name, 
@@ -508,19 +518,13 @@ export default function Home() {
         conversion_pct: Math.round(totAcc / totIns * 100) || 0
       };
       
-      // NON includiamo image_base64 per ridurre dimensione
-      
-      const response = await fetch(WEBHOOK_URL, { 
+      await fetch(WEBHOOK_URL, { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(webhookData)
       });
       
-      if (imageUrl) {
-        setSendStatus('✅ Inviato!');
-      } else {
-        setSendStatus('⚠️ Inviato senza immagine');
-      }
+      setSendStatus('✅ Inviato!');
       setTimeout(() => setSendStatus(''), 3000);
     } catch (e) { 
       console.log('Errore webhook:', e);
@@ -550,7 +554,7 @@ export default function Home() {
       {loginError && <p style={{ color: '#f44', fontSize: 13, marginBottom: 10 }}>{loginError}</p>}
       <button style={S.btn} onClick={handleLogin}>ACCEDI</button>
       <div style={S.categoryIcons}><span style={S.catIcon}>🟠</span><span style={S.catIcon}>🔵</span><span style={S.catIcon}>⭐</span><span style={S.catIcon}>👑</span></div>
-      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v8.0</p>
+      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v8.5</p>
     </div></div></>);
 
   // HOMEPAGE CSV
