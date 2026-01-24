@@ -222,6 +222,215 @@ export default function Home() {
     return { ins: totIns, acc: totAcc, part: ivdData.length, conv, top3, top10, maxV1, weeklyData };
   };
 
+  // Genera PNG per slide NWG (16:9)
+  const generateSlidePNG = (type = 'podio_top7') => {
+    const stats = getDashboardStats();
+    if (!stats.top3.length) return null;
+    
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const W = 1920, H = 1080;
+    canvas.width = W; canvas.height = H;
+    
+    // Sfondo verde teal NWG
+    ctx.fillStyle = '#2AAA8A';
+    ctx.fillRect(0, 0, W, H);
+    
+    // Pattern sottile
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < W; i += 40) {
+      ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, H); ctx.stroke();
+    }
+    for (let i = 0; i < H; i += 40) {
+      ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(W, i); ctx.stroke();
+    }
+    
+    // Titolo
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(`🏆 CLASSIFICA ${eventName.toUpperCase()}`, W/2, 70);
+    ctx.font = '24px Arial';
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fillText(eventDate, W/2, 110);
+    
+    if (type === 'solo_podio') {
+      // SOLO PODIO - centrato e grande
+      const podioY = 200;
+      const podioH = 500;
+      const barW = 200;
+      const gap = 40;
+      const centerX = W / 2;
+      
+      // Podio bars
+      const positions = [
+        { x: centerX - barW - gap, h: podioH * 0.7, color: ['#E8E8E8', '#A0A0A0'], pos: 2, data: stats.top3[1] },
+        { x: centerX, h: podioH, color: ['#FFE082', '#FFD700'], pos: 1, data: stats.top3[0] },
+        { x: centerX + barW + gap, h: podioH * 0.5, color: ['#FFAB91', '#CD7F32'], pos: 3, data: stats.top3[2] }
+      ];
+      
+      positions.forEach(p => {
+        if (!p.data) return;
+        const barX = p.x - barW/2;
+        const barY = podioY + podioH - p.h;
+        
+        // Bar gradient
+        const grad = ctx.createLinearGradient(0, barY, 0, barY + p.h);
+        grad.addColorStop(0, p.color[0]);
+        grad.addColorStop(1, p.color[1]);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.roundRect(barX, barY, barW, p.h, [20, 20, 0, 0]);
+        ctx.fill();
+        
+        // Shadow glow for 1st
+        if (p.pos === 1) {
+          ctx.shadowColor = 'rgba(255,215,0,0.5)';
+          ctx.shadowBlur = 30;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+        
+        // Position number
+        ctx.fillStyle = '#333';
+        ctx.font = 'bold 72px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.pos.toString(), p.x, barY + 80);
+        
+        // Value
+        ctx.font = 'bold 48px Arial';
+        ctx.fillText(p.data.v1.toString(), p.x, barY + 140);
+        
+        // Name above bar
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 28px Arial';
+        const name = p.data.name.toUpperCase();
+        ctx.fillText(name, p.x, barY - 20);
+      });
+      
+      // Footer stats
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.font = '24px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${stats.ins} Inseriti • ${stats.acc} Accettati • ${stats.conv}% Conversione`, W/2, H - 50);
+      
+    } else {
+      // PODIO + TOP 7 (4°-10° posizione)
+      const leftX = 150;
+      const rightX = W - 500;
+      
+      // PODIO a sinistra
+      const podioY = 180;
+      const podioH = 350;
+      const barW = 180;
+      const gap = 20;
+      const podioCenter = leftX + 350;
+      
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 32px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('🏆 PODIO', podioCenter, podioY - 30);
+      
+      const positions = [
+        { x: podioCenter - barW - gap, h: podioH * 0.7, color: ['#E8E8E8', '#A0A0A0'], pos: 2, data: stats.top3[1] },
+        { x: podioCenter, h: podioH, color: ['#FFE082', '#FFD700'], pos: 1, data: stats.top3[0] },
+        { x: podioCenter + barW + gap, h: podioH * 0.5, color: ['#FFAB91', '#CD7F32'], pos: 3, data: stats.top3[2] }
+      ];
+      
+      positions.forEach(p => {
+        if (!p.data) return;
+        const barX = p.x - barW/2;
+        const barY = podioY + podioH - p.h;
+        
+        const grad = ctx.createLinearGradient(0, barY, 0, barY + p.h);
+        grad.addColorStop(0, p.color[0]);
+        grad.addColorStop(1, p.color[1]);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.roundRect(barX, barY, barW, p.h, [15, 15, 0, 0]);
+        ctx.fill();
+        
+        ctx.fillStyle = '#333';
+        ctx.font = 'bold 48px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.pos.toString(), p.x, barY + 55);
+        
+        ctx.font = 'bold 36px Arial';
+        ctx.fillText(p.data.v1.toString(), p.x, barY + 100);
+        
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 20px Arial';
+        const name = p.data.name.toUpperCase();
+        ctx.fillText(name, p.x, barY - 15);
+      });
+      
+      // TOP 7 (4°-10°) a destra
+      const top7 = stats.top10.slice(3, 10);
+      const listX = rightX;
+      const listY = 180;
+      const rowH = 70;
+      
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 32px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText('📊 CLASSIFICA 4° - 10°', listX, listY - 30);
+      
+      top7.forEach((p, i) => {
+        const y = listY + i * rowH + 30;
+        const pos = i + 4;
+        
+        // Bar background
+        ctx.fillStyle = 'rgba(255,255,255,0.1)';
+        ctx.beginPath();
+        ctx.roundRect(listX, y, 450, 55, 10);
+        ctx.fill();
+        
+        // Bar fill
+        const barWidth = (p.v1 / stats.maxV1) * 350;
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.beginPath();
+        ctx.roundRect(listX, y, barWidth, 55, 10);
+        ctx.fill();
+        
+        // Position
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 24px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(`${pos}°`, listX + 15, y + 37);
+        
+        // Name
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '22px Arial';
+        ctx.fillText(p.name.toUpperCase(), listX + 60, y + 37);
+        
+        // Value
+        ctx.font = 'bold 28px Arial';
+        ctx.textAlign = 'right';
+        ctx.fillText(p.v1.toString(), listX + 430, y + 37);
+        ctx.textAlign = 'left';
+      });
+      
+      // Footer stats
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.font = '28px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(`📥 ${stats.ins} Inseriti   ✅ ${stats.acc} Accettati   📈 ${stats.conv}% Conversione   👥 ${stats.part} Partecipanti`, W/2, H - 40);
+    }
+    
+    return canvas.toDataURL('image/png');
+  };
+
+  const downloadSlidePNG = (type) => {
+    const img = generateSlidePNG(type);
+    if (img) {
+      const a = document.createElement('a');
+      a.download = `classifica_${type}_${eventDate.replace(/\s/g, '_')}.png`;
+      a.href = img;
+      a.click();
+    }
+  };
+
   // Animazione contatori
   const animateStats = (target) => {
     const duration = 1500;
@@ -656,7 +865,7 @@ export default function Home() {
       {loginError && <p style={{ color: '#f44', fontSize: 13, marginBottom: 10 }}>{loginError}</p>}
       <button style={S.btn} onClick={handleLogin}>ACCEDI</button>
       <div style={S.categoryIcons}><span style={S.catIcon}>🟠</span><span style={S.catIcon}>🔵</span><span style={S.catIcon}>⭐</span><span style={S.catIcon}>👑</span></div>
-      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v8.8</p>
+      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v8.9</p>
     </div></div></>);
 
   // HOMEPAGE CSV
@@ -732,158 +941,125 @@ export default function Home() {
             const maxWeekly = Math.max(...stats.weeklyData, 1);
             
             return (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                {/* STATS CARDS */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 15 }}>
-                  <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.2), rgba(255,107,53,0.05))', borderRadius: 16, padding: 20, textAlign: 'center', border: '1px solid rgba(255,107,53,0.3)' }}>
-                    <div style={{ fontSize: 36, fontWeight: 800, color: '#FF6B35', marginBottom: 5 }}>{animatedStats.ins}</div>
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 1 }}>Inseriti</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {/* STATS CARDS - più compatte */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+                  <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.2), rgba(255,107,53,0.05))', borderRadius: 12, padding: '12px 8px', textAlign: 'center', border: '1px solid rgba(255,107,53,0.3)' }}>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: '#FF6B35' }}>{animatedStats.ins}</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase' }}>Inseriti</div>
                   </div>
-                  <div style={{ background: 'linear-gradient(135deg, rgba(76,175,80,0.2), rgba(76,175,80,0.05))', borderRadius: 16, padding: 20, textAlign: 'center', border: '1px solid rgba(76,175,80,0.3)' }}>
-                    <div style={{ fontSize: 36, fontWeight: 800, color: '#4CAF50', marginBottom: 5 }}>{animatedStats.acc}</div>
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 1 }}>Accettati</div>
+                  <div style={{ background: 'linear-gradient(135deg, rgba(76,175,80,0.2), rgba(76,175,80,0.05))', borderRadius: 12, padding: '12px 8px', textAlign: 'center', border: '1px solid rgba(76,175,80,0.3)' }}>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: '#4CAF50' }}>{animatedStats.acc}</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase' }}>Accettati</div>
                   </div>
-                  <div style={{ background: 'linear-gradient(135deg, rgba(124,77,255,0.2), rgba(124,77,255,0.05))', borderRadius: 16, padding: 20, textAlign: 'center', border: '1px solid rgba(124,77,255,0.3)' }}>
-                    <div style={{ fontSize: 36, fontWeight: 800, color: '#7C4DFF', marginBottom: 5 }}>{animatedStats.part}</div>
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 1 }}>Partecipanti</div>
+                  <div style={{ background: 'linear-gradient(135deg, rgba(124,77,255,0.2), rgba(124,77,255,0.05))', borderRadius: 12, padding: '12px 8px', textAlign: 'center', border: '1px solid rgba(124,77,255,0.3)' }}>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: '#7C4DFF' }}>{animatedStats.part}</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase' }}>Partecipanti</div>
                   </div>
-                  <div style={{ background: 'linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.05))', borderRadius: 16, padding: 20, textAlign: 'center', border: '1px solid rgba(255,215,0,0.3)' }}>
-                    <div style={{ fontSize: 36, fontWeight: 800, color: '#FFD700', marginBottom: 5 }}>{animatedStats.conv}%</div>
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 1 }}>Conversione</div>
-                  </div>
-                </div>
-
-                {/* PODIO */}
-                <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 20, padding: 25, border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <h3 style={{ color: '#FFD700', fontSize: 16, marginBottom: 20, textAlign: 'center' }}>🏆 PODIO</h3>
-                  <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 15, height: 180 }}>
-                    {/* 2° POSTO */}
-                    <div style={{ textAlign: 'center', flex: 1, maxWidth: 120 }}>
-                      <div style={{ fontSize: 13, color: '#fff', fontWeight: 600, marginBottom: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{stats.top3[1]?.name || '-'}</div>
-                      <div style={{ background: 'linear-gradient(180deg, #E8E8E8, #A0A0A0)', borderRadius: '12px 12px 0 0', height: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 15 }}>
-                        <span style={{ fontSize: 28, fontWeight: 800, color: '#333' }}>2</span>
-                        <span style={{ fontSize: 18, fontWeight: 700, color: '#333', marginTop: 5 }}>{stats.top3[1]?.v1 || 0}</span>
-                      </div>
-                    </div>
-                    {/* 1° POSTO */}
-                    <div style={{ textAlign: 'center', flex: 1, maxWidth: 140 }}>
-                      <div style={{ fontSize: 14, color: '#FFD700', fontWeight: 700, marginBottom: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{stats.top3[0]?.name || '-'}</div>
-                      <div style={{ background: 'linear-gradient(180deg, #FFE082, #FFD700)', borderRadius: '12px 12px 0 0', height: 140, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 15, boxShadow: '0 0 30px rgba(255,215,0,0.3)' }}>
-                        <span style={{ fontSize: 36, fontWeight: 800, color: '#333' }}>1</span>
-                        <span style={{ fontSize: 24, fontWeight: 700, color: '#333', marginTop: 5 }}>{stats.top3[0]?.v1 || 0}</span>
-                      </div>
-                    </div>
-                    {/* 3° POSTO */}
-                    <div style={{ textAlign: 'center', flex: 1, maxWidth: 120 }}>
-                      <div style={{ fontSize: 13, color: '#fff', fontWeight: 600, marginBottom: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{stats.top3[2]?.name || '-'}</div>
-                      <div style={{ background: 'linear-gradient(180deg, #FFAB91, #CD7F32)', borderRadius: '12px 12px 0 0', height: 70, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 12 }}>
-                        <span style={{ fontSize: 24, fontWeight: 800, color: '#333' }}>3</span>
-                        <span style={{ fontSize: 16, fontWeight: 700, color: '#333', marginTop: 3 }}>{stats.top3[2]?.v1 || 0}</span>
-                      </div>
-                    </div>
+                  <div style={{ background: 'linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.05))', borderRadius: 12, padding: '12px 8px', textAlign: 'center', border: '1px solid rgba(255,215,0,0.3)' }}>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: '#FFD700' }}>{animatedStats.conv}%</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase' }}>Conversione</div>
                   </div>
                 </div>
 
-                {/* TOP 10 BARS + DONUT */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
-                  {/* TOP 10 */}
-                  <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <h3 style={{ color: '#FF6B35', fontSize: 14, marginBottom: 15 }}>📈 TOP 10 INSERITI</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {stats.top10.map((p, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{ width: 20, fontSize: 12, color: i < 3 ? '#FFD700' : 'rgba(255,255,255,0.5)', fontWeight: i < 3 ? 700 : 400 }}>{i + 1}°</span>
-                          <div style={{ flex: 1, height: 24, background: 'rgba(255,255,255,0.05)', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
-                            <div style={{ 
-                              width: `${(p.v1 / stats.maxV1) * 100}%`, 
-                              height: '100%', 
-                              background: i === 0 ? 'linear-gradient(90deg, #FFD700, #FFA000)' : i < 3 ? 'linear-gradient(90deg, #FF6B35, #FF8A50)' : 'linear-gradient(90deg, #7C4DFF, #9575CD)',
-                              borderRadius: 6,
-                              transition: 'width 1s ease-out'
-                            }} />
-                            <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: '#fff', fontWeight: 500, textShadow: '0 1px 2px rgba(0,0,0,0.5)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '60%' }}>{p.name}</span>
+                {/* PODIO + TOP 7 affiancati */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
+                  {/* PODIO - compatto */}
+                  <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, padding: 15, border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <h3 style={{ color: '#FFD700', fontSize: 14, marginBottom: 12, textAlign: 'center' }}>🏆 PODIO</h3>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 8, height: 140 }}>
+                      {/* 2° */}
+                      <div style={{ textAlign: 'center', flex: 1 }}>
+                        <div style={{ fontSize: 11, color: '#fff', fontWeight: 600, marginBottom: 5, lineHeight: 1.2 }}>{stats.top3[1]?.name || '-'}</div>
+                        <div style={{ background: 'linear-gradient(180deg, #E8E8E8, #A0A0A0)', borderRadius: '8px 8px 0 0', height: 75, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ fontSize: 20, fontWeight: 800, color: '#333' }}>2</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: '#333' }}>{stats.top3[1]?.v1 || 0}</span>
+                        </div>
+                      </div>
+                      {/* 1° */}
+                      <div style={{ textAlign: 'center', flex: 1 }}>
+                        <div style={{ fontSize: 12, color: '#FFD700', fontWeight: 700, marginBottom: 5, lineHeight: 1.2 }}>{stats.top3[0]?.name || '-'}</div>
+                        <div style={{ background: 'linear-gradient(180deg, #FFE082, #FFD700)', borderRadius: '8px 8px 0 0', height: 105, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 20px rgba(255,215,0,0.3)' }}>
+                          <span style={{ fontSize: 28, fontWeight: 800, color: '#333' }}>1</span>
+                          <span style={{ fontSize: 18, fontWeight: 700, color: '#333' }}>{stats.top3[0]?.v1 || 0}</span>
+                        </div>
+                      </div>
+                      {/* 3° */}
+                      <div style={{ textAlign: 'center', flex: 1 }}>
+                        <div style={{ fontSize: 11, color: '#fff', fontWeight: 600, marginBottom: 5, lineHeight: 1.2 }}>{stats.top3[2]?.name || '-'}</div>
+                        <div style={{ background: 'linear-gradient(180deg, #FFAB91, #CD7F32)', borderRadius: '8px 8px 0 0', height: 55, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ fontSize: 18, fontWeight: 800, color: '#333' }}>3</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#333' }}>{stats.top3[2]?.v1 || 0}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* TOP 4-10 */}
+                  <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, padding: 15, border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <h3 style={{ color: '#FF6B35', fontSize: 14, marginBottom: 10 }}>📈 TOP 4° - 10°</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                      {stats.top10.slice(3, 10).map((p, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ width: 24, fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{i + 4}°</span>
+                          <div style={{ flex: 1, height: 22, background: 'rgba(255,255,255,0.05)', borderRadius: 5, overflow: 'hidden', position: 'relative' }}>
+                            <div style={{ width: `${(p.v1 / stats.maxV1) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #7C4DFF, #9575CD)', borderRadius: 5 }} />
+                            <span style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#fff', fontWeight: 500 }}>{p.name}</span>
                           </div>
-                          <span style={{ width: 30, fontSize: 13, fontWeight: 700, color: '#FF6B35', textAlign: 'right' }}>{p.v1}</span>
+                          <span style={{ width: 24, fontSize: 12, fontWeight: 700, color: '#FF6B35', textAlign: 'right' }}>{p.v1}</span>
                         </div>
                       ))}
                     </div>
                   </div>
+                </div>
 
-                  {/* DONUT CHART */}
-                  <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <h3 style={{ color: '#4CAF50', fontSize: 14, marginBottom: 15, alignSelf: 'flex-start' }}>🍩 CONVERSIONE</h3>
-                    <div style={{ position: 'relative', width: 150, height: 150 }}>
+                {/* DONUT + HEATMAP affiancati */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
+                  {/* DONUT */}
+                  <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, padding: 15, border: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: 15 }}>
+                    <div style={{ position: 'relative', width: 80, height: 80, flexShrink: 0 }}>
                       <svg viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
-                        <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="12" />
-                        <circle 
-                          cx="50" cy="50" r="40" fill="none" 
-                          stroke="url(#gradient)" 
-                          strokeWidth="12" 
-                          strokeLinecap="round"
-                          strokeDasharray={`${stats.conv * 2.51} 251`}
-                          style={{ transition: 'stroke-dasharray 1.5s ease-out' }}
-                        />
-                        <defs>
-                          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stopColor="#4CAF50" />
-                            <stop offset="100%" stopColor="#81C784" />
-                          </linearGradient>
-                        </defs>
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="15" />
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="#4CAF50" strokeWidth="15" strokeLinecap="round" strokeDasharray={`${stats.conv * 2.51} 251`} />
                       </svg>
-                      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: 32, fontWeight: 800, color: '#4CAF50' }}>{stats.conv}%</span>
-                        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>TASSO</span>
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: 18, fontWeight: 800, color: '#4CAF50' }}>{stats.conv}%</span>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 20, marginTop: 15 }}>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: 18, fontWeight: 700, color: '#FF6B35' }}>{stats.ins}</div>
-                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>Inseriti</div>
+                    <div>
+                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 5 }}>CONVERSIONE</div>
+                      <div style={{ display: 'flex', gap: 15 }}>
+                        <div><span style={{ fontSize: 16, fontWeight: 700, color: '#FF6B35' }}>{stats.ins}</span><span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginLeft: 4 }}>ins</span></div>
+                        <div><span style={{ fontSize: 16, fontWeight: 700, color: '#4CAF50' }}>{stats.acc}</span><span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginLeft: 4 }}>acc</span></div>
                       </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: 18, fontWeight: 700, color: '#4CAF50' }}>{stats.acc}</div>
-                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>Accettati</div>
-                      </div>
+                    </div>
+                  </div>
+
+                  {/* HEATMAP compatta */}
+                  <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, padding: 15, border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>🗓️ ATTIVITÀ SETTIMANALE</div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {dayNames.map((day, i) => {
+                        const val = stats.weeklyData[i];
+                        const intensity = val / maxWeekly;
+                        const bgColor = val === 0 ? 'rgba(255,255,255,0.05)' : intensity > 0.7 ? '#4CAF50' : intensity > 0.4 ? '#FFC107' : '#FF6B35';
+                        return (
+                          <div key={day} style={{ flex: 1, textAlign: 'center' }}>
+                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>{day}</div>
+                            <div style={{ height: 36, borderRadius: 6, background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: val === 0 ? 'rgba(255,255,255,0.2)' : '#fff' }}>{val}</div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
 
-                {/* HEATMAP SETTIMANALE */}
-                <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <h3 style={{ color: '#7C4DFF', fontSize: 14, marginBottom: 15 }}>🗓️ ATTIVITÀ SETTIMANALE</h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 10 }}>
-                    {dayNames.map((day, i) => {
-                      const val = stats.weeklyData[i];
-                      const intensity = val / maxWeekly;
-                      const bgColor = val === 0 ? 'rgba(255,255,255,0.05)' : 
-                        intensity > 0.7 ? '#4CAF50' : 
-                        intensity > 0.4 ? '#FFC107' : 
-                        intensity > 0 ? '#FF6B35' : 'rgba(255,255,255,0.05)';
-                      return (
-                        <div key={day} style={{ textAlign: 'center' }}>
-                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>{day}</div>
-                          <div style={{ 
-                            width: '100%', 
-                            aspectRatio: '1', 
-                            borderRadius: 10, 
-                            background: bgColor,
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            fontSize: 16,
-                            fontWeight: 700,
-                            color: val === 0 ? 'rgba(255,255,255,0.2)' : '#fff',
-                            boxShadow: val > 0 ? `0 0 15px ${bgColor}40` : 'none',
-                            transition: 'all 0.3s'
-                          }}>{val}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 15 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#4CAF50' }} /><span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>Alto</span></div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FFC107' }} /><span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>Medio</span></div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FF6B35' }} /><span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>Basso</span></div>
+                {/* BOTTONI DOWNLOAD SLIDE */}
+                <div style={{ background: 'linear-gradient(135deg, rgba(42,170,138,0.2), rgba(42,170,138,0.05))', borderRadius: 16, padding: 15, border: '1px solid rgba(42,170,138,0.3)' }}>
+                  <div style={{ fontSize: 12, color: '#2AAA8A', marginBottom: 10, fontWeight: 600 }}>📥 SCARICA PER SLIDE (16:9)</div>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <button style={{ ...S.btn, flex: 1, minWidth: 150, padding: '10px 15px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)' }} onClick={() => downloadSlidePNG('solo_podio')}>🏆 Solo Podio</button>
+                    <button style={{ ...S.btn, flex: 1, minWidth: 150, padding: '10px 15px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)' }} onClick={() => downloadSlidePNG('podio_top7')}>📊 Podio + TOP 7</button>
                   </div>
                 </div>
               </div>
