@@ -93,6 +93,8 @@ export default function Home() {
   const [sendStatus, setSendStatus] = useState('');
   const [periodType, setPeriodType] = useState('progressiva');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' o 'classifiche'
+  const [animatedStats, setAnimatedStats] = useState({ ins: 0, acc: 0, part: 0, conv: 0 });
   const parseCSV = (text) => {
     const lines = text.trim().split('\n');
     const headers = lines[0].split(';').map(h => h.trim().replace(/"/g, '').replace(/^\uFEFF/, ''));
@@ -185,6 +187,71 @@ export default function Home() {
     words.forEach(word => { const testLine = currentLine ? `${currentLine} ${word}` : word; if (ctx.measureText(testLine).width > maxWidth && currentLine) { lines.push(currentLine); currentLine = word; } else currentLine = testLine; });
     if (currentLine) lines.push(currentLine); return lines;
   };
+
+  // Dashboard helper functions
+  const getDashboardStats = () => {
+    if (!filteredData || !rankings) return { ins: 0, acc: 0, part: 0, conv: 0, top3: [], top10: [], weeklyData: [] };
+    
+    // Totali da IVD (o tutti i dati)
+    const ivdData = rankings.ivd_inseriti || [];
+    const totIns = ivdData.reduce((s, [,x]) => s + x.v1, 0);
+    const totAcc = ivdData.reduce((s, [,x]) => s + x.v2, 0);
+    const conv = totIns > 0 ? Math.round(totAcc / totIns * 100) : 0;
+    
+    // TOP 3 e TOP 10
+    const top3 = ivdData.slice(0, 3).map(([name, s]) => ({ name, v1: s.v1, v2: s.v2 }));
+    const top10 = ivdData.slice(0, 10).map(([name, s]) => ({ name, v1: s.v1, v2: s.v2 }));
+    const maxV1 = top10.length > 0 ? Math.max(...top10.map(t => t.v1)) : 1;
+    
+    // Weekly heatmap - analizza date inserimento
+    const weeklyData = [0, 0, 0, 0, 0, 0, 0]; // Lun-Dom
+    filteredData.forEach(row => {
+      const dateStr = row['Inserimento'] || row['Data'] || '';
+      if (dateStr) {
+        try {
+          const d = new Date(dateStr.replace(' ', 'T'));
+          if (!isNaN(d.getTime())) {
+            const day = d.getDay(); // 0=Dom, 1=Lun, ...
+            const idx = day === 0 ? 6 : day - 1; // Converti a Lun=0, Dom=6
+            weeklyData[idx]++;
+          }
+        } catch (e) {}
+      }
+    });
+    
+    return { ins: totIns, acc: totAcc, part: ivdData.length, conv, top3, top10, maxV1, weeklyData };
+  };
+
+  // Animazione contatori
+  const animateStats = (target) => {
+    const duration = 1500;
+    const steps = 60;
+    const interval = duration / steps;
+    let step = 0;
+    
+    const timer = setInterval(() => {
+      step++;
+      const progress = step / steps;
+      const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+      
+      setAnimatedStats({
+        ins: Math.round(target.ins * eased),
+        acc: Math.round(target.acc * eased),
+        part: Math.round(target.part * eased),
+        conv: Math.round(target.conv * eased)
+      });
+      
+      if (step >= steps) clearInterval(timer);
+    }, interval);
+  };
+
+  // Trigger animazione quando cambiano i dati
+  React.useEffect(() => {
+    if (rankings && filteredData) {
+      const stats = getDashboardStats();
+      animateStats(stats);
+    }
+  }, [rankings, filteredData, selectedMonth, selectedWeek]);
 
   const generatePNG_Impact = () => {
     const data = getData(); if (!data.length) return null;
@@ -455,7 +522,7 @@ export default function Home() {
     }
     
     setSendStatus('Invio...');
-    const img = previewImage || generatePNG();
+    const img = generatePNG();  // Genera SEMPRE nuova immagine per la classifica corrente
     if (!img) { setSendStatus('Errore'); return; }
     const config = getConfig(), totIns = getClassificaTotal(), totAcc = getData().reduce((sum, [,s]) => sum + s.v2, 0);
     
@@ -589,7 +656,7 @@ export default function Home() {
       {loginError && <p style={{ color: '#f44', fontSize: 13, marginBottom: 10 }}>{loginError}</p>}
       <button style={S.btn} onClick={handleLogin}>ACCEDI</button>
       <div style={S.categoryIcons}><span style={S.catIcon}>🟠</span><span style={S.catIcon}>🔵</span><span style={S.catIcon}>⭐</span><span style={S.catIcon}>👑</span></div>
-      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v8.7</p>
+      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v8.8</p>
     </div></div></>);
 
   // HOMEPAGE CSV
@@ -643,7 +710,188 @@ export default function Home() {
         {mobileMenuOpen && <div style={S.overlay} onClick={() => setMobileMenuOpen(false)} />}
         <section style={S.content}>
           {(user.role === 'admin' || user.role === 'assistente') && (<div style={{ ...S.uploadBox, ...(isDragging ? { borderColor: '#7C4DFF', background: 'rgba(124,77,255,0.1)' } : {}) }} onDragOver={e => { e.preventDefault(); setIsDragging(true); }} onDragLeave={e => { e.preventDefault(); setIsDragging(false); }} onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.csv')) processFile(f); }}><input type="file" accept=".csv" id="csv" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processFile(e.target.files[0]); }} /><label htmlFor="csv" style={{ cursor: 'pointer', padding: '10px 20px', background: 'rgba(124,77,255,0.1)', borderRadius: 8, color: '#7C4DFF', fontWeight: 600 }}>{filteredData ? `✅ ${filteredData.length} righe caricate` : '📤 Carica CSV'}</label></div>)}
-          {rankings ? (<div style={S.rankCard}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 15 }}><div><h2 style={{ color: config.color, fontSize: 18, margin: 0 }}>{config.emoji} {config.label}</h2><p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 4 }}>{getData().length} partecipanti • {getClassificaTotal()} contratti • {eventDate}</p></div><div style={{ display: 'flex', gap: 15 }}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: config.color }}>{getClassificaTotal()}</div><div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>{labels.c1}</div></div><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</div><div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>{labels.c2}</div></div></div></div><div style={{ overflowX: 'auto', maxHeight: '50vh', overflowY: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 300 }}><thead><tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}><th style={S.th}>#</th><th style={{ ...S.th, textAlign: 'left' }}>Nome</th><th style={S.th}>{labels.c1}</th>{isExclusive() && <><th style={S.th}>%</th><th style={S.th}>{labels.c2}</th></>}</tr></thead><tbody>{getData().map(([name, s], i) => { const p = s.v1 > 0 ? Math.round(s.v2 / s.v1 * 100) : 0; return (<tr key={name} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', ...(i < 3 ? { background: `${config.color}10` } : {}) }}><td style={{ padding: 10, textAlign: 'center' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td><td style={{ padding: 10, fontWeight: i < 3 ? 700 : 500, fontSize: 13 }}>{name}</td><td style={{ padding: 10, textAlign: 'center', color: config.color, fontWeight: 700 }}>{s.v1}</td>{isExclusive() && <><td style={{ padding: 10, textAlign: 'center', color: p >= 50 ? '#4CAF50' : '#FFC107', fontSize: 12 }}>{p}%</td><td style={{ padding: 10, textAlign: 'center', color: '#4CAF50', fontWeight: 700 }}>{s.v2}</td></>}</tr>); })}</tbody></table></div>{(user.role === 'admin' || user.role === 'assistente') && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}>📸 PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg,#00BFA5,#1DE9B6)' }} onClick={() => handleSendToBot()}>🤖 Invia a Bot</button>{sendStatus && <span style={{ fontSize: 13, color: sendStatus.includes('✅') ? '#4CAF50' : sendStatus.includes('❌') ? '#f44' : '#FFC107' }}>{sendStatus}</span>}</div>)}{user.role === 'k' && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}>📸 PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg,#666,#888)' }} onClick={() => handleSendToBot()}>🤖 Invia a Bot</button></div>)}</div>) : (<div style={{ textAlign: 'center', padding: 60, color: 'rgba(255,255,255,0.4)' }}><div style={{ fontSize: 50 }}>📊</div><p>Carica un CSV per iniziare</p></div>)}
+          
+          {/* TABS */}
+          {rankings && (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+              <button 
+                style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'dashboard' ? 'linear-gradient(135deg,#7C4DFF,#536DFE)' : 'rgba(255,255,255,0.05)', border: activeTab === 'dashboard' ? 'none' : '1px solid rgba(255,255,255,0.1)' }} 
+                onClick={() => setActiveTab('dashboard')}
+              >📊 Dashboard</button>
+              <button 
+                style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'classifiche' ? 'linear-gradient(135deg,#7C4DFF,#536DFE)' : 'rgba(255,255,255,0.05)', border: activeTab === 'classifiche' ? 'none' : '1px solid rgba(255,255,255,0.1)' }} 
+                onClick={() => setActiveTab('classifiche')}
+              >🏆 Classifiche</button>
+            </div>
+          )}
+
+          {/* DASHBOARD TAB */}
+          {rankings && activeTab === 'dashboard' && (() => {
+            const stats = getDashboardStats();
+            const dayNames = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+            const maxWeekly = Math.max(...stats.weeklyData, 1);
+            
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {/* STATS CARDS */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 15 }}>
+                  <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.2), rgba(255,107,53,0.05))', borderRadius: 16, padding: 20, textAlign: 'center', border: '1px solid rgba(255,107,53,0.3)' }}>
+                    <div style={{ fontSize: 36, fontWeight: 800, color: '#FF6B35', marginBottom: 5 }}>{animatedStats.ins}</div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 1 }}>Inseriti</div>
+                  </div>
+                  <div style={{ background: 'linear-gradient(135deg, rgba(76,175,80,0.2), rgba(76,175,80,0.05))', borderRadius: 16, padding: 20, textAlign: 'center', border: '1px solid rgba(76,175,80,0.3)' }}>
+                    <div style={{ fontSize: 36, fontWeight: 800, color: '#4CAF50', marginBottom: 5 }}>{animatedStats.acc}</div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 1 }}>Accettati</div>
+                  </div>
+                  <div style={{ background: 'linear-gradient(135deg, rgba(124,77,255,0.2), rgba(124,77,255,0.05))', borderRadius: 16, padding: 20, textAlign: 'center', border: '1px solid rgba(124,77,255,0.3)' }}>
+                    <div style={{ fontSize: 36, fontWeight: 800, color: '#7C4DFF', marginBottom: 5 }}>{animatedStats.part}</div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 1 }}>Partecipanti</div>
+                  </div>
+                  <div style={{ background: 'linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.05))', borderRadius: 16, padding: 20, textAlign: 'center', border: '1px solid rgba(255,215,0,0.3)' }}>
+                    <div style={{ fontSize: 36, fontWeight: 800, color: '#FFD700', marginBottom: 5 }}>{animatedStats.conv}%</div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 1 }}>Conversione</div>
+                  </div>
+                </div>
+
+                {/* PODIO */}
+                <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 20, padding: 25, border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <h3 style={{ color: '#FFD700', fontSize: 16, marginBottom: 20, textAlign: 'center' }}>🏆 PODIO</h3>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 15, height: 180 }}>
+                    {/* 2° POSTO */}
+                    <div style={{ textAlign: 'center', flex: 1, maxWidth: 120 }}>
+                      <div style={{ fontSize: 13, color: '#fff', fontWeight: 600, marginBottom: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{stats.top3[1]?.name || '-'}</div>
+                      <div style={{ background: 'linear-gradient(180deg, #E8E8E8, #A0A0A0)', borderRadius: '12px 12px 0 0', height: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 15 }}>
+                        <span style={{ fontSize: 28, fontWeight: 800, color: '#333' }}>2</span>
+                        <span style={{ fontSize: 18, fontWeight: 700, color: '#333', marginTop: 5 }}>{stats.top3[1]?.v1 || 0}</span>
+                      </div>
+                    </div>
+                    {/* 1° POSTO */}
+                    <div style={{ textAlign: 'center', flex: 1, maxWidth: 140 }}>
+                      <div style={{ fontSize: 14, color: '#FFD700', fontWeight: 700, marginBottom: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{stats.top3[0]?.name || '-'}</div>
+                      <div style={{ background: 'linear-gradient(180deg, #FFE082, #FFD700)', borderRadius: '12px 12px 0 0', height: 140, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 15, boxShadow: '0 0 30px rgba(255,215,0,0.3)' }}>
+                        <span style={{ fontSize: 36, fontWeight: 800, color: '#333' }}>1</span>
+                        <span style={{ fontSize: 24, fontWeight: 700, color: '#333', marginTop: 5 }}>{stats.top3[0]?.v1 || 0}</span>
+                      </div>
+                    </div>
+                    {/* 3° POSTO */}
+                    <div style={{ textAlign: 'center', flex: 1, maxWidth: 120 }}>
+                      <div style={{ fontSize: 13, color: '#fff', fontWeight: 600, marginBottom: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{stats.top3[2]?.name || '-'}</div>
+                      <div style={{ background: 'linear-gradient(180deg, #FFAB91, #CD7F32)', borderRadius: '12px 12px 0 0', height: 70, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 12 }}>
+                        <span style={{ fontSize: 24, fontWeight: 800, color: '#333' }}>3</span>
+                        <span style={{ fontSize: 16, fontWeight: 700, color: '#333', marginTop: 3 }}>{stats.top3[2]?.v1 || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* TOP 10 BARS + DONUT */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
+                  {/* TOP 10 */}
+                  <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <h3 style={{ color: '#FF6B35', fontSize: 14, marginBottom: 15 }}>📈 TOP 10 INSERITI</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {stats.top10.map((p, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span style={{ width: 20, fontSize: 12, color: i < 3 ? '#FFD700' : 'rgba(255,255,255,0.5)', fontWeight: i < 3 ? 700 : 400 }}>{i + 1}°</span>
+                          <div style={{ flex: 1, height: 24, background: 'rgba(255,255,255,0.05)', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
+                            <div style={{ 
+                              width: `${(p.v1 / stats.maxV1) * 100}%`, 
+                              height: '100%', 
+                              background: i === 0 ? 'linear-gradient(90deg, #FFD700, #FFA000)' : i < 3 ? 'linear-gradient(90deg, #FF6B35, #FF8A50)' : 'linear-gradient(90deg, #7C4DFF, #9575CD)',
+                              borderRadius: 6,
+                              transition: 'width 1s ease-out'
+                            }} />
+                            <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: '#fff', fontWeight: 500, textShadow: '0 1px 2px rgba(0,0,0,0.5)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '60%' }}>{p.name}</span>
+                          </div>
+                          <span style={{ width: 30, fontSize: 13, fontWeight: 700, color: '#FF6B35', textAlign: 'right' }}>{p.v1}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* DONUT CHART */}
+                  <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <h3 style={{ color: '#4CAF50', fontSize: 14, marginBottom: 15, alignSelf: 'flex-start' }}>🍩 CONVERSIONE</h3>
+                    <div style={{ position: 'relative', width: 150, height: 150 }}>
+                      <svg viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="12" />
+                        <circle 
+                          cx="50" cy="50" r="40" fill="none" 
+                          stroke="url(#gradient)" 
+                          strokeWidth="12" 
+                          strokeLinecap="round"
+                          strokeDasharray={`${stats.conv * 2.51} 251`}
+                          style={{ transition: 'stroke-dasharray 1.5s ease-out' }}
+                        />
+                        <defs>
+                          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#4CAF50" />
+                            <stop offset="100%" stopColor="#81C784" />
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: 32, fontWeight: 800, color: '#4CAF50' }}>{stats.conv}%</span>
+                        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>TASSO</span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 20, marginTop: 15 }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: '#FF6B35' }}>{stats.ins}</div>
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>Inseriti</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: '#4CAF50' }}>{stats.acc}</div>
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>Accettati</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* HEATMAP SETTIMANALE */}
+                <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <h3 style={{ color: '#7C4DFF', fontSize: 14, marginBottom: 15 }}>🗓️ ATTIVITÀ SETTIMANALE</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 10 }}>
+                    {dayNames.map((day, i) => {
+                      const val = stats.weeklyData[i];
+                      const intensity = val / maxWeekly;
+                      const bgColor = val === 0 ? 'rgba(255,255,255,0.05)' : 
+                        intensity > 0.7 ? '#4CAF50' : 
+                        intensity > 0.4 ? '#FFC107' : 
+                        intensity > 0 ? '#FF6B35' : 'rgba(255,255,255,0.05)';
+                      return (
+                        <div key={day} style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>{day}</div>
+                          <div style={{ 
+                            width: '100%', 
+                            aspectRatio: '1', 
+                            borderRadius: 10, 
+                            background: bgColor,
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            fontSize: 16,
+                            fontWeight: 700,
+                            color: val === 0 ? 'rgba(255,255,255,0.2)' : '#fff',
+                            boxShadow: val > 0 ? `0 0 15px ${bgColor}40` : 'none',
+                            transition: 'all 0.3s'
+                          }}>{val}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 15 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#4CAF50' }} /><span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>Alto</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FFC107' }} /><span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>Medio</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FF6B35' }} /><span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>Basso</span></div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* CLASSIFICHE TAB */}
+          {rankings && activeTab === 'classifiche' ? (<div style={S.rankCard}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 15 }}><div><h2 style={{ color: config.color, fontSize: 18, margin: 0 }}>{config.emoji} {config.label}</h2><p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 4 }}>{getData().length} partecipanti • {getClassificaTotal()} contratti • {eventDate}</p></div><div style={{ display: 'flex', gap: 15 }}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: config.color }}>{getClassificaTotal()}</div><div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>{labels.c1}</div></div><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</div><div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>{labels.c2}</div></div></div></div><div style={{ overflowX: 'auto', maxHeight: '50vh', overflowY: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 300 }}><thead><tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}><th style={S.th}>#</th><th style={{ ...S.th, textAlign: 'left' }}>Nome</th><th style={S.th}>{labels.c1}</th>{isExclusive() && <><th style={S.th}>%</th><th style={S.th}>{labels.c2}</th></>}</tr></thead><tbody>{getData().map(([name, s], i) => { const p = s.v1 > 0 ? Math.round(s.v2 / s.v1 * 100) : 0; return (<tr key={name} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', ...(i < 3 ? { background: `${config.color}10` } : {}) }}><td style={{ padding: 10, textAlign: 'center' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td><td style={{ padding: 10, fontWeight: i < 3 ? 700 : 500, fontSize: 13 }}>{name}</td><td style={{ padding: 10, textAlign: 'center', color: config.color, fontWeight: 700 }}>{s.v1}</td>{isExclusive() && <><td style={{ padding: 10, textAlign: 'center', color: p >= 50 ? '#4CAF50' : '#FFC107', fontSize: 12 }}>{p}%</td><td style={{ padding: 10, textAlign: 'center', color: '#4CAF50', fontWeight: 700 }}>{s.v2}</td></>}</tr>); })}</tbody></table></div>{(user.role === 'admin' || user.role === 'assistente') && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}>📸 PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg,#00BFA5,#1DE9B6)' }} onClick={() => handleSendToBot()}>🤖 Invia a Bot</button>{sendStatus && <span style={{ fontSize: 13, color: sendStatus.includes('✅') ? '#4CAF50' : sendStatus.includes('❌') ? '#f44' : '#FFC107' }}>{sendStatus}</span>}</div>)}{user.role === 'k' && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}>📸 PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg,#666,#888)' }} onClick={() => handleSendToBot()}>🤖 Invia a Bot</button></div>)}</div>) : !rankings && (<div style={{ textAlign: 'center', padding: 60, color: 'rgba(255,255,255,0.4)' }}><div style={{ fontSize: 50 }}>📊</div><p>Carica un CSV per iniziare</p></div>)}
         </section>
       </main>
       {showConfirmModal && (
