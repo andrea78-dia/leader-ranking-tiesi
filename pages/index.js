@@ -4,11 +4,11 @@ import Head from 'next/head';
 const USERS = {
   admin: { password: 'admin2026', role: 'admin', name: 'Admin' },
   assistente: { password: 'assist2026', role: 'assistente', name: 'Assistente' },
-  manager1: { password: 'manager1', role: 'k', name: 'Manager 1' },
-  manager2: { password: 'manager2', role: 'k', name: 'Manager 2' },
-  manager3: { password: 'manager3', role: 'k', name: 'Manager 3' },
-  manager4: { password: 'manager4', role: 'k', name: 'Manager 4' },
-  manager5: { password: 'manager5', role: 'k', name: 'Manager 5' },
+  thomas: { password: 'thomas2026', role: 'k', name: 'Thomas Magri' },
+  marcello: { password: 'marcello2026', role: 'k', name: 'Marcello Ventura' },
+  patrizio: { password: 'patrizio2026', role: 'k', name: 'Patrizio Tiesi' },
+  andrea: { password: 'andrea2026', role: 'k', name: 'Andrea Tiesi' },
+  leonardo: { password: 'leonardo2026', role: 'k', name: 'Leonardo Colletta' },
 };
 
 const K_NAMES = [];
@@ -91,7 +91,8 @@ export default function Home() {
   const [availableMonths, setAvailableMonths] = useState([]);
   const [weeks, setWeeks] = useState([]);
   const [sendStatus, setSendStatus] = useState('');
-
+  const [periodType, setPeriodType] = useState('progressiva');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const parseCSV = (text) => {
     const lines = text.trim().split('\n');
     const headers = lines[0].split(';').map(h => h.trim().replace(/"/g, '').replace(/^\uFEFF/, ''));
@@ -188,7 +189,23 @@ export default function Home() {
   const generatePNG_Impact = () => {
     const data = getData(); if (!data.length) return null;
     const config = getConfig(), labels = getLabels(), isAcc = selectedRanking.includes('accettati'), grouped = groupByValue(data, isAcc);
-    const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d'), W = 1080, H = 1080;
+    const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d'), W = 1080;
+    
+    // Calcola altezza necessaria PRIMA
+    let estimatedH = 220; // Header
+    const testFontSize = 18;
+    ctx.font = `bold ${testFontSize}px Arial`;
+    
+    grouped.forEach((group) => {
+      const allNames = group.members.map(m => m.name.toUpperCase());
+      const namesText = allNames.join('  •  ');
+      const estimatedLines = Math.ceil(ctx.measureText(namesText).width / (W - 180)) || 1;
+      estimatedH += Math.max(50, 20 + estimatedLines * (testFontSize + 8)) + 12;
+    });
+    estimatedH += 60; // Footer
+    
+    // Altezza minima 1080, ma può crescere se necessario
+    const H = Math.max(1080, estimatedH);
     canvas.width = W; canvas.height = H;
     
     // Background
@@ -197,7 +214,7 @@ export default function Home() {
     ctx.strokeStyle = `${config.color}30`; ctx.lineWidth = 2; ctx.strokeRect(20, 20, W - 40, H - 40);
     ctx.fillStyle = config.color; ctx.fillRect(35, 35, W - 70, 4);
     
-    // Header - più compatto senza stats box
+    // Header
     ctx.fillStyle = config.color; ctx.font = 'bold 16px Arial'; ctx.fillText('LEADER RANKING', 45, 65);
     ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 42px Arial'; ctx.fillText(`${config.emoji} CLASSIFICA ${config.label}`, 45, 115);
     ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '18px Arial'; ctx.fillText(`${eventName} • ${eventDate}`, 45, 148);
@@ -210,30 +227,36 @@ export default function Home() {
     // Separator
     ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(45, 195, W - 90, 2);
     
-    // Calcola spazio disponibile - ORA HO PIÙ SPAZIO!
-    let currentY = 215;
-    const footerY = H - 55;
-    const availableH = footerY - currentY;
-    
-    // Calcola font size in base ai gruppi
+    // Calcola font size proporzionale in base al numero di gruppi e membri totali
+    const totalMembers = data.length;
     const numGroups = grouped.length;
-    const baseFontSize = numGroups <= 5 ? 24 : numGroups <= 8 ? 21 : numGroups <= 12 ? 18 : 16;
-    const lineHeight = baseFontSize + 10;
-    const groupPadding = numGroups <= 8 ? 18 : 12;
     
+    // Font più piccolo se tanti partecipanti, ma mai sotto 13px
+    let baseFontSize;
+    if (totalMembers <= 15) baseFontSize = 22;
+    else if (totalMembers <= 25) baseFontSize = 20;
+    else if (totalMembers <= 40) baseFontSize = 18;
+    else if (totalMembers <= 60) baseFontSize = 16;
+    else if (totalMembers <= 80) baseFontSize = 14;
+    else baseFontSize = 13;
+    
+    const lineHeight = baseFontSize + 6;
+    const groupPadding = totalMembers <= 30 ? 12 : 8;
+    
+    let currentY = 215;
     let position = 1;
     
+    // MOSTRA TUTTI I GRUPPI - nessun taglio!
     grouped.forEach((group) => {
-      if (currentY > footerY - 50) return;
       const { value, members } = group;
       const isTop3 = position <= 3;
       const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : null;
       
       // Font size per questo gruppo
-      const fontSize = isTop3 ? baseFontSize + 3 : baseFontSize;
+      const fontSize = isTop3 ? Math.min(baseFontSize + 2, 24) : baseFontSize;
       ctx.font = `bold ${fontSize}px Arial`;
       
-      // Costruisci linee di nomi
+      // Costruisci linee di nomi - TUTTI i nomi
       const maxLineWidth = W - 170;
       const allNames = members.map(m => m.name.toUpperCase());
       const lines = [];
@@ -252,10 +275,8 @@ export default function Home() {
       });
       if (currentLine) lines.push(currentLine);
       
-      // Altezza blocco
-      const blockH = Math.max(isTop3 ? 60 : 52, 22 + lines.length * lineHeight);
-      
-      if (currentY + blockH > footerY - 35) return;
+      // Altezza blocco basata sulle linee effettive
+      const blockH = Math.max(isTop3 ? 55 : 45, 18 + lines.length * lineHeight);
       
       // Background
       if (isTop3) {
@@ -265,45 +286,46 @@ export default function Home() {
       } else {
         ctx.fillStyle = 'rgba(255,255,255,0.05)';
       }
-      ctx.beginPath(); ctx.roundRect(45, currentY, W - 90, blockH, 12); ctx.fill();
+      ctx.beginPath(); ctx.roundRect(45, currentY, W - 90, blockH, 10); ctx.fill();
       
       // Medaglia/Posizione
       const textStartY = currentY + (blockH - lines.length * lineHeight) / 2 + fontSize;
       
       if (medal) {
-        ctx.font = '32px Arial';
-        ctx.fillText(medal, 60, textStartY + (lines.length > 1 ? 0 : 6));
+        ctx.font = `${Math.min(28, fontSize + 8)}px Arial`;
+        ctx.fillText(medal, 55, textStartY + (lines.length > 1 ? 0 : 4));
       } else {
         ctx.fillStyle = 'rgba(255,255,255,0.6)';
-        ctx.font = 'bold 20px Arial';
-        ctx.fillText(`${position}°`, 62, textStartY + (lines.length > 1 ? 0 : 6));
+        ctx.font = `bold ${Math.min(18, fontSize)}px Arial`;
+        ctx.fillText(`${position}°`, 58, textStartY + (lines.length > 1 ? 0 : 4));
       }
       
       // Nomi
       ctx.fillStyle = isTop3 ? '#FFF' : 'rgba(255,255,255,0.9)';
       ctx.font = `bold ${fontSize}px Arial`;
       lines.forEach((line, i) => {
-        ctx.fillText(line, 108, textStartY + i * lineHeight);
+        ctx.fillText(line, 100, textStartY + i * lineHeight);
       });
       
       // Valore contratti
       ctx.fillStyle = isAcc ? '#4CAF50' : config.color;
-      ctx.font = `bold ${isTop3 ? 36 : 30}px Arial`;
+      ctx.font = `bold ${isTop3 ? 32 : 26}px Arial`;
       ctx.textAlign = 'right';
-      ctx.fillText(value.toString(), W - 55, currentY + blockH / 2 + 12);
+      ctx.fillText(value.toString(), W - 55, currentY + blockH / 2 + 10);
       ctx.textAlign = 'left';
       
       currentY += blockH + groupPadding;
       position++;
     });
     
-    // Footer
+    // Footer - posizionato dopo l'ultimo gruppo
+    const footerY = currentY + 10;
     ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(45, footerY, W - 90, 2);
     ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '15px Arial';
-    ctx.fillText(`📊 ${data.length} partecipanti • ${totIns} contratti`, 50, footerY + 30);
-    ctx.textAlign = 'right'; ctx.fillText('LEADER RANKING', W - 50, footerY + 30);
+    ctx.fillText(`📊 ${data.length} partecipanti • ${totIns} contratti`, 50, footerY + 28);
+    ctx.textAlign = 'right'; ctx.fillText('LEADER RANKING', W - 50, footerY + 28);
     ctx.textAlign = 'left';
-    ctx.fillStyle = config.color; ctx.fillRect(35, H - 16, W - 70, 4);
+    ctx.fillStyle = config.color; ctx.fillRect(35, footerY + 45, W - 70, 4);
     
     return canvas.toDataURL('image/png');
   };
@@ -419,7 +441,19 @@ export default function Home() {
   const handleGenerate = () => { const img = generatePNG(); if (img) { setPreviewImage(img); setShowPreview(true); } };
   const download = () => { if (previewImage) { const a = document.createElement('a'); a.download = `classifica_${selectedRanking}_${eventDate.replace(/\s/g, '_').replace(/\./g, '')}.png`; a.href = previewImage; a.click(); } };
 
-  const handleSendToBot = async () => {
+  const handleSendToBot = async (confirmed = false) => {
+    // K Manager: messaggio ironico
+    if (user.role === 'k') {
+      alert('🚫 Ehi campione! Questo bottone è riservato ai Supremi Amministratori.\n\nSe vuoi l\'automazione anche per te, contatta il Genio Creatore Andrea Tiesi 🧞‍♂️\n\nNel frattempo... scarica l\'immagine e postala tu, che fa bene ai muscoli delle dita! 💪');
+      return;
+    }
+    
+    // Assistente: mostra conferma
+    if (user.role === 'assistente' && !confirmed) {
+      setShowConfirmModal(true);
+      return;
+    }
+    
     setSendStatus('Invio...');
     const img = previewImage || generatePNG();
     if (!img) { setSendStatus('Errore'); return; }
@@ -503,6 +537,7 @@ export default function Home() {
         ranking_category: config.category,
         event_name: eventName,
         event_date: eventDate,
+        period_type: periodType,
         csv_type: csvType,
         exclude_k: excludeK,
         image_url: imageUrl,
@@ -554,13 +589,13 @@ export default function Home() {
       {loginError && <p style={{ color: '#f44', fontSize: 13, marginBottom: 10 }}>{loginError}</p>}
       <button style={S.btn} onClick={handleLogin}>ACCEDI</button>
       <div style={S.categoryIcons}><span style={S.catIcon}>🟠</span><span style={S.catIcon}>🔵</span><span style={S.catIcon}>⭐</span><span style={S.catIcon}>👑</span></div>
-      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v8.5</p>
+      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v8.7</p>
     </div></div></>);
 
   // HOMEPAGE CSV
-  if (!csvData && (user.role === 'admin' || user.role === 'assistente')) return (<><Head><title>Leader Ranking</title><meta name="viewport" content="width=device-width,initial-scale=1" /></Head>
+  if (!csvData && (user.role === 'admin' || user.role === 'assistente' || user.role === 'k')) return (<><Head><title>Leader Ranking</title><meta name="viewport" content="width=device-width,initial-scale=1" /></Head>
     <div style={S.homeWrap}>
-      <header style={S.homeHeader}><div style={S.homeLogoSmall}><span style={{ color: '#7C4DFF', fontWeight: 800 }}>LEADER</span><span style={{ fontWeight: 300 }}> RANKING</span></div><button style={S.logoutBtn} onClick={() => setUser(null)}>Esci</button></header>
+      <header style={S.homeHeader}><div style={S.homeLogoSmall}><span style={{ color: '#7C4DFF', fontWeight: 800 }}>LEADER</span><span style={{ fontWeight: 300 }}> RANKING</span></div><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Ciao, {user.name}</span><button style={S.logoutBtn} onClick={() => setUser(null)}>Esci</button></div></header>
       <main style={S.homeMain}>
         <div style={S.homeLogo}>
           <div style={S.homeLogoIcon}><div style={S.homePodium}>
@@ -603,14 +638,35 @@ export default function Home() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}><span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', letterSpacing: 1 }}>📊 CLASSIFICHE</span><button style={{ background: 'none', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer' }} onClick={() => setMobileMenuOpen(false)}>✕</button></div>
           {rankings ? (<><p style={S.catLabel}>IVD</p><button style={{ ...S.menuItem, ...(selectedRanking === 'ivd_inseriti' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('ivd_inseriti'); setMobileMenuOpen(false); }}>🟠 {labels.c1} ({rankings.ivd_inseriti.length})</button><button style={{ ...S.menuItem, ...(selectedRanking === 'ivd_accettati' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('ivd_accettati'); setMobileMenuOpen(false); }}>🟢 {labels.c2} ({rankings.ivd_accettati.length})</button><p style={S.catLabel}>SDP</p><button style={{ ...S.menuItem, ...(selectedRanking === 'sdp_inseriti' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('sdp_inseriti'); setMobileMenuOpen(false); }}>🔵 {labels.c1} ({rankings.sdp_inseriti.length})</button><button style={{ ...S.menuItem, ...(selectedRanking === 'sdp_accettati' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('sdp_accettati'); setMobileMenuOpen(false); }}>🟢 {labels.c2} ({rankings.sdp_accettati.length})</button><p style={S.catLabel}>MANAGER</p><button style={{ ...S.menuItem, ...(selectedRanking === 'nw' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('nw'); setMobileMenuOpen(false); }}>⭐ Networker ({rankings.nw.length})</button><button style={{ ...S.menuItem, ...(selectedRanking === 'k' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('k'); setMobileMenuOpen(false); }}>👑 K Manager ({rankings.k.length})</button></>) : <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>Carica CSV</p>}
           <div style={S.divider} />
-          {(user.role === 'admin' || user.role === 'assistente') && (<><p style={S.catLabel}>⚙️ FILTRI</p><label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', color: 'rgba(255,255,255,0.8)' }}><input type="checkbox" checked={excludeK} onChange={toggleExcludeK} style={{ accentColor: '#7C4DFF' }} /> Escludi K</label><div style={S.divider} /><p style={S.catLabel}>📅 PERIODO</p><button style={{ ...S.periodBtn, ...(!selectedMonth ? { background: 'rgba(124,77,255,0.2)', color: '#7C4DFF' } : {}) }} onClick={handleShowAll}>📋 Tutti ({csvData?.length || 0})</button>{availableMonths.length > 0 && (<select style={S.select} value={selectedMonth} onChange={e => handleMonthChange(e.target.value)}><option value="">-- Mese --</option>{availableMonths.map(m => <option key={m} value={m}>{m}</option>)}</select>)}{weeks.length > 0 && (<select style={S.select} value={selectedWeek?.num || ''} onChange={e => handleWeekChange(e.target.value)}><option value="">-- Settimana --</option>{weeks.map(w => <option key={w.num} value={w.num}>{w.label}</option>)}</select>)}<div style={S.divider} /><p style={S.catLabel}>🏷️ ETICHETTE</p><select style={S.select} value={eventName} onChange={e => setEventName(e.target.value)}>{EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select><input style={S.inputSm} value={eventDate} onChange={e => setEventDate(e.target.value)} placeholder="Periodo" /></>)}
+          {(user.role === 'admin' || user.role === 'assistente') && (<><p style={S.catLabel}>⚙️ FILTRI</p><label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', color: 'rgba(255,255,255,0.8)' }}><input type="checkbox" checked={excludeK} onChange={toggleExcludeK} style={{ accentColor: '#7C4DFF' }} /> Escludi K</label><div style={S.divider} /><p style={S.catLabel}>📅 PERIODO</p><button style={{ ...S.periodBtn, ...(!selectedMonth ? { background: 'rgba(124,77,255,0.2)', color: '#7C4DFF' } : {}) }} onClick={handleShowAll}>📋 Tutti ({csvData?.length || 0})</button>{availableMonths.length > 0 && (<select style={S.select} value={selectedMonth} onChange={e => handleMonthChange(e.target.value)}><option value="">-- Mese --</option>{availableMonths.map(m => <option key={m} value={m}>{m}</option>)}</select>)}{weeks.length > 0 && (<select style={S.select} value={selectedWeek?.num || ''} onChange={e => handleWeekChange(e.target.value)}><option value="">-- Settimana --</option>{weeks.map(w => <option key={w.num} value={w.num}>{w.label}</option>)}</select>)}<div style={S.divider} /><p style={S.catLabel}>📊 TIPO CLASSIFICA</p><select style={S.select} value={periodType} onChange={e => setPeriodType(e.target.value)}><option value="progressiva">📈 Progressiva (mese in corso)</option><option value="settimanale">📅 Settimanale</option><option value="finale">🏆 Finale mese</option></select><div style={S.divider} /><p style={S.catLabel}>🏷️ ETICHETTE</p><select style={S.select} value={eventName} onChange={e => setEventName(e.target.value)}>{EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select><input style={S.inputSm} value={eventDate} onChange={e => setEventDate(e.target.value)} placeholder="Periodo" /></>)}
         </aside>
         {mobileMenuOpen && <div style={S.overlay} onClick={() => setMobileMenuOpen(false)} />}
         <section style={S.content}>
           {(user.role === 'admin' || user.role === 'assistente') && (<div style={{ ...S.uploadBox, ...(isDragging ? { borderColor: '#7C4DFF', background: 'rgba(124,77,255,0.1)' } : {}) }} onDragOver={e => { e.preventDefault(); setIsDragging(true); }} onDragLeave={e => { e.preventDefault(); setIsDragging(false); }} onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.csv')) processFile(f); }}><input type="file" accept=".csv" id="csv" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processFile(e.target.files[0]); }} /><label htmlFor="csv" style={{ cursor: 'pointer', padding: '10px 20px', background: 'rgba(124,77,255,0.1)', borderRadius: 8, color: '#7C4DFF', fontWeight: 600 }}>{filteredData ? `✅ ${filteredData.length} righe caricate` : '📤 Carica CSV'}</label></div>)}
-          {rankings ? (<div style={S.rankCard}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 15 }}><div><h2 style={{ color: config.color, fontSize: 18, margin: 0 }}>{config.emoji} {config.label}</h2><p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 4 }}>{getData().length} partecipanti • {getClassificaTotal()} contratti • {eventDate}</p></div><div style={{ display: 'flex', gap: 15 }}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: config.color }}>{getClassificaTotal()}</div><div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>{labels.c1}</div></div><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</div><div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>{labels.c2}</div></div></div></div><div style={{ overflowX: 'auto', maxHeight: '50vh', overflowY: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 300 }}><thead><tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}><th style={S.th}>#</th><th style={{ ...S.th, textAlign: 'left' }}>Nome</th><th style={S.th}>{labels.c1}</th>{isExclusive() && <><th style={S.th}>%</th><th style={S.th}>{labels.c2}</th></>}</tr></thead><tbody>{getData().map(([name, s], i) => { const p = s.v1 > 0 ? Math.round(s.v2 / s.v1 * 100) : 0; return (<tr key={name} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', ...(i < 3 ? { background: `${config.color}10` } : {}) }}><td style={{ padding: 10, textAlign: 'center' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td><td style={{ padding: 10, fontWeight: i < 3 ? 700 : 500, fontSize: 13 }}>{name}</td><td style={{ padding: 10, textAlign: 'center', color: config.color, fontWeight: 700 }}>{s.v1}</td>{isExclusive() && <><td style={{ padding: 10, textAlign: 'center', color: p >= 50 ? '#4CAF50' : '#FFC107', fontSize: 12 }}>{p}%</td><td style={{ padding: 10, textAlign: 'center', color: '#4CAF50', fontWeight: 700 }}>{s.v2}</td></>}</tr>); })}</tbody></table></div>{(user.role === 'admin' || user.role === 'assistente') && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}>📸 PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg,#00BFA5,#1DE9B6)' }} onClick={handleSendToBot}>🤖 Invia a Bot</button>{sendStatus && <span style={{ fontSize: 13, color: sendStatus.includes('✅') ? '#4CAF50' : sendStatus.includes('❌') ? '#f44' : '#FFC107' }}>{sendStatus}</span>}</div>)}</div>) : (<div style={{ textAlign: 'center', padding: 60, color: 'rgba(255,255,255,0.4)' }}><div style={{ fontSize: 50 }}>📊</div><p>Carica un CSV per iniziare</p></div>)}
+          {rankings ? (<div style={S.rankCard}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 15 }}><div><h2 style={{ color: config.color, fontSize: 18, margin: 0 }}>{config.emoji} {config.label}</h2><p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 4 }}>{getData().length} partecipanti • {getClassificaTotal()} contratti • {eventDate}</p></div><div style={{ display: 'flex', gap: 15 }}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: config.color }}>{getClassificaTotal()}</div><div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>{labels.c1}</div></div><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</div><div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>{labels.c2}</div></div></div></div><div style={{ overflowX: 'auto', maxHeight: '50vh', overflowY: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 300 }}><thead><tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}><th style={S.th}>#</th><th style={{ ...S.th, textAlign: 'left' }}>Nome</th><th style={S.th}>{labels.c1}</th>{isExclusive() && <><th style={S.th}>%</th><th style={S.th}>{labels.c2}</th></>}</tr></thead><tbody>{getData().map(([name, s], i) => { const p = s.v1 > 0 ? Math.round(s.v2 / s.v1 * 100) : 0; return (<tr key={name} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', ...(i < 3 ? { background: `${config.color}10` } : {}) }}><td style={{ padding: 10, textAlign: 'center' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td><td style={{ padding: 10, fontWeight: i < 3 ? 700 : 500, fontSize: 13 }}>{name}</td><td style={{ padding: 10, textAlign: 'center', color: config.color, fontWeight: 700 }}>{s.v1}</td>{isExclusive() && <><td style={{ padding: 10, textAlign: 'center', color: p >= 50 ? '#4CAF50' : '#FFC107', fontSize: 12 }}>{p}%</td><td style={{ padding: 10, textAlign: 'center', color: '#4CAF50', fontWeight: 700 }}>{s.v2}</td></>}</tr>); })}</tbody></table></div>{(user.role === 'admin' || user.role === 'assistente') && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}>📸 PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg,#00BFA5,#1DE9B6)' }} onClick={() => handleSendToBot()}>🤖 Invia a Bot</button>{sendStatus && <span style={{ fontSize: 13, color: sendStatus.includes('✅') ? '#4CAF50' : sendStatus.includes('❌') ? '#f44' : '#FFC107' }}>{sendStatus}</span>}</div>)}{user.role === 'k' && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}>📸 PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg,#666,#888)' }} onClick={() => handleSendToBot()}>🤖 Invia a Bot</button></div>)}</div>) : (<div style={{ textAlign: 'center', padding: 60, color: 'rgba(255,255,255,0.4)' }}><div style={{ fontSize: 50 }}>📊</div><p>Carica un CSV per iniziare</p></div>)}
         </section>
       </main>
+      {showConfirmModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
+          <div style={{ background: 'linear-gradient(135deg,#1a1a2e,#12121f)', borderRadius: 20, padding: 30, maxWidth: 450, width: '100%', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <h2 style={{ color: '#FFC107', marginBottom: 20, fontSize: 20 }}>⚠️ VERIFICA PRIMA DI INVIARE</h2>
+            <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+              <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 10, fontSize: 14 }}>📊 <strong style={{ color: '#fff' }}>Classifica:</strong> {config.label}</p>
+              <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 10, fontSize: 14 }}>📅 <strong style={{ color: '#fff' }}>Evento:</strong> {eventName} - {eventDate}</p>
+              <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 10, fontSize: 14 }}>📈 <strong style={{ color: '#fff' }}>Tipo:</strong> {periodType === 'progressiva' ? 'Progressiva' : periodType === 'settimanale' ? 'Settimanale' : 'Finale mese'}</p>
+              <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '15px 0' }} />
+              <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 8, fontSize: 14 }}>📥 <strong style={{ color: config.color }}>{getClassificaTotal()}</strong> {labels.c1}</p>
+              <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 8, fontSize: 14 }}>✅ <strong style={{ color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</strong> {labels.c2}</p>
+              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>👥 <strong style={{ color: '#fff' }}>{getData().length}</strong> partecipanti</p>
+            </div>
+            <p style={{ color: '#FFC107', fontSize: 14, marginBottom: 20, textAlign: 'center' }}>✅ I numeri sono corretti?</p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button style={{ ...S.btn, flex: 1, background: 'transparent', border: '1px solid rgba(255,255,255,0.2)' }} onClick={() => setShowConfirmModal(false)}>Annulla</button>
+              <button style={{ ...S.btn, flex: 1, background: 'linear-gradient(135deg,#4CAF50,#81C784)' }} onClick={() => { setShowConfirmModal(false); handleSendToBot(true); }}>✅ Conferma e Invia</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div></>);
 }
 
