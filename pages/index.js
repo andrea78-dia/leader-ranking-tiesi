@@ -298,9 +298,9 @@ export default function Home() {
 
   // Colori per torte
   const PIE_COLORS = ['#FFD700', '#7C4DFF', '#FF6B35', '#4CAF50', '#2196F3', '#E91E63', '#00BCD4', '#9C27B0', '#FF9800', '#607D8B'];
-  const STATO_COLORS = { 'Accettato': '#4CAF50', 'Sospeso': '#FFC107', 'Presente': '#4CAF50', 'Assente': '#FF6B35' };
+  const STATO_COLORS = { 'Accettato': '#4CAF50', 'Sospeso': '#FFC107', 'Presente': '#4CAF50', 'Assente': '#FF6B35', 'In lavorazione': '#2196F3', 'Installato': '#00BCD4', 'Recesso': '#f44336', 'Annullato': '#9E9E9E', 'In fornitura': '#4CAF50', 'Cessato': '#607D8B' };
 
-  // === REPORT AGGREGATO - Funzioni ===
+  // === REPORT AGGREGATO v2 - 3 PILASTRI SEPARATI ===
   const processReportCSV = (type, file) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -322,76 +322,174 @@ export default function Home() {
   };
 
   const generateReportData = () => {
-    const allData = [];
-    const sources = { ivd: 0, energy: 0, fv: 0, consultings: 0 };
-    
-    // Combina tutti i CSV caricati
-    Object.entries(reportCSVs).forEach(([type, csv]) => {
-      if (csv?.data) {
-        sources[type] = csv.data.length;
-        csv.data.forEach(row => allData.push({ ...row, _source: type }));
-      }
-    });
-    
-    if (allData.length === 0) return null;
-    
-    // Calcola classifiche aggregate
-    const kCount = {}, nwCount = {}, sdpCount = {}, ivdCount = {};
-    
-    allData.forEach(row => {
-      const k = row['Nome Primo K'] || '';
-      const nw = row['Nome Primo Networker'] || '';
-      const sdp = row['Nome Primo SDP FV'] || row['Nome Primo SDP Fv'] || row['Nome Primo SDP LA'] || row['Nome Primo SDP La'] || '';
-      const ivd = row['IVD'] || row['Nome Intermediario'] || '';
-      
-      if (k && !k.includes('Nome Primo')) kCount[k] = (kCount[k] || 0) + 1;
-      if (nw && !nw.includes('Nome Primo')) nwCount[nw] = (nwCount[nw] || 0) + 1;
-      if (sdp && !sdp.includes('Nome Primo')) sdpCount[sdp] = (sdpCount[sdp] || 0) + 1;
-      if (ivd && !ivd.includes('Nome') && !ivd.includes('IVD')) ivdCount[ivd] = (ivdCount[ivd] || 0) + 1;
-    });
-    
-    const toSortedArray = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1]);
-    
-    // Calcola heatmap per ogni categoria
-    const heatmaps = {};
-    ['ivd', 'energy', 'fv', 'consultings'].forEach(type => {
-      if (reportCSVs[type]?.data) {
-        const monthlyData = Array(31).fill(0);
-        reportCSVs[type].data.forEach(row => {
-          const dateStr = row['Inserimento'] || row['Data'] || row['Data Inserimento'] || '';
-          if (dateStr) {
-            try {
-              const d = new Date(dateStr.replace(' ', 'T'));
-              if (!isNaN(d.getTime())) {
-                const dayOfMonth = d.getDate();
-                if (dayOfMonth >= 1 && dayOfMonth <= 31) {
-                  monthlyData[dayOfMonth - 1]++;
-                }
-              }
-            } catch (e) {}
-          }
-        });
-        heatmaps[type] = monthlyData;
-      }
-    });
-    
-    return {
-      total: allData.length,
-      sources,
-      classifiche: {
-        k: toSortedArray(kCount),
-        nw: toSortedArray(nwCount),
-        sdp: toSortedArray(sdpCount),
-        ivd: toSortedArray(ivdCount)
-      },
-      heatmaps
+    const result = {
+      pilastri: {},
+      heatmapMesi: {}, // Per ogni pilastro, dati per mese
+      selectedMonth: null // Per drill-down
     };
+    
+    // Helper per estrarre classifiche da un dataset
+    const extractClassifiche = (data) => {
+      const kCount = {}, nwCount = {}, sdpCount = {};
+      data.forEach(row => {
+        const k = row['Nome Primo K'] || '';
+        const nw = row['Nome Primo Networker'] || '';
+        const sdp = row['Nome Primo SDP FV'] || row['Nome Primo SDP Fv'] || row['Nome Primo SDP LA'] || row['Nome Primo SDP La'] || '';
+        
+        if (k && !k.includes('Nome Primo')) kCount[k] = (kCount[k] || 0) + 1;
+        if (nw && !nw.includes('Nome Primo')) nwCount[nw] = (nwCount[nw] || 0) + 1;
+        if (sdp && !sdp.includes('Nome Primo')) sdpCount[sdp] = (sdpCount[sdp] || 0) + 1;
+      });
+      const toSorted = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1]);
+      return { k: toSorted(kCount), nw: toSorted(nwCount), sdp: toSorted(sdpCount) };
+    };
+    
+    // Helper per contare stati
+    const countStati = (data, field) => {
+      const counts = {};
+      data.forEach(row => {
+        const stato = row[field] || '';
+        if (stato && !stato.includes('Stato')) {
+          counts[stato] = (counts[stato] || 0) + 1;
+        }
+      });
+      return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    };
+    
+    // Helper per heatmap mesi (12 mesi)
+    const calcHeatmapMesi = (data) => {
+      const mesi = Array(12).fill(0);
+      const giorniPerMese = {}; // { 0: [31 giorni], 1: [28 giorni], ... }
+      
+      data.forEach(row => {
+        const dateStr = row['Inserimento'] || row['Data'] || row['Data Inserimento'] || row['Data SI'] || '';
+        if (dateStr) {
+          try {
+            const d = new Date(dateStr.replace(' ', 'T'));
+            if (!isNaN(d.getTime())) {
+              const month = d.getMonth();
+              const day = d.getDate();
+              mesi[month]++;
+              
+              if (!giorniPerMese[month]) giorniPerMese[month] = Array(31).fill(0);
+              if (day >= 1 && day <= 31) giorniPerMese[month][day - 1]++;
+            }
+          } catch (e) {}
+        }
+      });
+      
+      return { mesi, giorniPerMese };
+    };
+    
+    // ═══════════════════════════════════════════════════════════
+    // ☀️ PILASTRO FOTOVOLTAICO
+    // ═══════════════════════════════════════════════════════════
+    if (reportCSVs.fv?.data?.length > 0) {
+      const fvData = reportCSVs.fv.data;
+      const stati = countStati(fvData, 'Stato');
+      const classifiche = extractClassifiche(fvData);
+      const heatmap = calcHeatmapMesi(fvData);
+      
+      result.pilastri.fv = {
+        nome: 'FOTOVOLTAICO',
+        emoji: '☀️',
+        color: '#FF9800',
+        totale: fvData.length,
+        stati: stati,
+        classifiche: classifiche,
+        totaleK: classifiche.k.reduce((s, [,v]) => s + v, 0)
+      };
+      result.heatmapMesi.fv = heatmap;
+    }
+    
+    // ═══════════════════════════════════════════════════════════
+    // ⚡ PILASTRO LUCE AMICA
+    // ═══════════════════════════════════════════════════════════
+    if (reportCSVs.energy?.data?.length > 0) {
+      const laData = reportCSVs.energy.data;
+      const statiNwgSpa = countStati(laData, 'Stato NWG Spa');
+      const statiNwgEnergia = countStati(laData, 'Stato NWG Energia');
+      const statiGenerico = countStati(laData, 'Stato');
+      const classifiche = extractClassifiche(laData);
+      const heatmap = calcHeatmapMesi(laData);
+      
+      result.pilastri.energy = {
+        nome: 'LUCE AMICA',
+        emoji: '⚡',
+        color: '#FFC107',
+        totale: laData.length,
+        statiNwgSpa: statiNwgSpa.length > 0 ? statiNwgSpa : statiGenerico,
+        statiNwgEnergia: statiNwgEnergia,
+        classifiche: classifiche,
+        totaleK: classifiche.k.reduce((s, [,v]) => s + v, 0)
+      };
+      result.heatmapMesi.energy = heatmap;
+    }
+    
+    // ═══════════════════════════════════════════════════════════
+    // 🎓 PILASTRO COLLABORATORI (Seminari + Attivati)
+    // ═══════════════════════════════════════════════════════════
+    const collabData = { iscritti: 0, presenti: 0, attivati: 0, classifiche: null };
+    
+    // Seminari: Iscritti e Presenti
+    if (reportCSVs.consultings?.data?.length > 0) {
+      const semData = reportCSVs.consultings.data;
+      collabData.iscritti = semData.length;
+      collabData.presenti = semData.filter(row => {
+        const presente = (row['Presente SI'] || row['Presente'] || '').toLowerCase();
+        return presente === 'si' || presente === 'sì' || presente === 'yes' || presente === '1';
+      }).length;
+      
+      // Classifiche basate sui presenti (chi ha portato gente che si è presentata)
+      const presentiData = semData.filter(row => {
+        const presente = (row['Presente SI'] || row['Presente'] || '').toLowerCase();
+        return presente === 'si' || presente === 'sì' || presente === 'yes' || presente === '1';
+      });
+      collabData.classifiche = extractClassifiche(presentiData.length > 0 ? presentiData : semData);
+      
+      result.heatmapMesi.consultings = calcHeatmapMesi(semData);
+    }
+    
+    // Attivati (IVD Contracts - solo Attivazione START&GO)
+    if (reportCSVs.ivd?.data?.length > 0) {
+      collabData.attivati = reportCSVs.ivd.data.length;
+      
+      // Se non ci sono seminari, usa classifiche da attivati
+      if (!collabData.classifiche) {
+        collabData.classifiche = extractClassifiche(reportCSVs.ivd.data);
+      }
+      
+      result.heatmapMesi.ivd = calcHeatmapMesi(reportCSVs.ivd.data);
+    }
+    
+    if (collabData.iscritti > 0 || collabData.attivati > 0) {
+      result.pilastri.collaboratori = {
+        nome: 'COLLABORATORI',
+        emoji: '🎓',
+        color: '#9C27B0',
+        iscritti: collabData.iscritti,
+        presenti: collabData.presenti,
+        attivati: collabData.attivati,
+        convPresenti: collabData.iscritti > 0 ? Math.round(collabData.presenti / collabData.iscritti * 100) : 0,
+        convAttivati: collabData.presenti > 0 ? Math.round(collabData.attivati / collabData.presenti * 100) : 0,
+        classifiche: collabData.classifiche || { k: [], nw: [], sdp: [] },
+        totaleK: collabData.classifiche ? collabData.classifiche.k.reduce((s, [,v]) => s + v, 0) : 0
+      };
+    }
+    
+    // Se nessun pilastro ha dati, ritorna null
+    if (Object.keys(result.pilastri).length === 0) return null;
+    
+    return result;
   };
 
   const clearReportCSVs = () => {
     setReportCSVs({ ivd: null, energy: null, fv: null, consultings: null });
     setReportData(null);
   };
+  
+  // Stato per drill-down heatmap mesi
+  const [heatmapDrilldown, setHeatmapDrilldown] = useState(null); // { pilastro: 'fv', mese: 0 }
 
   // === SCREENSHOT DASHBOARD (solo canvas nativo, no dipendenze esterne) ===
   const generateDashboardCanvas = (format = 'png') => {
@@ -1482,7 +1580,7 @@ export default function Home() {
       {loginError && <p style={{ color: '#f44', fontSize: 13, marginBottom: 10 }}>{loginError}</p>}
       <button style={S.btn} onClick={handleLogin}>ACCEDI</button>
       <div style={S.categoryIcons}><span style={S.catIcon}>🟠</span><span style={S.catIcon}>🔵</span><span style={S.catIcon}>⭐</span><span style={S.catIcon}>👑</span></div>
-      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v9.6</p>
+      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v9.7</p>
     </div></div></>);
 
   // HOMEPAGE CSV
@@ -1632,168 +1730,341 @@ export default function Home() {
                 </div>
               </div>
               
-              {/* RISULTATI REPORT */}
-              {reportData && (
+              {/* RISULTATI REPORT - PILASTRI SEPARATI */}
+              {reportData && reportData.pilastri && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
-                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.1)' }}>
-                    {/* Header con totali */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 15, marginBottom: 20 }}>
-                      <div style={{ background: 'linear-gradient(135deg, rgba(124,77,255,0.2), rgba(124,77,255,0.05))', borderRadius: 12, padding: 15, flex: 1, minWidth: 120, textAlign: 'center' }}>
-                        <div style={{ fontSize: 28, fontWeight: 800, color: '#7C4DFF' }}>{reportData.total}</div>
-                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>TOTALE CONTRATTI</div>
+                  
+                  {/* 🗓️ HEATMAP MESI - Con drill-down */}
+                  {Object.keys(reportData.heatmapMesi).length > 0 && (
+                    <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.1), rgba(255,107,53,0.02))', borderRadius: 20, padding: 20, border: '1px solid rgba(255,107,53,0.2)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+                        <div>
+                          <h3 style={{ color: '#FF6B35', fontSize: 16, margin: 0 }}>🗓️ CALENDARIO CALDO</h3>
+                          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, margin: '5px 0 0' }}>
+                            {heatmapDrilldown ? `Giorni di ${['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'][heatmapDrilldown.mese]} - Click per tornare ai mesi` : 'Click su un mese per vedere i giorni'}
+                          </p>
+                        </div>
+                        {heatmapDrilldown && (
+                          <button style={{ ...S.btn, padding: '8px 15px', fontSize: 12, background: 'rgba(255,255,255,0.1)' }} onClick={() => setHeatmapDrilldown(null)}>← Torna ai mesi</button>
+                        )}
                       </div>
-                      {reportData.sources.ivd > 0 && (
-                        <div style={{ background: 'rgba(255,107,53,0.1)', borderRadius: 12, padding: 15, textAlign: 'center' }}>
-                          <div style={{ fontSize: 20, fontWeight: 700, color: '#FF6B35' }}>{reportData.sources.ivd}</div>
-                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>IVD</div>
-                        </div>
-                      )}
-                      {reportData.sources.energy > 0 && (
-                        <div style={{ background: 'rgba(255,193,7,0.1)', borderRadius: 12, padding: 15, textAlign: 'center' }}>
-                          <div style={{ fontSize: 20, fontWeight: 700, color: '#FFC107' }}>{reportData.sources.energy}</div>
-                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>Luce</div>
-                        </div>
-                      )}
-                      {reportData.sources.fv > 0 && (
-                        <div style={{ background: 'rgba(255,152,0,0.1)', borderRadius: 12, padding: 15, textAlign: 'center' }}>
-                          <div style={{ fontSize: 20, fontWeight: 700, color: '#FF9800' }}>{reportData.sources.fv}</div>
-                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>FV</div>
-                        </div>
-                      )}
-                      {reportData.sources.consultings > 0 && (
-                        <div style={{ background: 'rgba(156,39,176,0.1)', borderRadius: 12, padding: 15, textAlign: 'center' }}>
-                          <div style={{ fontSize: 20, fontWeight: 700, color: '#9C27B0' }}>{reportData.sources.consultings}</div>
-                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>Seminari</div>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* 🔥 HEATMAP 4 CATEGORIE - Giorni caldi */}
-                    {reportData.heatmaps && Object.keys(reportData.heatmaps).length > 0 && (
-                      <div style={{ marginBottom: 20 }}>
-                        <h3 style={{ color: '#FF6B35', fontSize: 16, marginBottom: 15 }}>🔥 TEMPERATURA CONTRATTI PER CATEGORIA</h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
-                          {Object.entries(reportData.heatmaps).map(([type, data]) => {
-                            const maxVal = Math.max(...data, 1);
-                            const typeInfo = {
-                              ivd: { emoji: '🟠', label: 'IVD Attivati', color: '#FF6B35' },
-                              energy: { emoji: '⚡', label: 'Luce Amica', color: '#FFC107' },
-                              fv: { emoji: '☀️', label: 'Fotovoltaico', color: '#FF9800' },
-                              consultings: { emoji: '🎓', label: 'Seminari', color: '#9C27B0' }
-                            }[type];
-                            const dayLabels = ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
+                      
+                      {/* Heatmap per pilastro */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 15 }}>
+                        {Object.entries(reportData.heatmapMesi).map(([type, heatData]) => {
+                          const info = { fv: { emoji: '☀️', label: 'Fotovoltaico', color: '#FF9800' }, energy: { emoji: '⚡', label: 'Luce Amica', color: '#FFC107' }, consultings: { emoji: '🎓', label: 'Seminari', color: '#9C27B0' }, ivd: { emoji: '🟠', label: 'Attivati', color: '#FF6B35' } }[type];
+                          if (!info) return null;
+                          
+                          const mesiNomi = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+                          const maxMese = Math.max(...heatData.mesi, 1);
+                          
+                          // Se drill-down attivo per questo pilastro, mostra giorni
+                          if (heatmapDrilldown && heatmapDrilldown.pilastro === type) {
+                            const giorni = heatData.giorniPerMese[heatmapDrilldown.mese] || Array(31).fill(0);
+                            const maxGiorno = Math.max(...giorni, 1);
+                            const dayLabels = ['L','M','M','G','V','S','D'];
                             
                             return (
-                              <div key={type} style={{ background: `${typeInfo.color}10`, borderRadius: 12, padding: 12, border: `1px solid ${typeInfo.color}30` }}>
-                                <div style={{ fontSize: 12, color: typeInfo.color, fontWeight: 600, marginBottom: 8 }}>{typeInfo.emoji} {typeInfo.label}</div>
-                                {/* Header giorni */}
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
-                                  {dayLabels.map((d, i) => (
-                                    <div key={i} style={{ textAlign: 'center', fontSize: 8, color: 'rgba(255,255,255,0.4)' }}>{d}</div>
-                                  ))}
+                              <div key={type} style={{ background: `${info.color}15`, borderRadius: 16, padding: 15, border: `2px solid ${info.color}` }}>
+                                <div style={{ fontSize: 13, color: info.color, fontWeight: 600, marginBottom: 10 }}>{info.emoji} {info.label} - {mesiNomi[heatmapDrilldown.mese]}</div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3, marginBottom: 6 }}>
+                                  {dayLabels.map((d, i) => <div key={i} style={{ textAlign: 'center', fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>{d}</div>)}
                                 </div>
-                                {/* Griglia giorni */}
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
-                                  {data.slice(0, 31).map((val, i) => {
-                                    const intensity = val / maxVal;
-                                    const bgColor = val === 0 ? 'rgba(255,255,255,0.05)' : 
-                                                   intensity > 0.7 ? '#4CAF50' : 
-                                                   intensity > 0.4 ? '#FFC107' : typeInfo.color;
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
+                                  {giorni.slice(0, 31).map((val, i) => {
+                                    const intensity = val / maxGiorno;
+                                    const bgColor = val === 0 ? 'rgba(255,255,255,0.05)' : intensity > 0.7 ? '#4CAF50' : intensity > 0.4 ? '#FFC107' : info.color;
                                     return (
-                                      <div key={i} style={{ 
-                                        height: 22, 
-                                        borderRadius: 4, 
-                                        background: bgColor,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: 8,
-                                        color: val === 0 ? 'rgba(255,255,255,0.2)' : '#fff',
-                                        fontWeight: val > 0 ? 600 : 400,
-                                        position: 'relative'
-                                      }}>
-                                        {i + 1}
-                                        {val > 0 && intensity > 0.7 && <span style={{ position: 'absolute', top: -3, right: -1, fontSize: 6 }}>🔥</span>}
+                                      <div key={i} style={{ height: 28, borderRadius: 4, background: bgColor, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: val === 0 ? 'rgba(255,255,255,0.2)' : '#fff', position: 'relative' }}>
+                                        <span>{i + 1}</span>
+                                        {val > 0 && <span style={{ fontSize: 7, fontWeight: 700 }}>{val}</span>}
+                                        {val > 0 && intensity > 0.7 && <span style={{ position: 'absolute', top: -3, right: -1, fontSize: 7 }}>🔥</span>}
                                       </div>
                                     );
                                   })}
                                 </div>
-                                {/* Totale */}
-                                <div style={{ textAlign: 'right', fontSize: 10, color: 'rgba(255,255,255,0.5)', marginTop: 6 }}>
-                                  Tot: <strong style={{ color: typeInfo.color }}>{data.reduce((a, b) => a + b, 0)}</strong>
-                                </div>
+                              </div>
+                            );
+                          }
+                          
+                          // Vista mesi
+                          return (
+                            <div key={type} style={{ background: `${info.color}10`, borderRadius: 16, padding: 15, border: `1px solid ${info.color}30` }}>
+                              <div style={{ fontSize: 13, color: info.color, fontWeight: 600, marginBottom: 10 }}>{info.emoji} {info.label}</div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
+                                {heatData.mesi.map((val, i) => {
+                                  const intensity = val / maxMese;
+                                  const bgColor = val === 0 ? 'rgba(255,255,255,0.05)' : intensity > 0.7 ? '#4CAF50' : intensity > 0.4 ? '#FFC107' : info.color;
+                                  const isHot = intensity > 0.7 && val > 0;
+                                  return (
+                                    <div key={i} onClick={() => val > 0 && setHeatmapDrilldown({ pilastro: type, mese: i })} style={{ height: 40, borderRadius: 6, background: bgColor, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: val > 0 ? 'pointer' : 'default', position: 'relative', boxShadow: isHot ? `0 0 10px ${info.color}50` : 'none', transition: 'transform 0.2s' }}>
+                                      <span style={{ fontSize: 9, color: val === 0 ? 'rgba(255,255,255,0.3)' : '#fff' }}>{mesiNomi[i]}</span>
+                                      {val > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: '#fff' }}>{val}</span>}
+                                      {isHot && <span style={{ position: 'absolute', top: -4, right: -2, fontSize: 10 }}>🔥</span>}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <div style={{ textAlign: 'right', marginTop: 8, fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>Totale: <strong style={{ color: info.color }}>{heatData.mesi.reduce((a,b) => a+b, 0)}</strong></div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* ☀️ PILASTRO FOTOVOLTAICO */}
+                  {reportData.pilastri.fv && (
+                    <div style={{ background: 'linear-gradient(135deg, rgba(255,152,0,0.1), rgba(255,152,0,0.02))', borderRadius: 20, padding: 20, border: '1px solid rgba(255,152,0,0.3)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
+                        <span style={{ fontSize: 28 }}>☀️</span>
+                        <div>
+                          <h3 style={{ color: '#FF9800', fontSize: 18, margin: 0 }}>PILASTRO FOTOVOLTAICO</h3>
+                          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, margin: 0 }}>Totale inseriti: <strong style={{ color: '#FF9800' }}>{reportData.pilastri.fv.totale}</strong></p>
+                        </div>
+                      </div>
+                      
+                      {/* Stati FV */}
+                      <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 15, marginBottom: 15 }}>
+                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 10 }}>📋 STATI CONTRATTI</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                          {reportData.pilastri.fv.stati.map(([stato, val], i) => {
+                            const color = STATO_COLORS[stato] || PIE_COLORS[i % PIE_COLORS.length];
+                            const pct = Math.round(val / reportData.pilastri.fv.totale * 100);
+                            return (
+                              <div key={stato} style={{ background: `${color}20`, border: `1px solid ${color}50`, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ width: 10, height: 10, borderRadius: 3, background: color }} />
+                                <span style={{ color: '#fff', fontSize: 12 }}>{stato}</span>
+                                <span style={{ color: color, fontWeight: 700, fontSize: 14 }}>{val}</span>
+                                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>({pct}%)</span>
                               </div>
                             );
                           })}
                         </div>
                       </div>
-                    )}
-                    
-                    {/* Classifiche aggregate */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 15 }}>
-                      {/* K Manager */}
-                      <div style={{ background: 'rgba(255,215,0,0.05)', borderRadius: 16, padding: 15, border: '1px solid rgba(255,215,0,0.2)' }}>
-                        <h3 style={{ color: '#FFD700', fontSize: 14, marginBottom: 12 }}>👑 CLASSIFICA K MANAGER</h3>
-                        {reportData.classifiche.k.map(([name, val], i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                            <span style={{ width: 24, fontSize: 12, color: i < 3 ? '#FFD700' : 'rgba(255,255,255,0.5)', fontWeight: i < 3 ? 700 : 500 }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
-                            <div style={{ flex: 1, height: 24, background: 'rgba(255,255,255,0.05)', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
-                              <div style={{ width: `${(val / reportData.classifiche.k[0][1]) * 100}%`, height: '100%', background: `linear-gradient(90deg, #FFD700, #FFA000)`, borderRadius: 6 }} />
-                              <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: '#fff', fontWeight: 500 }}>{name}</span>
-                            </div>
-                            <span style={{ width: 35, fontSize: 13, fontWeight: 700, color: '#FFD700', textAlign: 'right' }}>{val}</span>
-                          </div>
-                        ))}
-                      </div>
                       
-                      {/* Networker - TUTTI */}
-                      <div style={{ background: 'rgba(156,39,176,0.05)', borderRadius: 16, padding: 15, border: '1px solid rgba(156,39,176,0.2)', maxHeight: 400, overflowY: 'auto' }}>
-                        <h3 style={{ color: '#9C27B0', fontSize: 14, marginBottom: 12 }}>⭐ CLASSIFICA NETWORKER ({reportData.classifiche.nw.length})</h3>
-                        {reportData.classifiche.nw.map(([name, val], i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                            <span style={{ width: 24, fontSize: 11, color: i < 3 ? '#9C27B0' : 'rgba(255,255,255,0.5)', fontWeight: i < 3 ? 700 : 500 }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
-                            <div style={{ flex: 1, height: 20, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
-                              <div style={{ width: `${(val / reportData.classifiche.nw[0][1]) * 100}%`, height: '100%', background: `linear-gradient(90deg, #9C27B0, #7B1FA2)`, borderRadius: 4 }} />
-                              <span style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#fff' }}>{name.split(' ').slice(0,2).join(' ')}</span>
+                      {/* Classifiche FV */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
+                        {/* K Manager FV */}
+                        <div style={{ background: 'rgba(255,215,0,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(255,215,0,0.2)' }}>
+                          <div style={{ fontSize: 12, color: '#FFD700', fontWeight: 600, marginBottom: 8 }}>👑 K MANAGER</div>
+                          {reportData.pilastri.fv.classifiche.k.map(([name, val], i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                              <span style={{ width: 20, fontSize: 10, color: i < 3 ? '#FFD700' : 'rgba(255,255,255,0.5)' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
+                              <span style={{ flex: 1, fontSize: 11, color: '#fff' }}>{name}</span>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: '#FFD700' }}>{val}</span>
                             </div>
-                            <span style={{ width: 30, fontSize: 12, fontWeight: 600, color: '#9C27B0', textAlign: 'right' }}>{val}</span>
+                          ))}
+                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 8, paddingTop: 8, textAlign: 'right', fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
+                            Totale: <strong style={{ color: '#FFD700' }}>{reportData.pilastri.fv.totaleK}</strong>
                           </div>
-                        ))}
-                      </div>
-                      
-                      {/* SDP */}
-                      <div style={{ background: 'rgba(33,150,243,0.05)', borderRadius: 16, padding: 15, border: '1px solid rgba(33,150,243,0.2)', maxHeight: 400, overflowY: 'auto' }}>
-                        <h3 style={{ color: '#2196F3', fontSize: 14, marginBottom: 12 }}>🔵 CLASSIFICA SDP ({reportData.classifiche.sdp.length})</h3>
-                        {reportData.classifiche.sdp.map(([name, val], i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                            <span style={{ width: 24, fontSize: 11, color: i < 3 ? '#2196F3' : 'rgba(255,255,255,0.5)', fontWeight: i < 3 ? 700 : 500 }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
-                            <div style={{ flex: 1, height: 20, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
-                              <div style={{ width: `${(val / (reportData.classifiche.sdp[0]?.[1] || 1)) * 100}%`, height: '100%', background: `linear-gradient(90deg, #2196F3, #1976D2)`, borderRadius: 4 }} />
-                              <span style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#fff' }}>{name.split(' ').slice(0,2).join(' ')}</span>
-                            </div>
-                            <span style={{ width: 30, fontSize: 12, fontWeight: 600, color: '#2196F3', textAlign: 'right' }}>{val}</span>
-                          </div>
-                        ))}
-                      </div>
-                      
-                      {/* IVD */}
-                      {reportData.classifiche.ivd.length > 0 && (
-                        <div style={{ background: 'rgba(255,107,53,0.05)', borderRadius: 16, padding: 15, border: '1px solid rgba(255,107,53,0.2)', maxHeight: 400, overflowY: 'auto' }}>
-                          <h3 style={{ color: '#FF6B35', fontSize: 14, marginBottom: 12 }}>🟠 CLASSIFICA IVD ({reportData.classifiche.ivd.length})</h3>
-                          {reportData.classifiche.ivd.slice(0, 20).map(([name, val], i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                              <span style={{ width: 24, fontSize: 11, color: i < 3 ? '#FF6B35' : 'rgba(255,255,255,0.5)', fontWeight: i < 3 ? 700 : 500 }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
-                              <div style={{ flex: 1, height: 20, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
-                                <div style={{ width: `${(val / (reportData.classifiche.ivd[0]?.[1] || 1)) * 100}%`, height: '100%', background: `linear-gradient(90deg, #FF6B35, #E65100)`, borderRadius: 4 }} />
-                                <span style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#fff' }}>{name.split(' ').slice(0,2).join(' ')}</span>
-                              </div>
-                              <span style={{ width: 30, fontSize: 12, fontWeight: 600, color: '#FF6B35', textAlign: 'right' }}>{val}</span>
+                        </div>
+                        
+                        {/* NW FV */}
+                        <div style={{ background: 'rgba(156,39,176,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(156,39,176,0.2)', maxHeight: 250, overflowY: 'auto' }}>
+                          <div style={{ fontSize: 12, color: '#9C27B0', fontWeight: 600, marginBottom: 8 }}>⭐ NETWORKER ({reportData.pilastri.fv.classifiche.nw.length})</div>
+                          {reportData.pilastri.fv.classifiche.nw.map(([name, val], i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                              <span style={{ width: 20, fontSize: 9, color: i < 3 ? '#9C27B0' : 'rgba(255,255,255,0.4)' }}>{i+1}°</span>
+                              <span style={{ flex: 1, fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>{name}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#9C27B0' }}>{val}</span>
                             </div>
                           ))}
                         </div>
-                      )}
+                        
+                        {/* SDP FV */}
+                        <div style={{ background: 'rgba(33,150,243,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(33,150,243,0.2)', maxHeight: 250, overflowY: 'auto' }}>
+                          <div style={{ fontSize: 12, color: '#2196F3', fontWeight: 600, marginBottom: 8 }}>🔵 SDP ({reportData.pilastri.fv.classifiche.sdp.length})</div>
+                          {reportData.pilastri.fv.classifiche.sdp.map(([name, val], i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                              <span style={{ width: 20, fontSize: 9, color: i < 3 ? '#2196F3' : 'rgba(255,255,255,0.4)' }}>{i+1}°</span>
+                              <span style={{ flex: 1, fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>{name}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#2196F3' }}>{val}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
+                  
+                  {/* ⚡ PILASTRO LUCE AMICA */}
+                  {reportData.pilastri.energy && (
+                    <div style={{ background: 'linear-gradient(135deg, rgba(255,193,7,0.1), rgba(255,193,7,0.02))', borderRadius: 20, padding: 20, border: '1px solid rgba(255,193,7,0.3)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
+                        <span style={{ fontSize: 28 }}>⚡</span>
+                        <div>
+                          <h3 style={{ color: '#FFC107', fontSize: 18, margin: 0 }}>PILASTRO LUCE AMICA</h3>
+                          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, margin: 0 }}>Totale inseriti: <strong style={{ color: '#FFC107' }}>{reportData.pilastri.energy.totale}</strong></p>
+                        </div>
+                      </div>
+                      
+                      {/* Stati NWG Spa */}
+                      <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 15, marginBottom: 10 }}>
+                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 10 }}>📋 STATI NWG SPA</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                          {reportData.pilastri.energy.statiNwgSpa.map(([stato, val], i) => {
+                            const color = STATO_COLORS[stato] || PIE_COLORS[i % PIE_COLORS.length];
+                            const pct = Math.round(val / reportData.pilastri.energy.totale * 100);
+                            return (
+                              <div key={stato} style={{ background: `${color}20`, border: `1px solid ${color}50`, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ width: 10, height: 10, borderRadius: 3, background: color }} />
+                                <span style={{ color: '#fff', fontSize: 12 }}>{stato}</span>
+                                <span style={{ color: color, fontWeight: 700, fontSize: 14 }}>{val}</span>
+                                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>({pct}%)</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      
+                      {/* Stati NWG Energia (se presenti) */}
+                      {reportData.pilastri.energy.statiNwgEnergia.length > 0 && (
+                        <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 15, marginBottom: 15 }}>
+                          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 10 }}>⚡ STATI NWG ENERGIA</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            {reportData.pilastri.energy.statiNwgEnergia.map(([stato, val], i) => {
+                              const color = STATO_COLORS[stato] || PIE_COLORS[(i + 5) % PIE_COLORS.length];
+                              const pct = Math.round(val / reportData.pilastri.energy.totale * 100);
+                              return (
+                                <div key={stato} style={{ background: `${color}20`, border: `1px solid ${color}50`, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <span style={{ width: 10, height: 10, borderRadius: 3, background: color }} />
+                                  <span style={{ color: '#fff', fontSize: 12 }}>{stato}</span>
+                                  <span style={{ color: color, fontWeight: 700, fontSize: 14 }}>{val}</span>
+                                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>({pct}%)</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Classifiche LA */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
+                        {/* K Manager LA */}
+                        <div style={{ background: 'rgba(255,215,0,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(255,215,0,0.2)' }}>
+                          <div style={{ fontSize: 12, color: '#FFD700', fontWeight: 600, marginBottom: 8 }}>👑 K MANAGER</div>
+                          {reportData.pilastri.energy.classifiche.k.map(([name, val], i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                              <span style={{ width: 20, fontSize: 10, color: i < 3 ? '#FFD700' : 'rgba(255,255,255,0.5)' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
+                              <span style={{ flex: 1, fontSize: 11, color: '#fff' }}>{name}</span>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: '#FFD700' }}>{val}</span>
+                            </div>
+                          ))}
+                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 8, paddingTop: 8, textAlign: 'right', fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
+                            Totale: <strong style={{ color: '#FFD700' }}>{reportData.pilastri.energy.totaleK}</strong>
+                          </div>
+                        </div>
+                        
+                        {/* NW LA */}
+                        <div style={{ background: 'rgba(156,39,176,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(156,39,176,0.2)', maxHeight: 250, overflowY: 'auto' }}>
+                          <div style={{ fontSize: 12, color: '#9C27B0', fontWeight: 600, marginBottom: 8 }}>⭐ NETWORKER ({reportData.pilastri.energy.classifiche.nw.length})</div>
+                          {reportData.pilastri.energy.classifiche.nw.map(([name, val], i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                              <span style={{ width: 20, fontSize: 9, color: i < 3 ? '#9C27B0' : 'rgba(255,255,255,0.4)' }}>{i+1}°</span>
+                              <span style={{ flex: 1, fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>{name}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#9C27B0' }}>{val}</span>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {/* SDP LA */}
+                        <div style={{ background: 'rgba(33,150,243,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(33,150,243,0.2)', maxHeight: 250, overflowY: 'auto' }}>
+                          <div style={{ fontSize: 12, color: '#2196F3', fontWeight: 600, marginBottom: 8 }}>🔵 SDP ({reportData.pilastri.energy.classifiche.sdp.length})</div>
+                          {reportData.pilastri.energy.classifiche.sdp.map(([name, val], i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                              <span style={{ width: 20, fontSize: 9, color: i < 3 ? '#2196F3' : 'rgba(255,255,255,0.4)' }}>{i+1}°</span>
+                              <span style={{ flex: 1, fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>{name}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#2196F3' }}>{val}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* 🎓 PILASTRO COLLABORATORI */}
+                  {reportData.pilastri.collaboratori && (
+                    <div style={{ background: 'linear-gradient(135deg, rgba(156,39,176,0.1), rgba(156,39,176,0.02))', borderRadius: 20, padding: 20, border: '1px solid rgba(156,39,176,0.3)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
+                        <span style={{ fontSize: 28 }}>🎓</span>
+                        <div>
+                          <h3 style={{ color: '#9C27B0', fontSize: 18, margin: 0 }}>PILASTRO COLLABORATORI</h3>
+                          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, margin: 0 }}>Funnel: Iscritti → Presenti → Attivati</p>
+                        </div>
+                      </div>
+                      
+                      {/* Funnel Collaboratori */}
+                      <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 20, marginBottom: 15 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 15, flexWrap: 'wrap' }}>
+                          {/* Iscritti */}
+                          <div style={{ textAlign: 'center', minWidth: 100 }}>
+                            <div style={{ fontSize: 32, fontWeight: 800, color: '#9C27B0' }}>{reportData.pilastri.collaboratori.iscritti}</div>
+                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>📝 Iscritti</div>
+                          </div>
+                          
+                          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 24 }}>→</div>
+                          
+                          {/* Presenti */}
+                          <div style={{ textAlign: 'center', minWidth: 100 }}>
+                            <div style={{ fontSize: 32, fontWeight: 800, color: '#4CAF50' }}>{reportData.pilastri.collaboratori.presenti}</div>
+                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>✅ Presenti</div>
+                            <div style={{ fontSize: 10, color: '#4CAF50', marginTop: 2 }}>{reportData.pilastri.collaboratori.convPresenti}%</div>
+                          </div>
+                          
+                          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 24 }}>→</div>
+                          
+                          {/* Attivati */}
+                          <div style={{ textAlign: 'center', minWidth: 100 }}>
+                            <div style={{ fontSize: 32, fontWeight: 800, color: '#FF6B35' }}>{reportData.pilastri.collaboratori.attivati}</div>
+                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>🟠 Attivati</div>
+                            <div style={{ fontSize: 10, color: '#FF6B35', marginTop: 2 }}>{reportData.pilastri.collaboratori.convAttivati}% dei presenti</div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Classifiche Collaboratori */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
+                        {/* K Manager Coll */}
+                        <div style={{ background: 'rgba(255,215,0,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(255,215,0,0.2)' }}>
+                          <div style={{ fontSize: 12, color: '#FFD700', fontWeight: 600, marginBottom: 8 }}>👑 K MANAGER</div>
+                          {reportData.pilastri.collaboratori.classifiche.k.map(([name, val], i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                              <span style={{ width: 20, fontSize: 10, color: i < 3 ? '#FFD700' : 'rgba(255,255,255,0.5)' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
+                              <span style={{ flex: 1, fontSize: 11, color: '#fff' }}>{name}</span>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: '#FFD700' }}>{val}</span>
+                            </div>
+                          ))}
+                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 8, paddingTop: 8, textAlign: 'right', fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
+                            Totale: <strong style={{ color: '#FFD700' }}>{reportData.pilastri.collaboratori.totaleK}</strong>
+                          </div>
+                        </div>
+                        
+                        {/* NW Coll */}
+                        <div style={{ background: 'rgba(156,39,176,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(156,39,176,0.2)', maxHeight: 250, overflowY: 'auto' }}>
+                          <div style={{ fontSize: 12, color: '#9C27B0', fontWeight: 600, marginBottom: 8 }}>⭐ NETWORKER ({reportData.pilastri.collaboratori.classifiche.nw.length})</div>
+                          {reportData.pilastri.collaboratori.classifiche.nw.map(([name, val], i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                              <span style={{ width: 20, fontSize: 9, color: i < 3 ? '#9C27B0' : 'rgba(255,255,255,0.4)' }}>{i+1}°</span>
+                              <span style={{ flex: 1, fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>{name}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#9C27B0' }}>{val}</span>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {/* SDP Coll */}
+                        <div style={{ background: 'rgba(33,150,243,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(33,150,243,0.2)', maxHeight: 250, overflowY: 'auto' }}>
+                          <div style={{ fontSize: 12, color: '#2196F3', fontWeight: 600, marginBottom: 8 }}>🔵 SDP ({reportData.pilastri.collaboratori.classifiche.sdp.length})</div>
+                          {reportData.pilastri.collaboratori.classifiche.sdp.map(([name, val], i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                              <span style={{ width: 20, fontSize: 9, color: i < 3 ? '#2196F3' : 'rgba(255,255,255,0.4)' }}>{i+1}°</span>
+                              <span style={{ flex: 1, fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>{name}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#2196F3' }}>{val}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   
                   {/* BOTTONE SCREENSHOT REPORT */}
                   <div style={{ background: 'linear-gradient(135deg, rgba(124,77,255,0.2), rgba(124,77,255,0.05))', borderRadius: 16, padding: 20, border: '1px solid rgba(124,77,255,0.3)' }}>
@@ -1801,7 +2072,6 @@ export default function Home() {
                     <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 15 }}>Scarica il report come immagine</div>
                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                       <button style={{ ...S.btn, flex: 1, minWidth: 140, padding: '14px 20px', background: 'linear-gradient(135deg, #7C4DFF, #536DFE)', fontSize: 14 }} onClick={() => generateDashboardCanvas('png')}>📷 Salva PNG</button>
-                      <button style={{ ...S.btn, flex: 1, minWidth: 140, padding: '14px 20px', background: 'linear-gradient(135deg, #E91E63, #C2185B)', fontSize: 14 }} onClick={() => generateDashboardCanvas('pdf')}>📄 Salva PDF</button>
                     </div>
                   </div>
                 </div>
