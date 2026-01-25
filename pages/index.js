@@ -93,8 +93,12 @@ export default function Home() {
   const [sendStatus, setSendStatus] = useState('');
   const [periodType, setPeriodType] = useState('progressiva');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' o 'classifiche'
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'classifiche', 'report'
   const [animatedStats, setAnimatedStats] = useState({ ins: 0, acc: 0, part: 0, conv: 0 });
+  
+  // REPORT AGGREGATO - Multi CSV upload
+  const [reportCSVs, setReportCSVs] = useState({ ivd: null, energy: null, fv: null, consultings: null });
+  const [reportData, setReportData] = useState(null);
   const parseCSV = (text) => {
     const lines = text.trim().split('\n');
     const headers = lines[0].split(';').map(h => h.trim().replace(/"/g, '').replace(/^\uFEFF/, ''));
@@ -190,7 +194,7 @@ export default function Home() {
 
   // Dashboard helper functions
   const getDashboardStats = () => {
-    if (!filteredData || !rankings) return { ins: 0, acc: 0, part: 0, conv: 0, top3: [], top10: [], weeklyData: [], maxV1: 1 };
+    if (!filteredData || !rankings) return { ins: 0, acc: 0, part: 0, conv: 0, top3: [], top10: [], weeklyData: [], monthlyData: [], maxV1: 1, isMonthly: false };
     
     // USA LA CLASSIFICA SELEZIONATA invece di sempre IVD
     const currentData = getData(); // Usa la stessa funzione delle classifiche
@@ -204,23 +208,467 @@ export default function Home() {
     const top10 = currentData.slice(0, 10).map(([name, s]) => ({ name, v1: s.v1, v2: s.v2 }));
     const maxV1 = top10.length > 0 ? Math.max(...top10.map(t => t.v1)) : 1;
     
-    // Weekly heatmap - analizza date inserimento
+    // Heatmap - analizza date inserimento
     const weeklyData = [0, 0, 0, 0, 0, 0, 0]; // Lun-Dom
+    const monthlyData = Array(31).fill(0); // Giorni 1-31
+    let minDate = null, maxDate = null;
+    
     filteredData.forEach(row => {
-      const dateStr = row['Inserimento'] || row['Data'] || '';
+      const dateStr = row['Inserimento'] || row['Data'] || row['Data Inserimento'] || '';
       if (dateStr) {
         try {
           const d = new Date(dateStr.replace(' ', 'T'));
           if (!isNaN(d.getTime())) {
-            const day = d.getDay(); // 0=Dom, 1=Lun, ...
-            const idx = day === 0 ? 6 : day - 1; // Converti a Lun=0, Dom=6
+            // Weekly
+            const day = d.getDay();
+            const idx = day === 0 ? 6 : day - 1;
             weeklyData[idx]++;
+            
+            // Monthly (giorno del mese 1-31)
+            const dayOfMonth = d.getDate();
+            if (dayOfMonth >= 1 && dayOfMonth <= 31) {
+              monthlyData[dayOfMonth - 1]++;
+            }
+            
+            // Track date range
+            if (!minDate || d < minDate) minDate = d;
+            if (!maxDate || d > maxDate) maxDate = d;
           }
         } catch (e) {}
       }
     });
     
-    return { ins: totIns, acc: totAcc, part: currentData.length, conv, top3, top10, maxV1, weeklyData };
+    // Determina se mostrare vista mensile (più di 7 giorni di range)
+    const dayRange = minDate && maxDate ? Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24)) : 0;
+    const isMonthly = dayRange > 7 || selectedMonth || periodType === 'progressiva' || periodType === 'finale';
+    
+    // Info mese per calendario
+    let monthInfo = null;
+    if (isMonthly && minDate) {
+      const year = minDate.getFullYear();
+      const month = minDate.getMonth();
+      const firstDay = new Date(year, month, 1).getDay(); // 0=Dom
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      monthInfo = { year, month, firstDay: firstDay === 0 ? 6 : firstDay - 1, daysInMonth };
+    }
+    
+    return { ins: totIns, acc: totAcc, part: currentData.length, conv, top3, top10, maxV1, weeklyData, monthlyData, isMonthly, monthInfo };
+  };
+
+  // Calcola distribuzioni per grafici torta
+  const getPieDistributions = () => {
+    if (!filteredData) return { k: [], nw: [], sdp: [], stati: [] };
+    
+    const kCount = {}, nwCount = {}, sdpCount = {}, statiCount = {};
+    
+    filteredData.forEach(row => {
+      // K Manager
+      const k = row['Nome Primo K'] || '';
+      if (k && k !== 'Nome Primo K') kCount[k] = (kCount[k] || 0) + 1;
+      
+      // Networker
+      const nw = row['Nome Primo Networker'] || '';
+      if (nw && nw !== 'Nome Primo Networker') nwCount[nw] = (nwCount[nw] || 0) + 1;
+      
+      // SDP (prova FV poi LA)
+      const sdp = row['Nome Primo SDP FV'] || row['Nome Primo SDP Fv'] || row['Nome Primo SDP LA'] || row['Nome Primo SDP La'] || '';
+      if (sdp && !sdp.includes('Nome Primo')) sdpCount[sdp] = (sdpCount[sdp] || 0) + 1;
+      
+      // Stati
+      const stato = row['Stato'] || row['Stato NWG Spa'] || row['Presente SI'] || '';
+      if (stato && stato !== 'Stato' && stato !== 'Stato NWG Spa' && stato !== 'Presente SI') {
+        const statoNorm = stato.toLowerCase().includes('accett') ? 'Accettato' : 
+                          stato.toLowerCase().includes('sospes') ? 'Sospeso' : 
+                          stato === 'Si' ? 'Presente' : 
+                          stato === 'No' ? 'Assente' : stato;
+        statiCount[statoNorm] = (statiCount[statoNorm] || 0) + 1;
+      }
+    });
+    
+    // Converti in array ordinati
+    const toArray = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1]);
+    
+    return {
+      k: toArray(kCount),
+      nw: toArray(nwCount),
+      sdp: toArray(sdpCount).slice(0, 10), // TOP 10 SDP
+      stati: toArray(statiCount)
+    };
+  };
+
+  // Colori per torte
+  const PIE_COLORS = ['#FFD700', '#7C4DFF', '#FF6B35', '#4CAF50', '#2196F3', '#E91E63', '#00BCD4', '#9C27B0', '#FF9800', '#607D8B'];
+  const STATO_COLORS = { 'Accettato': '#4CAF50', 'Sospeso': '#FFC107', 'Presente': '#4CAF50', 'Assente': '#FF6B35' };
+
+  // === REPORT AGGREGATO - Funzioni ===
+  const processReportCSV = (type, file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target.result;
+      const data = parseCSV(text);
+      
+      // Filtra IVD: solo "Attivazione START&GO" (escludi rinnovi)
+      let filteredRows = data;
+      if (type === 'ivd') {
+        filteredRows = data.filter(row => {
+          const prodotto = (row['Prodotto'] || '').toLowerCase();
+          return prodotto.includes('attivazione') || prodotto.includes('start');
+        });
+      }
+      
+      setReportCSVs(prev => ({ ...prev, [type]: { name: file.name, rows: filteredRows.length, data: filteredRows } }));
+    };
+    reader.readAsText(file);
+  };
+
+  const generateReportData = () => {
+    const allData = [];
+    const sources = { ivd: 0, energy: 0, fv: 0, consultings: 0 };
+    
+    // Combina tutti i CSV caricati
+    Object.entries(reportCSVs).forEach(([type, csv]) => {
+      if (csv?.data) {
+        sources[type] = csv.data.length;
+        csv.data.forEach(row => allData.push({ ...row, _source: type }));
+      }
+    });
+    
+    if (allData.length === 0) return null;
+    
+    // Calcola classifiche aggregate
+    const kCount = {}, nwCount = {}, sdpCount = {}, ivdCount = {};
+    
+    allData.forEach(row => {
+      const k = row['Nome Primo K'] || '';
+      const nw = row['Nome Primo Networker'] || '';
+      const sdp = row['Nome Primo SDP FV'] || row['Nome Primo SDP Fv'] || row['Nome Primo SDP LA'] || row['Nome Primo SDP La'] || '';
+      const ivd = row['IVD'] || row['Nome Intermediario'] || '';
+      
+      if (k && !k.includes('Nome Primo')) kCount[k] = (kCount[k] || 0) + 1;
+      if (nw && !nw.includes('Nome Primo')) nwCount[nw] = (nwCount[nw] || 0) + 1;
+      if (sdp && !sdp.includes('Nome Primo')) sdpCount[sdp] = (sdpCount[sdp] || 0) + 1;
+      if (ivd && !ivd.includes('Nome') && !ivd.includes('IVD')) ivdCount[ivd] = (ivdCount[ivd] || 0) + 1;
+    });
+    
+    const toSortedArray = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1]);
+    
+    // Calcola heatmap per ogni categoria
+    const heatmaps = {};
+    ['ivd', 'energy', 'fv', 'consultings'].forEach(type => {
+      if (reportCSVs[type]?.data) {
+        const monthlyData = Array(31).fill(0);
+        reportCSVs[type].data.forEach(row => {
+          const dateStr = row['Inserimento'] || row['Data'] || row['Data Inserimento'] || '';
+          if (dateStr) {
+            try {
+              const d = new Date(dateStr.replace(' ', 'T'));
+              if (!isNaN(d.getTime())) {
+                const dayOfMonth = d.getDate();
+                if (dayOfMonth >= 1 && dayOfMonth <= 31) {
+                  monthlyData[dayOfMonth - 1]++;
+                }
+              }
+            } catch (e) {}
+          }
+        });
+        heatmaps[type] = monthlyData;
+      }
+    });
+    
+    return {
+      total: allData.length,
+      sources,
+      classifiche: {
+        k: toSortedArray(kCount),
+        nw: toSortedArray(nwCount),
+        sdp: toSortedArray(sdpCount),
+        ivd: toSortedArray(ivdCount)
+      },
+      heatmaps
+    };
+  };
+
+  const clearReportCSVs = () => {
+    setReportCSVs({ ivd: null, energy: null, fv: null, consultings: null });
+    setReportData(null);
+  };
+
+  // === SCREENSHOT/PDF DASHBOARD ===
+  const generateDashboardImage = async (format = 'png') => {
+    // Trova il container dashboard
+    const dashboardEl = document.getElementById('dashboard-content');
+    if (!dashboardEl) {
+      alert('Dashboard non trovata!');
+      return;
+    }
+    
+    // Usa html2canvas per catturare
+    const html2canvas = (await import('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/+esm')).default;
+    
+    try {
+      const canvas = await html2canvas(dashboardEl, {
+        backgroundColor: '#0a0a0f',
+        scale: 2,
+        useCORS: true,
+        logging: false
+      });
+      
+      if (format === 'png') {
+        // Download PNG
+        const link = document.createElement('a');
+        link.download = `dashboard_${eventDate.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } else if (format === 'pdf') {
+        // Genera PDF
+        const { jsPDF } = await import('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm');
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('landscape', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, Math.min(pdfHeight, pdf.internal.pageSize.getHeight()));
+        pdf.save(`dashboard_${eventDate.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+      }
+    } catch (err) {
+      console.error('Errore generazione:', err);
+      // Fallback: genera canvas manualmente
+      generateDashboardCanvas(format);
+    }
+  };
+
+  // Fallback: genera dashboard su canvas
+  const generateDashboardCanvas = (format = 'png') => {
+    const stats = getDashboardStats();
+    const pies = getPieDistributions();
+    
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const W = 1920, H = 1400;
+    canvas.width = W; canvas.height = H;
+    
+    // Sfondo scuro
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, W, H);
+    
+    // Header
+    ctx.fillStyle = '#7C4DFF';
+    ctx.font = 'bold 48px Arial';
+    ctx.fillText('📊 DASHBOARD', 50, 70);
+    ctx.fillStyle = '#fff';
+    ctx.font = '24px Arial';
+    ctx.fillText(`${config.emoji} ${config.label} - ${eventDate}`, 50, 110);
+    
+    // Stats cards
+    const cardW = 400, cardH = 120, cardY = 150;
+    const cardData = [
+      { label: labels.c1, value: stats.ins, color: '#FF6B35' },
+      { label: labels.c2, value: stats.acc, color: '#4CAF50' },
+      { label: 'Partecipanti', value: stats.part, color: '#7C4DFF' },
+      { label: 'Conversione', value: stats.conv + '%', color: '#FFD700' }
+    ];
+    cardData.forEach((card, i) => {
+      const x = 50 + i * (cardW + 30);
+      ctx.fillStyle = card.color + '30';
+      ctx.beginPath();
+      ctx.roundRect(x, cardY, cardW, cardH, 20);
+      ctx.fill();
+      ctx.strokeStyle = card.color + '60';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = card.color;
+      ctx.font = 'bold 52px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(card.value.toString(), x + cardW/2, cardY + 65);
+      ctx.fillStyle = '#fff';
+      ctx.font = '18px Arial';
+      ctx.fillText(card.label, x + cardW/2, cardY + 100);
+    });
+    ctx.textAlign = 'left';
+    
+    // Podio
+    const podioY = 320, podioH = 280;
+    ctx.fillStyle = 'rgba(255,255,255,0.03)';
+    ctx.beginPath();
+    ctx.roundRect(50, podioY, 600, podioH, 20);
+    ctx.fill();
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 28px Arial';
+    ctx.fillText('🏆 PODIO', 80, podioY + 40);
+    
+    // Disegna podio semplificato
+    const podioData = stats.top3;
+    const barColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
+    const barHeights = [160, 120, 80];
+    const barX = [280, 130, 430];
+    podioData.forEach((p, i) => {
+      const bx = barX[i], bh = barHeights[i], by = podioY + podioH - bh - 30;
+      ctx.fillStyle = barColors[i];
+      ctx.beginPath();
+      ctx.roundRect(bx, by, 140, bh, [15, 15, 0, 0]);
+      ctx.fill();
+      ctx.fillStyle = '#1a1a2e';
+      ctx.font = 'bold 36px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.v1.toString(), bx + 70, by + bh - 20);
+      ctx.fillStyle = '#fff';
+      ctx.font = '14px Arial';
+      ctx.fillText(p.name.split(' ')[0], bx + 70, by - 10);
+    });
+    ctx.textAlign = 'left';
+    
+    // Heatmap mensile
+    const heatY = 320, heatX = 700;
+    ctx.fillStyle = 'rgba(255,255,255,0.03)';
+    ctx.beginPath();
+    ctx.roundRect(heatX, heatY, 1170, podioH, 20);
+    ctx.fill();
+    ctx.fillStyle = '#FF6B35';
+    ctx.font = 'bold 28px Arial';
+    ctx.fillText('🔥 TEMPERATURA CONTRATTI', heatX + 30, heatY + 40);
+    
+    // Griglia calendario
+    const cellW = 45, cellH = 35, gridX = heatX + 30, gridY = heatY + 70;
+    const dayNames = ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
+    const maxMonthly = Math.max(...stats.monthlyData, 1);
+    
+    // Header giorni
+    dayNames.forEach((d, i) => {
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.font = '14px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(d, gridX + i * cellW + cellW/2, gridY - 10);
+    });
+    
+    // Celle calendario
+    const firstDay = stats.monthInfo?.firstDay || 0;
+    stats.monthlyData.slice(0, stats.monthInfo?.daysInMonth || 31).forEach((val, i) => {
+      const col = (i + firstDay) % 7;
+      const row = Math.floor((i + firstDay) / 7);
+      const cx = gridX + col * cellW;
+      const cy = gridY + row * cellH;
+      const intensity = val / maxMonthly;
+      const bgColor = val === 0 ? 'rgba(255,255,255,0.05)' : 
+                      intensity > 0.7 ? '#4CAF50' : 
+                      intensity > 0.4 ? '#FFC107' : '#FF6B35';
+      ctx.fillStyle = bgColor;
+      ctx.beginPath();
+      ctx.roundRect(cx, cy, cellW - 4, cellH - 4, 6);
+      ctx.fill();
+      ctx.fillStyle = val === 0 ? 'rgba(255,255,255,0.3)' : '#fff';
+      ctx.font = val > 0 ? 'bold 14px Arial' : '12px Arial';
+      ctx.fillText((i + 1).toString(), cx + cellW/2 - 2, cy + cellH/2 + 2);
+      if (val > 0) {
+        ctx.font = '10px Arial';
+        ctx.fillText(val.toString(), cx + cellW/2 - 2, cy + cellH - 8);
+      }
+    });
+    ctx.textAlign = 'left';
+    
+    // Legenda
+    const legY = heatY + 230;
+    ctx.fillStyle = '#4CAF50';
+    ctx.beginPath(); ctx.roundRect(heatX + 800, legY, 20, 20, 4); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = '12px Arial';
+    ctx.fillText('Alto', heatX + 830, legY + 15);
+    ctx.fillStyle = '#FFC107';
+    ctx.beginPath(); ctx.roundRect(heatX + 900, legY, 20, 20, 4); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.fillText('Medio', heatX + 930, legY + 15);
+    ctx.fillStyle = '#FF6B35';
+    ctx.beginPath(); ctx.roundRect(heatX + 1010, legY, 20, 20, 4); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.fillText('Basso', heatX + 1040, legY + 15);
+    
+    // TOP 4-10
+    const topY = 640;
+    ctx.fillStyle = 'rgba(255,255,255,0.03)';
+    ctx.beginPath();
+    ctx.roundRect(50, topY, 900, 320, 20);
+    ctx.fill();
+    ctx.fillStyle = '#FF6B35';
+    ctx.font = 'bold 28px Arial';
+    ctx.fillText('📈 TOP 4° - 10°', 80, topY + 40);
+    
+    stats.top10.slice(3, 10).forEach((p, i) => {
+      const ry = topY + 70 + i * 35;
+      const barW = (p.v1 / stats.maxV1) * 600;
+      ctx.fillStyle = 'rgba(124,77,255,0.3)';
+      ctx.beginPath();
+      ctx.roundRect(150, ry, barW, 28, 6);
+      ctx.fill();
+      ctx.fillStyle = '#FFD700';
+      ctx.font = 'bold 18px Arial';
+      ctx.fillText(`${i + 4}°`, 90, ry + 20);
+      ctx.fillStyle = '#fff';
+      ctx.font = '16px Arial';
+      ctx.fillText(p.name, 160, ry + 20);
+      ctx.fillStyle = '#FF6B35';
+      ctx.font = 'bold 20px Arial';
+      ctx.textAlign = 'right';
+      ctx.fillText(p.v1.toString(), 900, ry + 22);
+      ctx.textAlign = 'left';
+    });
+    
+    // Torte K e NW
+    const pieY = 640, pieX = 1000;
+    ctx.fillStyle = 'rgba(255,255,255,0.03)';
+    ctx.beginPath();
+    ctx.roundRect(pieX, pieY, 870, 320, 20);
+    ctx.fill();
+    
+    // K Manager pie
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 20px Arial';
+    ctx.fillText('👑 K MANAGER', pieX + 30, pieY + 40);
+    const totalK = pies.k.reduce((s, [,v]) => s + v, 0);
+    pies.k.slice(0, 5).forEach(([name, val], i) => {
+      const py = pieY + 70 + i * 28;
+      ctx.fillStyle = PIE_COLORS[i];
+      ctx.beginPath();
+      ctx.roundRect(pieX + 30, py, 15, 15, 3);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = '14px Arial';
+      ctx.fillText(`${name.split(' ')[0]}: ${val} (${Math.round(val/totalK*100)}%)`, pieX + 55, py + 12);
+    });
+    
+    // NW pie
+    ctx.fillStyle = '#9C27B0';
+    ctx.font = 'bold 20px Arial';
+    ctx.fillText('⭐ NETWORKER TOP 5', pieX + 400, pieY + 40);
+    pies.nw.slice(0, 5).forEach(([name, val], i) => {
+      const py = pieY + 70 + i * 28;
+      ctx.fillStyle = PIE_COLORS[i];
+      ctx.beginPath();
+      ctx.roundRect(pieX + 400, py, 15, 15, 3);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = '14px Arial';
+      ctx.fillText(`${name.split(' ').slice(0,2).join(' ')}: ${val}`, pieX + 425, py + 12);
+    });
+    
+    // Footer
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillRect(0, H - 60, W, 60);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Leader Ranking v9.6 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    
+    // Download
+    if (format === 'png') {
+      const link = document.createElement('a');
+      link.download = `dashboard_${eventDate.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } else {
+      // PDF semplice
+      const imgData = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `dashboard_${eventDate.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.png`;
+      link.href = imgData;
+      link.click();
+    }
   };
 
   // Genera PNG per slide NWG (16:9) - VERSIONE WOW
@@ -363,14 +811,14 @@ export default function Home() {
         ctx.roundRect(barX + 18, barY + 18, barW * 0.22, p.h - 36, [12, 12, 12, 12]);
         ctx.fill();
         
-        // Salva posizione medaglia per dopo
-        medalPositions.push({ x: p.x, y: barY + 100, pos: p.pos, medal: p.medal });
+        // Salva posizione medaglia per dopo (più in alto)
+        medalPositions.push({ x: p.x, y: barY + 80, pos: p.pos, medal: p.medal });
         
-        // Numero ENORME
+        // Numero alla BASE della colonna
         ctx.fillStyle = '#1a1a2e';
-        ctx.font = `bold ${p.pos === 1 ? 140 : 100}px Arial`;
+        ctx.font = `bold ${p.pos === 1 ? 120 : 90}px Arial`;
         ctx.textAlign = 'center';
-        ctx.fillText(p.data.v1.toString(), p.x, barY + (p.pos === 1 ? 280 : 240));
+        ctx.fillText(p.data.v1.toString(), p.x, podioBaseY - 30);
         
         // Nome su due righe - ALZATI
         const nameParts = p.data.name.toUpperCase().split(' ');
@@ -378,11 +826,11 @@ export default function Home() {
         const nome = nameParts.slice(1).join(' ') || '';
         
         ctx.fillStyle = '#FFFFFF';
-        ctx.font = `bold ${p.pos === 1 ? 44 : 36}px Arial`;
-        ctx.fillText(cognome, p.x, barY - 80);
-        ctx.font = `${p.pos === 1 ? 34 : 28}px Arial`;
+        ctx.font = `bold ${p.pos === 1 ? 48 : 40}px Arial`;
+        ctx.fillText(cognome, p.x, barY - 90);
+        ctx.font = `${p.pos === 1 ? 38 : 30}px Arial`;
         ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.fillText(nome, p.x, barY - 38);
+        ctx.fillText(nome, p.x, barY - 45);
       });
       
       // Stelle attorno al vincitore
@@ -505,14 +953,14 @@ export default function Home() {
         ctx.roundRect(barX + 14, barY + 14, barW * 0.24, p.h - 28, [10, 10, 10, 10]);
         ctx.fill();
         
-        // Salva posizione medaglia
-        medalPositions.push({ x: p.x, y: barY + 95, pos: p.pos, medal: p.medal });
+        // Salva posizione medaglia (più in alto)
+        medalPositions.push({ x: p.x, y: barY + 70, pos: p.pos, medal: p.medal });
         
-        // Numero GRANDE
+        // Numero alla BASE della colonna
         ctx.fillStyle = '#1a1a2e';
-        ctx.font = `bold ${p.pos === 1 ? 110 : 80}px Arial`;
+        ctx.font = `bold ${p.pos === 1 ? 100 : 75}px Arial`;
         ctx.textAlign = 'center';
-        ctx.fillText(p.data.v1.toString(), p.x, barY + (p.pos === 1 ? 225 : 195));
+        ctx.fillText(p.data.v1.toString(), p.x, podioBaseY - 25);
         
         // Nome su due righe - ALZATI
         const nameParts = p.data.name.toUpperCase().split(' ');
@@ -521,10 +969,10 @@ export default function Home() {
         
         ctx.fillStyle = '#FFFFFF';
         ctx.font = `bold ${p.pos === 1 ? 40 : 32}px Arial`;
-        ctx.fillText(cognome, p.x, barY - 75);
+        ctx.fillText(cognome, p.x, barY - 80);
         ctx.font = `${p.pos === 1 ? 30 : 24}px Arial`;
         ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.fillText(nome, p.x, barY - 38);
+        ctx.fillText(nome, p.x, barY - 42);
       });
       
       // Stelle attorno al vincitore
@@ -566,9 +1014,9 @@ export default function Home() {
         ctx.fillText(m.medal, m.x, m.y + (m.pos === 1 ? 28 : 22));
       });
       
-      // === CLASSIFICA 4°-10° - ALLINEATA CON BASE PODIO ===
-      const listX = 1200 + podioOffsetX - 100;
-      const rowH = 80; // Più grande
+      // === CLASSIFICA 4°-10° - PIU A SINISTRA ===
+      const listX = 1100 + podioOffsetX - 150; // Spostata a sinistra
+      const rowH = 80;
       const top7 = stats.top10.slice(3, 10);
       const numRows = top7.length;
       // Allinea in modo che l'ultima riga finisca alla base del podio
@@ -588,11 +1036,11 @@ export default function Home() {
         // Sfondo riga
         ctx.fillStyle = 'rgba(255,255,255,0.1)';
         ctx.beginPath();
-        ctx.roundRect(listX, y, 580, 68, 14);
+        ctx.roundRect(listX, y, 560, 68, 14);
         ctx.fill();
         
         // Barra progresso
-        const barWidth = (p.v1 / maxV1) * 420;
+        const barWidth = (p.v1 / maxV1) * 400;
         const barGrad = ctx.createLinearGradient(listX, 0, listX + barWidth, 0);
         barGrad.addColorStop(0, 'rgba(124,77,255,0.7)');
         barGrad.addColorStop(1, 'rgba(124,77,255,0.2)');
@@ -615,7 +1063,7 @@ export default function Home() {
         // Valore
         ctx.font = 'bold 36px Arial';
         ctx.textAlign = 'right';
-        ctx.fillText(p.v1.toString(), listX + 558, y + 47);
+        ctx.fillText(p.v1.toString(), listX + 538, y + 47);
         ctx.textAlign = 'left';
       });
     }
@@ -1077,7 +1525,7 @@ export default function Home() {
       {loginError && <p style={{ color: '#f44', fontSize: 13, marginBottom: 10 }}>{loginError}</p>}
       <button style={S.btn} onClick={handleLogin}>ACCEDI</button>
       <div style={S.categoryIcons}><span style={S.catIcon}>🟠</span><span style={S.catIcon}>🔵</span><span style={S.catIcon}>⭐</span><span style={S.catIcon}>👑</span></div>
-      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v9.4</p>
+      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v9.6</p>
     </div></div></>);
 
   // HOMEPAGE CSV
@@ -1132,17 +1580,275 @@ export default function Home() {
         <section style={S.content}>
           {(user.role === 'admin' || user.role === 'assistente') && (<div style={{ ...S.uploadBox, ...(isDragging ? { borderColor: '#7C4DFF', background: 'rgba(124,77,255,0.1)' } : {}) }} onDragOver={e => { e.preventDefault(); setIsDragging(true); }} onDragLeave={e => { e.preventDefault(); setIsDragging(false); }} onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.csv')) processFile(f); }}><input type="file" accept=".csv" id="csv" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processFile(e.target.files[0]); }} /><label htmlFor="csv" style={{ cursor: 'pointer', padding: '10px 20px', background: 'rgba(124,77,255,0.1)', borderRadius: 8, color: '#7C4DFF', fontWeight: 600 }}>{filteredData ? `✅ ${filteredData.length} righe caricate` : '📤 Carica CSV'}</label></div>)}
           
-          {/* TABS */}
-          {rankings && (
+          {/* TABS - Mostra sempre per admin/assistente (per accedere a Report) */}
+          {(rankings || (user.role === 'admin' || user.role === 'assistente')) && (
             <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
               <button 
-                style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'dashboard' ? 'linear-gradient(135deg,#7C4DFF,#536DFE)' : 'rgba(255,255,255,0.05)', border: activeTab === 'dashboard' ? 'none' : '1px solid rgba(255,255,255,0.1)' }} 
-                onClick={() => setActiveTab('dashboard')}
+                style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'dashboard' ? 'linear-gradient(135deg,#7C4DFF,#536DFE)' : 'rgba(255,255,255,0.05)', border: activeTab === 'dashboard' ? 'none' : '1px solid rgba(255,255,255,0.1)', opacity: rankings ? 1 : 0.5 }} 
+                onClick={() => rankings && setActiveTab('dashboard')}
+                disabled={!rankings}
               >📊 Dashboard</button>
               <button 
-                style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'classifiche' ? 'linear-gradient(135deg,#7C4DFF,#536DFE)' : 'rgba(255,255,255,0.05)', border: activeTab === 'classifiche' ? 'none' : '1px solid rgba(255,255,255,0.1)' }} 
-                onClick={() => setActiveTab('classifiche')}
+                style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'classifiche' ? 'linear-gradient(135deg,#7C4DFF,#536DFE)' : 'rgba(255,255,255,0.05)', border: activeTab === 'classifiche' ? 'none' : '1px solid rgba(255,255,255,0.1)', opacity: rankings ? 1 : 0.5 }} 
+                onClick={() => rankings && setActiveTab('classifiche')}
+                disabled={!rankings}
               >🏆 Classifiche</button>
+              {(user.role === 'admin' || user.role === 'assistente') && (
+                <button 
+                  style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'report' ? 'linear-gradient(135deg,#FF6B35,#FF8F00)' : 'rgba(255,255,255,0.05)', border: activeTab === 'report' ? 'none' : '1px solid rgba(255,255,255,0.1)' }} 
+                  onClick={() => setActiveTab('report')}
+                >📈 Report</button>
+              )}
+            </div>
+          )}
+          
+          {/* TAB REPORT AGGREGATO - Solo per admin/assistente */}
+          {(user.role === 'admin' || user.role === 'assistente') && activeTab === 'report' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+              <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.15), rgba(255,107,53,0.05))', borderRadius: 20, padding: 20, border: '1px solid rgba(255,107,53,0.3)' }}>
+                <h2 style={{ color: '#FF6B35', fontSize: 18, marginBottom: 5 }}>📈 REPORT AGGREGATO</h2>
+                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginBottom: 15 }}>Carica più CSV per generare classifiche mensili/trimestrali/annuali</p>
+                
+                {/* 4 UPLOAD CSV */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 20 }}>
+                  {/* IVD */}
+                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 15, border: reportCSVs.ivd ? '2px solid #4CAF50' : '1px solid rgba(255,255,255,0.1)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                      <span style={{ fontSize: 20 }}>🟠</span>
+                      <span style={{ color: '#FF6B35', fontWeight: 600 }}>IVD Attivati</span>
+                    </div>
+                    <input type="file" accept=".csv" id="csv-ivd" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('ivd', e.target.files[0]); }} />
+                    <label htmlFor="csv-ivd" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(255,107,53,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.ivd ? '#4CAF50' : 'rgba(255,255,255,0.6)', fontSize: 12 }}>
+                      {reportCSVs.ivd ? `✅ ${reportCSVs.ivd.rows} righe` : '📤 Carica CSV'}
+                    </label>
+                    <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, marginTop: 5, textAlign: 'center' }}>Solo Attivazione START&GO</p>
+                  </div>
+                  
+                  {/* Energy */}
+                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 15, border: reportCSVs.energy ? '2px solid #4CAF50' : '1px solid rgba(255,255,255,0.1)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                      <span style={{ fontSize: 20 }}>⚡</span>
+                      <span style={{ color: '#FFC107', fontWeight: 600 }}>Luce Amica</span>
+                    </div>
+                    <input type="file" accept=".csv" id="csv-energy" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('energy', e.target.files[0]); }} />
+                    <label htmlFor="csv-energy" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(255,193,7,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.energy ? '#4CAF50' : 'rgba(255,255,255,0.6)', fontSize: 12 }}>
+                      {reportCSVs.energy ? `✅ ${reportCSVs.energy.rows} righe` : '📤 Carica CSV'}
+                    </label>
+                  </div>
+                  
+                  {/* FV */}
+                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 15, border: reportCSVs.fv ? '2px solid #4CAF50' : '1px solid rgba(255,255,255,0.1)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                      <span style={{ fontSize: 20 }}>☀️</span>
+                      <span style={{ color: '#FF9800', fontWeight: 600 }}>Fotovoltaico</span>
+                    </div>
+                    <input type="file" accept=".csv" id="csv-fv" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('fv', e.target.files[0]); }} />
+                    <label htmlFor="csv-fv" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(255,152,0,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.fv ? '#4CAF50' : 'rgba(255,255,255,0.6)', fontSize: 12 }}>
+                      {reportCSVs.fv ? `✅ ${reportCSVs.fv.rows} righe` : '📤 Carica CSV'}
+                    </label>
+                  </div>
+                  
+                  {/* Consultings */}
+                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 15, border: reportCSVs.consultings ? '2px solid #4CAF50' : '1px solid rgba(255,255,255,0.1)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                      <span style={{ fontSize: 20 }}>🎓</span>
+                      <span style={{ color: '#9C27B0', fontWeight: 600 }}>Seminari</span>
+                    </div>
+                    <input type="file" accept=".csv" id="csv-consultings" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('consultings', e.target.files[0]); }} />
+                    <label htmlFor="csv-consultings" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(156,39,176,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.consultings ? '#4CAF50' : 'rgba(255,255,255,0.6)', fontSize: 12 }}>
+                      {reportCSVs.consultings ? `✅ ${reportCSVs.consultings.rows} righe` : '📤 Carica CSV'}
+                    </label>
+                  </div>
+                </div>
+                
+                {/* Bottoni azione */}
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  <button 
+                    style={{ ...S.btn, flex: 1, minWidth: 150, padding: '14px 20px', background: 'linear-gradient(135deg, #FF6B35, #FF8F00)', opacity: Object.values(reportCSVs).some(v => v) ? 1 : 0.5 }} 
+                    onClick={() => setReportData(generateReportData())}
+                    disabled={!Object.values(reportCSVs).some(v => v)}
+                  >📊 Genera Report</button>
+                  <button 
+                    style={{ ...S.btn, flex: 1, minWidth: 150, padding: '14px 20px', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)' }} 
+                    onClick={clearReportCSVs}
+                  >🗑️ Reset</button>
+                </div>
+              </div>
+              
+              {/* RISULTATI REPORT */}
+              {reportData && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.1)' }}>
+                    {/* Header con totali */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 15, marginBottom: 20 }}>
+                      <div style={{ background: 'linear-gradient(135deg, rgba(124,77,255,0.2), rgba(124,77,255,0.05))', borderRadius: 12, padding: 15, flex: 1, minWidth: 120, textAlign: 'center' }}>
+                        <div style={{ fontSize: 28, fontWeight: 800, color: '#7C4DFF' }}>{reportData.total}</div>
+                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>TOTALE CONTRATTI</div>
+                      </div>
+                      {reportData.sources.ivd > 0 && (
+                        <div style={{ background: 'rgba(255,107,53,0.1)', borderRadius: 12, padding: 15, textAlign: 'center' }}>
+                          <div style={{ fontSize: 20, fontWeight: 700, color: '#FF6B35' }}>{reportData.sources.ivd}</div>
+                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>IVD</div>
+                        </div>
+                      )}
+                      {reportData.sources.energy > 0 && (
+                        <div style={{ background: 'rgba(255,193,7,0.1)', borderRadius: 12, padding: 15, textAlign: 'center' }}>
+                          <div style={{ fontSize: 20, fontWeight: 700, color: '#FFC107' }}>{reportData.sources.energy}</div>
+                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>Luce</div>
+                        </div>
+                      )}
+                      {reportData.sources.fv > 0 && (
+                        <div style={{ background: 'rgba(255,152,0,0.1)', borderRadius: 12, padding: 15, textAlign: 'center' }}>
+                          <div style={{ fontSize: 20, fontWeight: 700, color: '#FF9800' }}>{reportData.sources.fv}</div>
+                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>FV</div>
+                        </div>
+                      )}
+                      {reportData.sources.consultings > 0 && (
+                        <div style={{ background: 'rgba(156,39,176,0.1)', borderRadius: 12, padding: 15, textAlign: 'center' }}>
+                          <div style={{ fontSize: 20, fontWeight: 700, color: '#9C27B0' }}>{reportData.sources.consultings}</div>
+                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>Seminari</div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* 🔥 HEATMAP 4 CATEGORIE - Giorni caldi */}
+                    {reportData.heatmaps && Object.keys(reportData.heatmaps).length > 0 && (
+                      <div style={{ marginBottom: 20 }}>
+                        <h3 style={{ color: '#FF6B35', fontSize: 16, marginBottom: 15 }}>🔥 TEMPERATURA CONTRATTI PER CATEGORIA</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
+                          {Object.entries(reportData.heatmaps).map(([type, data]) => {
+                            const maxVal = Math.max(...data, 1);
+                            const typeInfo = {
+                              ivd: { emoji: '🟠', label: 'IVD Attivati', color: '#FF6B35' },
+                              energy: { emoji: '⚡', label: 'Luce Amica', color: '#FFC107' },
+                              fv: { emoji: '☀️', label: 'Fotovoltaico', color: '#FF9800' },
+                              consultings: { emoji: '🎓', label: 'Seminari', color: '#9C27B0' }
+                            }[type];
+                            const dayLabels = ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
+                            
+                            return (
+                              <div key={type} style={{ background: `${typeInfo.color}10`, borderRadius: 12, padding: 12, border: `1px solid ${typeInfo.color}30` }}>
+                                <div style={{ fontSize: 12, color: typeInfo.color, fontWeight: 600, marginBottom: 8 }}>{typeInfo.emoji} {typeInfo.label}</div>
+                                {/* Header giorni */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
+                                  {dayLabels.map((d, i) => (
+                                    <div key={i} style={{ textAlign: 'center', fontSize: 8, color: 'rgba(255,255,255,0.4)' }}>{d}</div>
+                                  ))}
+                                </div>
+                                {/* Griglia giorni */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+                                  {data.slice(0, 31).map((val, i) => {
+                                    const intensity = val / maxVal;
+                                    const bgColor = val === 0 ? 'rgba(255,255,255,0.05)' : 
+                                                   intensity > 0.7 ? '#4CAF50' : 
+                                                   intensity > 0.4 ? '#FFC107' : typeInfo.color;
+                                    return (
+                                      <div key={i} style={{ 
+                                        height: 22, 
+                                        borderRadius: 4, 
+                                        background: bgColor,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: 8,
+                                        color: val === 0 ? 'rgba(255,255,255,0.2)' : '#fff',
+                                        fontWeight: val > 0 ? 600 : 400,
+                                        position: 'relative'
+                                      }}>
+                                        {i + 1}
+                                        {val > 0 && intensity > 0.7 && <span style={{ position: 'absolute', top: -3, right: -1, fontSize: 6 }}>🔥</span>}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                {/* Totale */}
+                                <div style={{ textAlign: 'right', fontSize: 10, color: 'rgba(255,255,255,0.5)', marginTop: 6 }}>
+                                  Tot: <strong style={{ color: typeInfo.color }}>{data.reduce((a, b) => a + b, 0)}</strong>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Classifiche aggregate */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 15 }}>
+                      {/* K Manager */}
+                      <div style={{ background: 'rgba(255,215,0,0.05)', borderRadius: 16, padding: 15, border: '1px solid rgba(255,215,0,0.2)' }}>
+                        <h3 style={{ color: '#FFD700', fontSize: 14, marginBottom: 12 }}>👑 CLASSIFICA K MANAGER</h3>
+                        {reportData.classifiche.k.map(([name, val], i) => (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                            <span style={{ width: 24, fontSize: 12, color: i < 3 ? '#FFD700' : 'rgba(255,255,255,0.5)', fontWeight: i < 3 ? 700 : 500 }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
+                            <div style={{ flex: 1, height: 24, background: 'rgba(255,255,255,0.05)', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
+                              <div style={{ width: `${(val / reportData.classifiche.k[0][1]) * 100}%`, height: '100%', background: `linear-gradient(90deg, #FFD700, #FFA000)`, borderRadius: 6 }} />
+                              <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: '#fff', fontWeight: 500 }}>{name}</span>
+                            </div>
+                            <span style={{ width: 35, fontSize: 13, fontWeight: 700, color: '#FFD700', textAlign: 'right' }}>{val}</span>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Networker - TUTTI */}
+                      <div style={{ background: 'rgba(156,39,176,0.05)', borderRadius: 16, padding: 15, border: '1px solid rgba(156,39,176,0.2)', maxHeight: 400, overflowY: 'auto' }}>
+                        <h3 style={{ color: '#9C27B0', fontSize: 14, marginBottom: 12 }}>⭐ CLASSIFICA NETWORKER ({reportData.classifiche.nw.length})</h3>
+                        {reportData.classifiche.nw.map(([name, val], i) => (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                            <span style={{ width: 24, fontSize: 11, color: i < 3 ? '#9C27B0' : 'rgba(255,255,255,0.5)', fontWeight: i < 3 ? 700 : 500 }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
+                            <div style={{ flex: 1, height: 20, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
+                              <div style={{ width: `${(val / reportData.classifiche.nw[0][1]) * 100}%`, height: '100%', background: `linear-gradient(90deg, #9C27B0, #7B1FA2)`, borderRadius: 4 }} />
+                              <span style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#fff' }}>{name.split(' ').slice(0,2).join(' ')}</span>
+                            </div>
+                            <span style={{ width: 30, fontSize: 12, fontWeight: 600, color: '#9C27B0', textAlign: 'right' }}>{val}</span>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* SDP */}
+                      <div style={{ background: 'rgba(33,150,243,0.05)', borderRadius: 16, padding: 15, border: '1px solid rgba(33,150,243,0.2)', maxHeight: 400, overflowY: 'auto' }}>
+                        <h3 style={{ color: '#2196F3', fontSize: 14, marginBottom: 12 }}>🔵 CLASSIFICA SDP ({reportData.classifiche.sdp.length})</h3>
+                        {reportData.classifiche.sdp.map(([name, val], i) => (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                            <span style={{ width: 24, fontSize: 11, color: i < 3 ? '#2196F3' : 'rgba(255,255,255,0.5)', fontWeight: i < 3 ? 700 : 500 }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
+                            <div style={{ flex: 1, height: 20, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
+                              <div style={{ width: `${(val / (reportData.classifiche.sdp[0]?.[1] || 1)) * 100}%`, height: '100%', background: `linear-gradient(90deg, #2196F3, #1976D2)`, borderRadius: 4 }} />
+                              <span style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#fff' }}>{name.split(' ').slice(0,2).join(' ')}</span>
+                            </div>
+                            <span style={{ width: 30, fontSize: 12, fontWeight: 600, color: '#2196F3', textAlign: 'right' }}>{val}</span>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* IVD */}
+                      {reportData.classifiche.ivd.length > 0 && (
+                        <div style={{ background: 'rgba(255,107,53,0.05)', borderRadius: 16, padding: 15, border: '1px solid rgba(255,107,53,0.2)', maxHeight: 400, overflowY: 'auto' }}>
+                          <h3 style={{ color: '#FF6B35', fontSize: 14, marginBottom: 12 }}>🟠 CLASSIFICA IVD ({reportData.classifiche.ivd.length})</h3>
+                          {reportData.classifiche.ivd.slice(0, 20).map(([name, val], i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                              <span style={{ width: 24, fontSize: 11, color: i < 3 ? '#FF6B35' : 'rgba(255,255,255,0.5)', fontWeight: i < 3 ? 700 : 500 }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
+                              <div style={{ flex: 1, height: 20, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
+                                <div style={{ width: `${(val / (reportData.classifiche.ivd[0]?.[1] || 1)) * 100}%`, height: '100%', background: `linear-gradient(90deg, #FF6B35, #E65100)`, borderRadius: 4 }} />
+                                <span style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#fff' }}>{name.split(' ').slice(0,2).join(' ')}</span>
+                              </div>
+                              <span style={{ width: 30, fontSize: 12, fontWeight: 600, color: '#FF6B35', textAlign: 'right' }}>{val}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* BOTTONE SCREENSHOT REPORT */}
+                  <div style={{ background: 'linear-gradient(135deg, rgba(124,77,255,0.2), rgba(124,77,255,0.05))', borderRadius: 16, padding: 20, border: '1px solid rgba(124,77,255,0.3)' }}>
+                    <div style={{ fontSize: 16, color: '#7C4DFF', fontWeight: 700, marginBottom: 5 }}>📷 SCARICA REPORT</div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 15 }}>Scarica il report come immagine</div>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                      <button style={{ ...S.btn, flex: 1, minWidth: 140, padding: '14px 20px', background: 'linear-gradient(135deg, #7C4DFF, #536DFE)', fontSize: 14 }} onClick={() => generateDashboardCanvas('png')}>📷 Salva PNG</button>
+                      <button style={{ ...S.btn, flex: 1, minWidth: 140, padding: '14px 20px', background: 'linear-gradient(135deg, #E91E63, #C2185B)', fontSize: 14 }} onClick={() => generateDashboardCanvas('pdf')}>📄 Salva PDF</button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1256,29 +1962,192 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* HEATMAP compatta */}
-                  <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, padding: 15, border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>🗓️ ATTIVITÀ SETTIMANALE</div>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      {dayNames.map((day, i) => {
-                        const val = stats.weeklyData[i];
-                        const intensity = val / maxWeekly;
-                        const bgColor = val === 0 ? 'rgba(255,255,255,0.05)' : intensity > 0.7 ? '#4CAF50' : intensity > 0.4 ? '#FFC107' : '#FF6B35';
+                  {/* HEATMAP DINAMICO - Settimanale o Mensile */}
+                  {!stats.isMonthly ? (
+                    // HEATMAP SETTIMANALE
+                    <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, padding: 15, border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>🗓️ ATTIVITÀ SETTIMANALE</div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {dayNames.map((day, i) => {
+                          const val = stats.weeklyData[i];
+                          const intensity = val / maxWeekly;
+                          const bgColor = val === 0 ? 'rgba(255,255,255,0.05)' : intensity > 0.7 ? '#4CAF50' : intensity > 0.4 ? '#FFC107' : '#FF6B35';
+                          return (
+                            <div key={day} style={{ flex: 1, textAlign: 'center' }}>
+                              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>{day}</div>
+                              <div style={{ height: 36, borderRadius: 6, background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: val === 0 ? 'rgba(255,255,255,0.2)' : '#fff' }}>{val}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#4CAF50' }} /><span style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)' }}>Alto (&gt;70%)</span></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#FFC107' }} /><span style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)' }}>Medio</span></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#FF6B35' }} /><span style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)' }}>Basso</span></div>
+                      </div>
+                    </div>
+                  ) : (
+                    // HEATMAP MENSILE - Griglia Calendario WOW
+                    <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.08), rgba(255,107,53,0.02))', borderRadius: 16, padding: 15, border: '1px solid rgba(255,107,53,0.2)', gridColumn: 'span 2' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                        <div style={{ fontSize: 14, color: '#FF6B35', fontWeight: 600 }}>🔥 TEMPERATURA CONTRATTI</div>
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>Giorni caldi del mese</div>
+                      </div>
+                      {(() => {
+                        const maxM = Math.max(...stats.monthlyData, 1);
+                        const daysInMonth = stats.monthInfo?.daysInMonth || 31;
+                        const firstDay = stats.monthInfo?.firstDay || 0;
+                        const dayLabels = ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
+                        
                         return (
-                          <div key={day} style={{ flex: 1, textAlign: 'center' }}>
-                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>{day}</div>
-                            <div style={{ height: 36, borderRadius: 6, background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: val === 0 ? 'rgba(255,255,255,0.2)' : '#fff' }}>{val}</div>
+                          <div>
+                            {/* Header giorni settimana */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3, marginBottom: 6 }}>
+                              {dayLabels.map((d, i) => (
+                                <div key={i} style={{ textAlign: 'center', fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>{d}</div>
+                              ))}
+                            </div>
+                            {/* Griglia calendario */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
+                              {/* Celle vuote prima del primo giorno */}
+                              {Array(firstDay).fill(null).map((_, i) => (
+                                <div key={`empty-${i}`} style={{ height: 32 }} />
+                              ))}
+                              {/* Giorni del mese */}
+                              {stats.monthlyData.slice(0, daysInMonth).map((val, i) => {
+                                const intensity = val / maxM;
+                                const bgColor = val === 0 ? 'rgba(255,255,255,0.05)' : 
+                                               intensity > 0.7 ? '#4CAF50' : 
+                                               intensity > 0.4 ? '#FFC107' : '#FF6B35';
+                                const isHot = intensity > 0.7 && val > 0;
+                                return (
+                                  <div key={i} style={{ 
+                                    height: 32, 
+                                    borderRadius: 6, 
+                                    background: bgColor, 
+                                    display: 'flex', 
+                                    flexDirection: 'column',
+                                    alignItems: 'center', 
+                                    justifyContent: 'center',
+                                    position: 'relative',
+                                    boxShadow: isHot ? '0 0 10px rgba(76,175,80,0.5)' : 'none',
+                                    transition: 'all 0.2s'
+                                  }}>
+                                    <span style={{ fontSize: 10, color: val === 0 ? 'rgba(255,255,255,0.3)' : '#fff', fontWeight: val > 0 ? 600 : 400 }}>{i + 1}</span>
+                                    {val > 0 && <span style={{ fontSize: 8, color: '#fff', fontWeight: 700 }}>{val}</span>}
+                                    {isHot && <span style={{ position: 'absolute', top: -4, right: -2, fontSize: 8 }}>🔥</span>}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {/* Legenda */}
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: 15, marginTop: 12 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#4CAF50', boxShadow: '0 0 6px rgba(76,175,80,0.5)' }} /><span style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>🔥 Caldo</span></div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FFC107' }} /><span style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>Tiepido</span></div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FF6B35' }} /><span style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>Freddo</span></div>
+                            </div>
                           </div>
                         );
-                      })}
+                      })()}
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 10 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#4CAF50' }} /><span style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)' }}>Alto (&gt;70%)</span></div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#FFC107' }} /><span style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)' }}>Medio (40-70%)</span></div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#FF6B35' }} /><span style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)' }}>Basso (&lt;40%)</span></div>
-                    </div>
-                  </div>
+                  )}
                 </div>
+
+                {/* GRAFICI TORTA - DISTRIBUZIONI */}
+                {(() => {
+                  const pies = getPieDistributions();
+                  const totalK = pies.k.reduce((s, [,v]) => s + v, 0);
+                  const totalStati = pies.stati.reduce((s, [,v]) => s + v, 0);
+                  
+                  // Funzione per disegnare torta mini SVG
+                  const MiniPie = ({ data, total, colors, size = 70 }) => {
+                    if (!data.length || total === 0) return <div style={{ width: size, height: size, borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />;
+                    let cumulative = 0;
+                    const paths = data.slice(0, 6).map(([name, val], i) => {
+                      const pct = val / total;
+                      const startAngle = cumulative * 360;
+                      cumulative += pct;
+                      const endAngle = cumulative * 360;
+                      const largeArc = pct > 0.5 ? 1 : 0;
+                      const r = size / 2 - 2;
+                      const cx = size / 2, cy = size / 2;
+                      const x1 = cx + r * Math.cos((startAngle - 90) * Math.PI / 180);
+                      const y1 = cy + r * Math.sin((startAngle - 90) * Math.PI / 180);
+                      const x2 = cx + r * Math.cos((endAngle - 90) * Math.PI / 180);
+                      const y2 = cy + r * Math.sin((endAngle - 90) * Math.PI / 180);
+                      return <path key={i} d={`M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${largeArc},1 ${x2},${y2} Z`} fill={colors[i % colors.length]} />;
+                    });
+                    return <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>{paths}</svg>;
+                  };
+                  
+                  return (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+                      {/* TORTA K MANAGER */}
+                      {pies.k.length > 0 && (
+                        <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, padding: 15, border: '1px solid rgba(255,215,0,0.2)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <MiniPie data={pies.k} total={totalK} colors={PIE_COLORS} size={65} />
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: 12, color: '#FFD700', fontWeight: 600, marginBottom: 6 }}>👑 K MANAGER</div>
+                              {pies.k.slice(0, 4).map(([name, val], i) => (
+                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'rgba(255,255,255,0.7)', marginBottom: 2 }}>
+                                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <span style={{ width: 8, height: 8, borderRadius: 2, background: PIE_COLORS[i] }} />
+                                    {name.split(' ')[0]}
+                                  </span>
+                                  <span style={{ fontWeight: 600 }}>{val} ({Math.round(val/totalK*100)}%)</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* TORTA STATI */}
+                      {pies.stati.length > 0 && (
+                        <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, padding: 15, border: '1px solid rgba(76,175,80,0.2)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <MiniPie data={pies.stati} total={totalStati} colors={pies.stati.map(([s]) => STATO_COLORS[s] || '#607D8B')} size={65} />
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: 12, color: '#4CAF50', fontWeight: 600, marginBottom: 6 }}>📋 STATI</div>
+                              {pies.stati.slice(0, 4).map(([name, val], i) => (
+                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'rgba(255,255,255,0.7)', marginBottom: 2 }}>
+                                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <span style={{ width: 8, height: 8, borderRadius: 2, background: STATO_COLORS[name] || '#607D8B' }} />
+                                    {name}
+                                  </span>
+                                  <span style={{ fontWeight: 600 }}>{val} ({Math.round(val/totalStati*100)}%)</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* BARRA NW TOP 5 */}
+                      {pies.nw.length > 0 && (
+                        <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, padding: 15, border: '1px solid rgba(156,39,176,0.2)', gridColumn: pies.k.length > 0 && pies.stati.length > 0 ? 'span 2' : 'span 1' }}>
+                          <div style={{ fontSize: 12, color: '#9C27B0', fontWeight: 600, marginBottom: 10 }}>⭐ TOP 5 NETWORKER</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            {pies.nw.slice(0, 5).map(([name, val], i) => {
+                              const maxNw = pies.nw[0]?.[1] || 1;
+                              return (
+                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <span style={{ width: 20, fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>{i+1}°</span>
+                                  <div style={{ flex: 1, height: 18, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
+                                    <div style={{ width: `${(val/maxNw)*100}%`, height: '100%', background: `linear-gradient(90deg, ${PIE_COLORS[i]}, ${PIE_COLORS[i]}88)`, borderRadius: 4 }} />
+                                    <span style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 9, color: '#fff' }}>{name.split(' ').slice(0,2).join(' ')}</span>
+                                  </div>
+                                  <span style={{ width: 25, fontSize: 11, fontWeight: 600, color: PIE_COLORS[i], textAlign: 'right' }}>{val}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* BOTTONI DOWNLOAD SLIDE */}
                 <div style={{ background: 'linear-gradient(135deg, rgba(42,170,138,0.2), rgba(42,170,138,0.05))', borderRadius: 16, padding: 20, border: '1px solid rgba(42,170,138,0.3)' }}>
@@ -1287,6 +2156,16 @@ export default function Home() {
                   <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                     <button style={{ ...S.btn, flex: 1, minWidth: 180, padding: '14px 20px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', fontSize: 14 }} onClick={() => downloadSlidePNG('full')}>📊 Podio + Classifica</button>
                     <button style={{ ...S.btn, flex: 1, minWidth: 180, padding: '14px 20px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', color: '#1a1a2e', fontSize: 14 }} onClick={() => downloadSlidePNG('solo')}>🏆 Solo Podio</button>
+                  </div>
+                </div>
+                
+                {/* BOTTONI SCREENSHOT DASHBOARD */}
+                <div style={{ background: 'linear-gradient(135deg, rgba(124,77,255,0.2), rgba(124,77,255,0.05))', borderRadius: 16, padding: 20, border: '1px solid rgba(124,77,255,0.3)' }}>
+                  <div style={{ fontSize: 16, color: '#7C4DFF', fontWeight: 700, marginBottom: 5 }}>📷 SCREENSHOT DASHBOARD</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 15 }}>Scarica tutta la dashboard come immagine o PDF</div>
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                    <button style={{ ...S.btn, flex: 1, minWidth: 140, padding: '14px 20px', background: 'linear-gradient(135deg, #7C4DFF, #536DFE)', fontSize: 14 }} onClick={() => generateDashboardCanvas('png')}>📷 Salva PNG</button>
+                    <button style={{ ...S.btn, flex: 1, minWidth: 140, padding: '14px 20px', background: 'linear-gradient(135deg, #E91E63, #C2185B)', fontSize: 14 }} onClick={() => generateDashboardCanvas('pdf')}>📄 Salva PDF</button>
                   </div>
                 </div>
               </div>
