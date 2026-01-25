@@ -190,17 +190,18 @@ export default function Home() {
 
   // Dashboard helper functions
   const getDashboardStats = () => {
-    if (!filteredData || !rankings) return { ins: 0, acc: 0, part: 0, conv: 0, top3: [], top10: [], weeklyData: [] };
+    if (!filteredData || !rankings) return { ins: 0, acc: 0, part: 0, conv: 0, top3: [], top10: [], weeklyData: [], maxV1: 1 };
     
-    // Totali da IVD (o tutti i dati)
-    const ivdData = rankings.ivd_inseriti || [];
-    const totIns = ivdData.reduce((s, [,x]) => s + x.v1, 0);
-    const totAcc = ivdData.reduce((s, [,x]) => s + x.v2, 0);
+    // USA LA CLASSIFICA SELEZIONATA invece di sempre IVD
+    const currentData = getData(); // Usa la stessa funzione delle classifiche
+    
+    const totIns = currentData.reduce((s, [,x]) => s + x.v1, 0);
+    const totAcc = currentData.reduce((s, [,x]) => s + x.v2, 0);
     const conv = totIns > 0 ? Math.round(totAcc / totIns * 100) : 0;
     
     // TOP 3 e TOP 10
-    const top3 = ivdData.slice(0, 3).map(([name, s]) => ({ name, v1: s.v1, v2: s.v2 }));
-    const top10 = ivdData.slice(0, 10).map(([name, s]) => ({ name, v1: s.v1, v2: s.v2 }));
+    const top3 = currentData.slice(0, 3).map(([name, s]) => ({ name, v1: s.v1, v2: s.v2 }));
+    const top10 = currentData.slice(0, 10).map(([name, s]) => ({ name, v1: s.v1, v2: s.v2 }));
     const maxV1 = top10.length > 0 ? Math.max(...top10.map(t => t.v1)) : 1;
     
     // Weekly heatmap - analizza date inserimento
@@ -219,7 +220,7 @@ export default function Home() {
       }
     });
     
-    return { ins: totIns, acc: totAcc, part: ivdData.length, conv, top3, top10, maxV1, weeklyData };
+    return { ins: totIns, acc: totAcc, part: currentData.length, conv, top3, top10, maxV1, weeklyData };
   };
 
   // Genera PNG per slide NWG (16:9) - VERSIONE WOW
@@ -277,9 +278,9 @@ export default function Home() {
       const maxVal = Math.max(stats.top3[0]?.v1 || 1, stats.top3[1]?.v1 || 1, stats.top3[2]?.v1 || 1);
       
       const positions = [
-        { x: centerX - barW - gap, data: stats.top3[1], medal: '🥈', pos: 2, colors: ['#F5F5F5', '#C0C0C0', '#909090'] },
-        { x: centerX, data: stats.top3[0], medal: '🥇', pos: 1, colors: ['#FFF8E1', '#FFD700', '#FFA000'] },
-        { x: centerX + barW + gap, data: stats.top3[2], medal: '🥉', pos: 3, colors: ['#FFE0B2', '#CD7F32', '#8B4513'] }
+        { x: centerX - barW - gap, data: stats.top3[1], medal: '🥈', pos: 2, colors: ['#F5F5F5', '#C0C0C0', '#909090'], sideColor: '#707070' },
+        { x: centerX, data: stats.top3[0], medal: '🥇', pos: 1, colors: ['#FFF8E1', '#FFD700', '#FFA000'], sideColor: '#CC9900' },
+        { x: centerX + barW + gap, data: stats.top3[2], medal: '🥉', pos: 3, colors: ['#FFE0B2', '#CD7F32', '#8B4513'], sideColor: '#6B3A0A' }
       ];
       
       positions.forEach(p => {
@@ -292,10 +293,14 @@ export default function Home() {
         }
       });
       
+      // Array per memorizzare posizioni medaglie (da disegnare dopo le stelle)
+      const medalPositions = [];
+      
       positions.forEach(p => {
         if (!p.data || p.h === 0) return;
         const barX = p.x - barW / 2;
         const barY = podioBaseY - p.h;
+        const depth = 25; // Profondità 3D
         
         // Glow per primo posto
         if (p.pos === 1) {
@@ -304,12 +309,45 @@ export default function Home() {
           ctx.shadowBlur = 80;
           ctx.fillStyle = 'rgba(255, 215, 0, 0.4)';
           ctx.beginPath();
-          ctx.roundRect(barX - 20, barY - 20, barW + 40, p.h + 20, [30, 30, 0, 0]);
+          ctx.roundRect(barX - 20, barY - 20, barW + 40 + depth, p.h + 20, [30, 30, 0, 0]);
           ctx.fill();
           ctx.restore();
         }
         
-        // Barra gradient
+        // OMBRA sotto la barra
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.roundRect(barX + 8, barY + 8, barW + depth, p.h, [25, 25, 0, 0]);
+        ctx.fill();
+        
+        // LATO DESTRO 3D (più scuro)
+        ctx.fillStyle = p.sideColor;
+        ctx.beginPath();
+        ctx.moveTo(barX + barW, barY + 25);
+        ctx.lineTo(barX + barW + depth, barY + 25 - 15);
+        ctx.lineTo(barX + barW + depth, barY + p.h);
+        ctx.lineTo(barX + barW, barY + p.h);
+        ctx.closePath();
+        ctx.fill();
+        
+        // TOP 3D (parte superiore inclinata)
+        const topGrad = ctx.createLinearGradient(barX, barY, barX + barW + depth, barY - 15);
+        topGrad.addColorStop(0, p.colors[0]);
+        topGrad.addColorStop(1, p.colors[1]);
+        ctx.fillStyle = topGrad;
+        ctx.beginPath();
+        ctx.moveTo(barX + 25, barY);
+        ctx.lineTo(barX + barW - 25, barY);
+        ctx.quadraticCurveTo(barX + barW, barY, barX + barW, barY + 25);
+        ctx.lineTo(barX + barW + depth, barY + 25 - 15);
+        ctx.lineTo(barX + barW + depth - 25, barY - 15);
+        ctx.lineTo(barX + 25, barY - 15);
+        ctx.quadraticCurveTo(barX, barY - 15, barX, barY);
+        ctx.quadraticCurveTo(barX, barY, barX + 25, barY);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Barra FRONTALE gradient
         const grad = ctx.createLinearGradient(barX, barY, barX, barY + p.h);
         grad.addColorStop(0, p.colors[0]);
         grad.addColorStop(0.5, p.colors[1]);
@@ -319,33 +357,32 @@ export default function Home() {
         ctx.roundRect(barX, barY, barW, p.h, [25, 25, 0, 0]);
         ctx.fill();
         
-        // Riflesso
-        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        // Riflesso lucido
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
         ctx.beginPath();
-        ctx.roundRect(barX + 15, barY + 15, barW * 0.25, p.h - 30, [12, 12, 12, 12]);
+        ctx.roundRect(barX + 18, barY + 18, barW * 0.22, p.h - 36, [12, 12, 12, 12]);
         ctx.fill();
         
-        // Medaglia grande
-        ctx.font = '100px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(p.medal, p.x, barY + 110);
+        // Salva posizione medaglia per dopo
+        medalPositions.push({ x: p.x, y: barY + 100, pos: p.pos, medal: p.medal });
         
         // Numero ENORME
         ctx.fillStyle = '#1a1a2e';
         ctx.font = `bold ${p.pos === 1 ? 140 : 100}px Arial`;
-        ctx.fillText(p.data.v1.toString(), p.x, barY + (p.pos === 1 ? 270 : 230));
+        ctx.textAlign = 'center';
+        ctx.fillText(p.data.v1.toString(), p.x, barY + (p.pos === 1 ? 280 : 240));
         
-        // Nome su due righe - PIU DISTANZIATO
+        // Nome su due righe - ALZATI
         const nameParts = p.data.name.toUpperCase().split(' ');
         const cognome = nameParts[0] || '';
         const nome = nameParts.slice(1).join(' ') || '';
         
         ctx.fillStyle = '#FFFFFF';
         ctx.font = `bold ${p.pos === 1 ? 44 : 36}px Arial`;
-        ctx.fillText(cognome, p.x, barY - 60);
+        ctx.fillText(cognome, p.x, barY - 80);
         ctx.font = `${p.pos === 1 ? 34 : 28}px Arial`;
         ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.fillText(nome, p.x, barY - 20);
+        ctx.fillText(nome, p.x, barY - 38);
       });
       
       // Stelle attorno al vincitore
@@ -358,22 +395,51 @@ export default function Home() {
         drawStar(sx, sy, 4, 12 + Math.random() * 10, 5, '#FFD700', 0.4 + Math.random() * 0.4);
       }
       
+      // MEDAGLIE SOLIDE (disegnate DOPO le stelle per stare in primo piano)
+      medalPositions.forEach(m => {
+        const size = m.pos === 1 ? 70 : 55;
+        
+        // Ombra medaglia
+        ctx.beginPath();
+        ctx.arc(m.x + 4, m.y + 4, size, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.fill();
+        
+        // Sfondo circolare solido
+        const medalBg = m.pos === 1 ? '#FFF8E1' : m.pos === 2 ? '#F5F5F5' : '#FFE0B2';
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, size, 0, Math.PI * 2);
+        ctx.fillStyle = medalBg;
+        ctx.fill();
+        
+        // Bordo medaglia
+        const medalBorder = m.pos === 1 ? '#FFD700' : m.pos === 2 ? '#A0A0A0' : '#CD7F32';
+        ctx.strokeStyle = medalBorder;
+        ctx.lineWidth = 6;
+        ctx.stroke();
+        
+        // Emoji medaglia
+        ctx.font = `${m.pos === 1 ? 90 : 70}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText(m.medal, m.x, m.y + (m.pos === 1 ? 32 : 25));
+      });
+      
     } else {
       // ============ PODIO + CLASSIFICA ============
-      const podioOffsetX = 180; // Più a destra
+      const podioOffsetX = 250; // ANCORA PIU A DESTRA
       const podioBaseY = 800; // Base podio
       const barW = 240; // Più largo
       const gap = 35;
-      const centerX = 500 + podioOffsetX;
+      const centerX = 480 + podioOffsetX;
       const maxH = 480;
       const minH = 200;
       
       const maxVal = Math.max(stats.top3[0]?.v1 || 1, stats.top3[1]?.v1 || 1, stats.top3[2]?.v1 || 1);
       
       const positions = [
-        { x: centerX - barW - gap, data: stats.top3[1], medal: '🥈', pos: 2, colors: ['#F5F5F5', '#C0C0C0', '#909090'] },
-        { x: centerX, data: stats.top3[0], medal: '🥇', pos: 1, colors: ['#FFF8E1', '#FFD700', '#FFA000'] },
-        { x: centerX + barW + gap, data: stats.top3[2], medal: '🥉', pos: 3, colors: ['#FFE0B2', '#CD7F32', '#8B4513'] }
+        { x: centerX - barW - gap, data: stats.top3[1], medal: '🥈', pos: 2, colors: ['#F5F5F5', '#C0C0C0', '#909090'], sideColor: '#707070' },
+        { x: centerX, data: stats.top3[0], medal: '🥇', pos: 1, colors: ['#FFF8E1', '#FFD700', '#FFA000'], sideColor: '#CC9900' },
+        { x: centerX + barW + gap, data: stats.top3[2], medal: '🥉', pos: 3, colors: ['#FFE0B2', '#CD7F32', '#8B4513'], sideColor: '#6B3A0A' }
       ];
       
       positions.forEach(p => {
@@ -386,10 +452,14 @@ export default function Home() {
         }
       });
       
+      // Array per memorizzare posizioni medaglie
+      const medalPositions = [];
+      
       positions.forEach(p => {
         if (!p.data || p.h === 0) return;
         const barX = p.x - barW / 2;
         const barY = podioBaseY - p.h;
+        const depth = 20; // Profondità 3D
         
         // Glow per primo posto
         if (p.pos === 1) {
@@ -398,12 +468,28 @@ export default function Home() {
           ctx.shadowBlur = 70;
           ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
           ctx.beginPath();
-          ctx.roundRect(barX - 18, barY - 18, barW + 36, p.h + 18, [28, 28, 0, 0]);
+          ctx.roundRect(barX - 18, barY - 18, barW + 36 + depth, p.h + 18, [28, 28, 0, 0]);
           ctx.fill();
           ctx.restore();
         }
         
-        // Barra gradient
+        // OMBRA sotto la barra
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.beginPath();
+        ctx.roundRect(barX + 6, barY + 6, barW + depth, p.h, [22, 22, 0, 0]);
+        ctx.fill();
+        
+        // LATO DESTRO 3D
+        ctx.fillStyle = p.sideColor;
+        ctx.beginPath();
+        ctx.moveTo(barX + barW, barY + 22);
+        ctx.lineTo(barX + barW + depth, barY + 22 - 12);
+        ctx.lineTo(barX + barW + depth, barY + p.h);
+        ctx.lineTo(barX + barW, barY + p.h);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Barra FRONTALE gradient
         const grad = ctx.createLinearGradient(barX, barY, barX, barY + p.h);
         grad.addColorStop(0, p.colors[0]);
         grad.addColorStop(0.5, p.colors[1]);
@@ -413,33 +499,32 @@ export default function Home() {
         ctx.roundRect(barX, barY, barW, p.h, [22, 22, 0, 0]);
         ctx.fill();
         
-        // Riflesso
-        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        // Riflesso lucido
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
         ctx.beginPath();
-        ctx.roundRect(barX + 12, barY + 12, barW * 0.28, p.h - 24, [10, 10, 10, 10]);
+        ctx.roundRect(barX + 14, barY + 14, barW * 0.24, p.h - 28, [10, 10, 10, 10]);
         ctx.fill();
         
-        // Medaglia grande
-        ctx.font = '90px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(p.medal, p.x, barY + 100);
+        // Salva posizione medaglia
+        medalPositions.push({ x: p.x, y: barY + 95, pos: p.pos, medal: p.medal });
         
         // Numero GRANDE
         ctx.fillStyle = '#1a1a2e';
         ctx.font = `bold ${p.pos === 1 ? 110 : 80}px Arial`;
-        ctx.fillText(p.data.v1.toString(), p.x, barY + (p.pos === 1 ? 220 : 190));
+        ctx.textAlign = 'center';
+        ctx.fillText(p.data.v1.toString(), p.x, barY + (p.pos === 1 ? 225 : 195));
         
-        // Nome su due righe - DISTANZIATO
+        // Nome su due righe - ALZATI
         const nameParts = p.data.name.toUpperCase().split(' ');
         const cognome = nameParts[0] || '';
         const nome = nameParts.slice(1).join(' ') || '';
         
         ctx.fillStyle = '#FFFFFF';
         ctx.font = `bold ${p.pos === 1 ? 40 : 32}px Arial`;
-        ctx.fillText(cognome, p.x, barY - 55);
+        ctx.fillText(cognome, p.x, barY - 75);
         ctx.font = `${p.pos === 1 ? 30 : 24}px Arial`;
         ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.fillText(nome, p.x, barY - 18);
+        ctx.fillText(nome, p.x, barY - 38);
       });
       
       // Stelle attorno al vincitore
@@ -451,6 +536,35 @@ export default function Home() {
         const sy = winnerY + 120 + Math.sin(angle) * dist * 0.5;
         drawStar(sx, sy, 4, 11 + Math.random() * 8, 4, '#FFD700', 0.4 + Math.random() * 0.35);
       }
+      
+      // MEDAGLIE SOLIDE (dopo le stelle)
+      medalPositions.forEach(m => {
+        const size = m.pos === 1 ? 60 : 48;
+        
+        // Ombra medaglia
+        ctx.beginPath();
+        ctx.arc(m.x + 3, m.y + 3, size, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.fill();
+        
+        // Sfondo circolare solido
+        const medalBg = m.pos === 1 ? '#FFF8E1' : m.pos === 2 ? '#F5F5F5' : '#FFE0B2';
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, size, 0, Math.PI * 2);
+        ctx.fillStyle = medalBg;
+        ctx.fill();
+        
+        // Bordo medaglia
+        const medalBorder = m.pos === 1 ? '#FFD700' : m.pos === 2 ? '#A0A0A0' : '#CD7F32';
+        ctx.strokeStyle = medalBorder;
+        ctx.lineWidth = 5;
+        ctx.stroke();
+        
+        // Emoji medaglia
+        ctx.font = `${m.pos === 1 ? 75 : 60}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText(m.medal, m.x, m.y + (m.pos === 1 ? 28 : 22));
+      });
       
       // === CLASSIFICA 4°-10° - ALLINEATA CON BASE PODIO ===
       const listX = 1200 + podioOffsetX - 100;
@@ -963,7 +1077,7 @@ export default function Home() {
       {loginError && <p style={{ color: '#f44', fontSize: 13, marginBottom: 10 }}>{loginError}</p>}
       <button style={S.btn} onClick={handleLogin}>ACCEDI</button>
       <div style={S.categoryIcons}><span style={S.catIcon}>🟠</span><span style={S.catIcon}>🔵</span><span style={S.catIcon}>⭐</span><span style={S.catIcon}>👑</span></div>
-      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v9.1</p>
+      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v9.4</p>
     </div></div></>);
 
   // HOMEPAGE CSV
@@ -1040,15 +1154,24 @@ export default function Home() {
             
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {/* TITOLO CLASSIFICA SELEZIONATA */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 5 }}>
+                  <span style={{ fontSize: 24 }}>{config.emoji}</span>
+                  <div>
+                    <h2 style={{ color: config.color, fontSize: 18, margin: 0 }}>{config.label}</h2>
+                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, margin: 0 }}>{eventDate}</p>
+                  </div>
+                </div>
+                
                 {/* STATS CARDS - PIU GRANDI */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
                   <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.25), rgba(255,107,53,0.08))', borderRadius: 16, padding: '18px 12px', textAlign: 'center', border: '1px solid rgba(255,107,53,0.4)' }}>
                     <div style={{ fontSize: 36, fontWeight: 800, color: '#FF6B35' }}>{animatedStats.ins}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', marginTop: 4 }}>Inseriti</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', marginTop: 4 }}>{labels.c1}</div>
                   </div>
                   <div style={{ background: 'linear-gradient(135deg, rgba(76,175,80,0.25), rgba(76,175,80,0.08))', borderRadius: 16, padding: '18px 12px', textAlign: 'center', border: '1px solid rgba(76,175,80,0.4)' }}>
                     <div style={{ fontSize: 36, fontWeight: 800, color: '#4CAF50' }}>{animatedStats.acc}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', marginTop: 4 }}>Accettati</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', marginTop: 4 }}>{labels.c2}</div>
                   </div>
                   <div style={{ background: 'linear-gradient(135deg, rgba(124,77,255,0.25), rgba(124,77,255,0.08))', borderRadius: 16, padding: '18px 12px', textAlign: 'center', border: '1px solid rgba(124,77,255,0.4)' }}>
                     <div style={{ fontSize: 36, fontWeight: 800, color: '#7C4DFF' }}>{animatedStats.part}</div>
