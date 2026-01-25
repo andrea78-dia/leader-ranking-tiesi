@@ -223,7 +223,7 @@ export default function Home() {
   };
 
   // Genera PNG per slide NWG (16:9) - VERSIONE WOW
-  const generateSlidePNG = () => {
+  const generateSlidePNG = (mode = 'full') => {
     const stats = getDashboardStats();
     if (!stats.top3.length) return null;
     
@@ -255,182 +255,275 @@ export default function Home() {
       ctx.restore();
     };
     
-    // Stelle decorative sparse (effetto celebrazione)
+    // Stelle decorative sparse
     const starPositions = [
-      { x: 180, y: 150, size: 12 }, { x: 250, y: 280, size: 8 }, { x: 150, y: 450, size: 10 },
-      { x: 1750, y: 120, size: 14 }, { x: 1820, y: 300, size: 9 }, { x: 1700, y: 500, size: 11 },
-      { x: 600, y: 100, size: 8 }, { x: 750, y: 180, size: 6 }, { x: 1200, y: 130, size: 10 },
-      { x: 1350, y: 200, size: 7 }, { x: 500, y: 700, size: 9 }, { x: 1500, y: 750, size: 8 },
-      { x: 300, y: 600, size: 6 }, { x: 1650, y: 650, size: 7 }
+      { x: 120, y: 100, size: 14 }, { x: 200, y: 250, size: 10 }, { x: 100, y: 500, size: 12 },
+      { x: 1800, y: 80, size: 16 }, { x: 1850, y: 280, size: 11 }, { x: 1750, y: 550, size: 13 },
+      { x: 500, y: 80, size: 10 }, { x: 700, y: 150, size: 8 }, { x: 1300, y: 100, size: 12 },
+      { x: 1450, y: 180, size: 9 }, { x: 400, y: 750, size: 11 }, { x: 1600, y: 800, size: 10 },
+      { x: 250, y: 650, size: 8 }, { x: 1700, y: 700, size: 9 }
     ];
-    starPositions.forEach(s => drawStar(s.x, s.y, 4, s.size, s.size * 0.4, '#FFD700', 0.4));
-    
-    // === PODIO (spostato a destra per bollino) ===
-    const podioOffsetX = 100; // Spostamento a destra
-    const podioY = 80;
-    const podioBaseY = 750;
-    const barW = 220;
-    const gap = 30;
-    const centerX = 550 + podioOffsetX;
-    
-    // Calcolo altezze proporzionali
-    const maxVal = Math.max(stats.top3[0]?.v1 || 1, stats.top3[1]?.v1 || 1, stats.top3[2]?.v1 || 1);
-    const maxH = 450;
-    const minH = 180;
-    
-    const positions = [
-      { x: centerX - barW - gap, data: stats.top3[1], medal: '🥈', pos: 2, colors: ['#F5F5F5', '#B0B0B0', '#808080'] },
-      { x: centerX, data: stats.top3[0], medal: '🥇', pos: 1, colors: ['#FFF8E1', '#FFD700', '#FFA000'] },
-      { x: centerX + barW + gap, data: stats.top3[2], medal: '🥉', pos: 3, colors: ['#FFE0B2', '#CD7F32', '#8B4513'] }
-    ];
-    
-    // Calcola altezze
-    positions.forEach(p => {
-      if (p.data) {
-        const ratio = p.data.v1 / maxVal;
-        p.h = minH + (maxH - minH) * ratio;
-        if (p.pos === 1) p.h = maxH; // Primo sempre massimo
-      } else {
-        p.h = minH;
-      }
-    });
-    
-    // Disegna podio
-    positions.forEach(p => {
-      if (!p.data) return;
-      const barX = p.x - barW / 2;
-      const barY = podioBaseY - p.h;
+    starPositions.forEach(s => drawStar(s.x, s.y, 4, s.size, s.size * 0.4, '#FFD700', 0.5));
+
+    if (mode === 'solo') {
+      // ============ SOLO PODIO - CENTRATO E GRANDE ============
+      const podioBaseY = 820;
+      const barW = 280;
+      const gap = 50;
+      const centerX = W / 2;
+      const maxH = 550;
+      const minH = 250;
       
-      // Glow per primo posto
-      if (p.pos === 1) {
-        ctx.save();
-        ctx.shadowColor = 'rgba(255, 215, 0, 0.6)';
-        ctx.shadowBlur = 60;
-        ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
+      const maxVal = Math.max(stats.top3[0]?.v1 || 1, stats.top3[1]?.v1 || 1, stats.top3[2]?.v1 || 1);
+      
+      const positions = [
+        { x: centerX - barW - gap, data: stats.top3[1], medal: '🥈', pos: 2, colors: ['#F5F5F5', '#C0C0C0', '#909090'] },
+        { x: centerX, data: stats.top3[0], medal: '🥇', pos: 1, colors: ['#FFF8E1', '#FFD700', '#FFA000'] },
+        { x: centerX + barW + gap, data: stats.top3[2], medal: '🥉', pos: 3, colors: ['#FFE0B2', '#CD7F32', '#8B4513'] }
+      ];
+      
+      positions.forEach(p => {
+        if (p.data) {
+          const ratio = p.data.v1 / maxVal;
+          p.h = minH + (maxH - minH) * ratio;
+          if (p.pos === 1) p.h = maxH;
+        } else {
+          p.h = 0;
+        }
+      });
+      
+      positions.forEach(p => {
+        if (!p.data || p.h === 0) return;
+        const barX = p.x - barW / 2;
+        const barY = podioBaseY - p.h;
+        
+        // Glow per primo posto
+        if (p.pos === 1) {
+          ctx.save();
+          ctx.shadowColor = 'rgba(255, 215, 0, 0.7)';
+          ctx.shadowBlur = 80;
+          ctx.fillStyle = 'rgba(255, 215, 0, 0.4)';
+          ctx.beginPath();
+          ctx.roundRect(barX - 20, barY - 20, barW + 40, p.h + 20, [30, 30, 0, 0]);
+          ctx.fill();
+          ctx.restore();
+        }
+        
+        // Barra gradient
+        const grad = ctx.createLinearGradient(barX, barY, barX, barY + p.h);
+        grad.addColorStop(0, p.colors[0]);
+        grad.addColorStop(0.5, p.colors[1]);
+        grad.addColorStop(1, p.colors[2]);
+        ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.roundRect(barX - 15, barY - 15, barW + 30, p.h + 15, [25, 25, 0, 0]);
+        ctx.roundRect(barX, barY, barW, p.h, [25, 25, 0, 0]);
         ctx.fill();
-        ctx.restore();
+        
+        // Riflesso
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        ctx.beginPath();
+        ctx.roundRect(barX + 15, barY + 15, barW * 0.25, p.h - 30, [12, 12, 12, 12]);
+        ctx.fill();
+        
+        // Medaglia grande
+        ctx.font = '100px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.medal, p.x, barY + 110);
+        
+        // Numero ENORME
+        ctx.fillStyle = '#1a1a2e';
+        ctx.font = `bold ${p.pos === 1 ? 140 : 100}px Arial`;
+        ctx.fillText(p.data.v1.toString(), p.x, barY + (p.pos === 1 ? 270 : 230));
+        
+        // Nome su due righe - PIU DISTANZIATO
+        const nameParts = p.data.name.toUpperCase().split(' ');
+        const cognome = nameParts[0] || '';
+        const nome = nameParts.slice(1).join(' ') || '';
+        
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = `bold ${p.pos === 1 ? 44 : 36}px Arial`;
+        ctx.fillText(cognome, p.x, barY - 60);
+        ctx.font = `${p.pos === 1 ? 34 : 28}px Arial`;
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.fillText(nome, p.x, barY - 20);
+      });
+      
+      // Stelle attorno al vincitore
+      const winnerY = podioBaseY - (positions[1].h || maxH);
+      for (let i = 0; i < 12; i++) {
+        const angle = (Math.PI * 2 * i) / 12;
+        const dist = 200 + Math.random() * 60;
+        const sx = centerX + Math.cos(angle) * dist;
+        const sy = winnerY + 150 + Math.sin(angle) * dist * 0.5;
+        drawStar(sx, sy, 4, 12 + Math.random() * 10, 5, '#FFD700', 0.4 + Math.random() * 0.4);
       }
       
-      // Barra gradient
-      const grad = ctx.createLinearGradient(barX, barY, barX, barY + p.h);
-      grad.addColorStop(0, p.colors[0]);
-      grad.addColorStop(0.5, p.colors[1]);
-      grad.addColorStop(1, p.colors[2]);
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.roundRect(barX, barY, barW, p.h, [20, 20, 0, 0]);
-      ctx.fill();
+    } else {
+      // ============ PODIO + CLASSIFICA ============
+      const podioOffsetX = 180; // Più a destra
+      const podioBaseY = 800; // Base podio
+      const barW = 240; // Più largo
+      const gap = 35;
+      const centerX = 500 + podioOffsetX;
+      const maxH = 480;
+      const minH = 200;
       
-      // Riflesso lucido
-      ctx.fillStyle = 'rgba(255,255,255,0.3)';
-      ctx.beginPath();
-      ctx.roundRect(barX + 10, barY + 10, barW * 0.3, p.h - 20, [10, 10, 10, 10]);
-      ctx.fill();
+      const maxVal = Math.max(stats.top3[0]?.v1 || 1, stats.top3[1]?.v1 || 1, stats.top3[2]?.v1 || 1);
       
-      // Medaglia emoji grande
-      ctx.font = '80px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(p.medal, p.x, barY + 90);
+      const positions = [
+        { x: centerX - barW - gap, data: stats.top3[1], medal: '🥈', pos: 2, colors: ['#F5F5F5', '#C0C0C0', '#909090'] },
+        { x: centerX, data: stats.top3[0], medal: '🥇', pos: 1, colors: ['#FFF8E1', '#FFD700', '#FFA000'] },
+        { x: centerX + barW + gap, data: stats.top3[2], medal: '🥉', pos: 3, colors: ['#FFE0B2', '#CD7F32', '#8B4513'] }
+      ];
       
-      // Numero inseriti GRANDE
-      ctx.fillStyle = '#1a1a2e';
-      ctx.font = `bold ${p.pos === 1 ? 100 : 70}px Arial`;
-      ctx.fillText(p.data.v1.toString(), p.x, barY + (p.pos === 1 ? 200 : 170));
+      positions.forEach(p => {
+        if (p.data) {
+          const ratio = p.data.v1 / maxVal;
+          p.h = minH + (maxH - minH) * ratio;
+          if (p.pos === 1) p.h = maxH;
+        } else {
+          p.h = 0;
+        }
+      });
       
-      // Nome su due righe sopra la barra
-      const nameParts = p.data.name.toUpperCase().split(' ');
-      const cognome = nameParts[0] || '';
-      const nome = nameParts.slice(1).join(' ') || '';
+      positions.forEach(p => {
+        if (!p.data || p.h === 0) return;
+        const barX = p.x - barW / 2;
+        const barY = podioBaseY - p.h;
+        
+        // Glow per primo posto
+        if (p.pos === 1) {
+          ctx.save();
+          ctx.shadowColor = 'rgba(255, 215, 0, 0.6)';
+          ctx.shadowBlur = 70;
+          ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
+          ctx.beginPath();
+          ctx.roundRect(barX - 18, barY - 18, barW + 36, p.h + 18, [28, 28, 0, 0]);
+          ctx.fill();
+          ctx.restore();
+        }
+        
+        // Barra gradient
+        const grad = ctx.createLinearGradient(barX, barY, barX, barY + p.h);
+        grad.addColorStop(0, p.colors[0]);
+        grad.addColorStop(0.5, p.colors[1]);
+        grad.addColorStop(1, p.colors[2]);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.roundRect(barX, barY, barW, p.h, [22, 22, 0, 0]);
+        ctx.fill();
+        
+        // Riflesso
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        ctx.beginPath();
+        ctx.roundRect(barX + 12, barY + 12, barW * 0.28, p.h - 24, [10, 10, 10, 10]);
+        ctx.fill();
+        
+        // Medaglia grande
+        ctx.font = '90px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.medal, p.x, barY + 100);
+        
+        // Numero GRANDE
+        ctx.fillStyle = '#1a1a2e';
+        ctx.font = `bold ${p.pos === 1 ? 110 : 80}px Arial`;
+        ctx.fillText(p.data.v1.toString(), p.x, barY + (p.pos === 1 ? 220 : 190));
+        
+        // Nome su due righe - DISTANZIATO
+        const nameParts = p.data.name.toUpperCase().split(' ');
+        const cognome = nameParts[0] || '';
+        const nome = nameParts.slice(1).join(' ') || '';
+        
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = `bold ${p.pos === 1 ? 40 : 32}px Arial`;
+        ctx.fillText(cognome, p.x, barY - 55);
+        ctx.font = `${p.pos === 1 ? 30 : 24}px Arial`;
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.fillText(nome, p.x, barY - 18);
+      });
+      
+      // Stelle attorno al vincitore
+      const winnerY = podioBaseY - (positions[1].h || maxH);
+      for (let i = 0; i < 10; i++) {
+        const angle = (Math.PI * 2 * i) / 10;
+        const dist = 180 + Math.random() * 50;
+        const sx = centerX + Math.cos(angle) * dist;
+        const sy = winnerY + 120 + Math.sin(angle) * dist * 0.5;
+        drawStar(sx, sy, 4, 11 + Math.random() * 8, 4, '#FFD700', 0.4 + Math.random() * 0.35);
+      }
+      
+      // === CLASSIFICA 4°-10° - ALLINEATA CON BASE PODIO ===
+      const listX = 1200 + podioOffsetX - 100;
+      const rowH = 80; // Più grande
+      const top7 = stats.top10.slice(3, 10);
+      const numRows = top7.length;
+      // Allinea in modo che l'ultima riga finisca alla base del podio
+      const listStartY = podioBaseY - (numRows * rowH) + 10;
       
       ctx.fillStyle = '#FFFFFF';
-      ctx.font = `bold ${p.pos === 1 ? 36 : 28}px Arial`;
-      ctx.fillText(cognome, p.x, barY - 45);
-      ctx.font = `${p.pos === 1 ? 28 : 22}px Arial`;
-      ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      ctx.fillText(nome, p.x, barY - 15);
-    });
-    
-    // Stelle attorno al vincitore
-    const winnerX = centerX;
-    const winnerY = podioBaseY - positions[1].h;
-    for (let i = 0; i < 8; i++) {
-      const angle = (Math.PI * 2 * i) / 8;
-      const dist = 160 + Math.random() * 40;
-      const sx = winnerX + Math.cos(angle) * dist;
-      const sy = winnerY + 100 + Math.sin(angle) * dist * 0.6;
-      drawStar(sx, sy, 4, 10 + Math.random() * 8, 4, '#FFD700', 0.5 + Math.random() * 0.3);
+      ctx.font = 'bold 36px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText('📊 CLASSIFICA', listX, listStartY - 25);
+      
+      const maxV1 = stats.maxV1;
+      
+      top7.forEach((p, i) => {
+        const y = listStartY + i * rowH;
+        const pos = i + 4;
+        
+        // Sfondo riga
+        ctx.fillStyle = 'rgba(255,255,255,0.1)';
+        ctx.beginPath();
+        ctx.roundRect(listX, y, 580, 68, 14);
+        ctx.fill();
+        
+        // Barra progresso
+        const barWidth = (p.v1 / maxV1) * 420;
+        const barGrad = ctx.createLinearGradient(listX, 0, listX + barWidth, 0);
+        barGrad.addColorStop(0, 'rgba(124,77,255,0.7)');
+        barGrad.addColorStop(1, 'rgba(124,77,255,0.2)');
+        ctx.fillStyle = barGrad;
+        ctx.beginPath();
+        ctx.roundRect(listX, y, barWidth, 68, 14);
+        ctx.fill();
+        
+        // Posizione
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 32px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(`${pos}°`, listX + 18, y + 45);
+        
+        // Nome
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '26px Arial';
+        ctx.fillText(p.name.toUpperCase(), listX + 80, y + 45);
+        
+        // Valore
+        ctx.font = 'bold 36px Arial';
+        ctx.textAlign = 'right';
+        ctx.fillText(p.v1.toString(), listX + 558, y + 47);
+        ctx.textAlign = 'left';
+      });
     }
     
-    // === CLASSIFICA 4°-10° a destra ===
-    const listX = 1150 + podioOffsetX;
-    const listY = 120;
-    const rowH = 75;
-    
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 32px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText('📊 CLASSIFICA', listX, listY);
-    
-    const top7 = stats.top10.slice(3, 10);
-    const maxV1 = stats.maxV1;
-    
-    top7.forEach((p, i) => {
-      const y = listY + 50 + i * rowH;
-      const pos = i + 4;
-      
-      // Sfondo riga
-      ctx.fillStyle = 'rgba(255,255,255,0.08)';
-      ctx.beginPath();
-      ctx.roundRect(listX, y, 550, 60, 12);
-      ctx.fill();
-      
-      // Barra progresso
-      const barWidth = (p.v1 / maxV1) * 400;
-      const barGrad = ctx.createLinearGradient(listX, 0, listX + barWidth, 0);
-      barGrad.addColorStop(0, 'rgba(124,77,255,0.6)');
-      barGrad.addColorStop(1, 'rgba(124,77,255,0.2)');
-      ctx.fillStyle = barGrad;
-      ctx.beginPath();
-      ctx.roundRect(listX, y, barWidth, 60, 12);
-      ctx.fill();
-      
-      // Posizione
-      ctx.fillStyle = '#FFD700';
-      ctx.font = 'bold 28px Arial';
-      ctx.textAlign = 'left';
-      ctx.fillText(`${pos}°`, listX + 15, y + 40);
-      
-      // Nome
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '24px Arial';
-      ctx.fillText(p.name.toUpperCase(), listX + 70, y + 40);
-      
-      // Valore
-      ctx.font = 'bold 32px Arial';
-      ctx.textAlign = 'right';
-      ctx.fillText(p.v1.toString(), listX + 530, y + 42);
-      ctx.textAlign = 'left';
-    });
-    
     // === FOOTER STATS ===
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    ctx.fillRect(0, H - 70, W, 70);
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillRect(0, H - 75, W, 75);
     
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.font = '24px Arial';
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.font = '26px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`📥 ${stats.ins} Inseriti   •   ✅ ${stats.acc} Accettati   •   📈 ${stats.conv}% Conversione   •   👥 ${stats.part} Partecipanti`, W / 2 + 50, H - 28);
+    ctx.fillText(`📥 ${stats.ins} Inseriti   •   ✅ ${stats.acc} Accettati   •   📈 ${stats.conv}% Conversione   •   👥 ${stats.part} Partecipanti`, W / 2, H - 28);
     
     return canvas.toDataURL('image/png');
   };
 
-  const downloadSlidePNG = () => {
-    const img = generateSlidePNG();
+  const downloadSlidePNG = (mode = 'full') => {
+    const img = generateSlidePNG(mode);
     if (img) {
       const a = document.createElement('a');
-      a.download = `classifica_podio_${eventDate.replace(/\s/g, '_')}.png`;
+      const suffix = mode === 'solo' ? 'solo_podio' : 'podio_classifica';
+      a.download = `classifica_${suffix}_${eventDate.replace(/\s/g, '_')}.png`;
       a.href = img;
       a.click();
     }
@@ -870,7 +963,7 @@ export default function Home() {
       {loginError && <p style={{ color: '#f44', fontSize: 13, marginBottom: 10 }}>{loginError}</p>}
       <button style={S.btn} onClick={handleLogin}>ACCEDI</button>
       <div style={S.categoryIcons}><span style={S.catIcon}>🟠</span><span style={S.catIcon}>🔵</span><span style={S.catIcon}>⭐</span><span style={S.catIcon}>👑</span></div>
-      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v9.0</p>
+      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v9.1</p>
     </div></div></>);
 
   // HOMEPAGE CSV
@@ -947,71 +1040,71 @@ export default function Home() {
             
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {/* STATS CARDS - più compatte */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
-                  <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.2), rgba(255,107,53,0.05))', borderRadius: 12, padding: '12px 8px', textAlign: 'center', border: '1px solid rgba(255,107,53,0.3)' }}>
-                    <div style={{ fontSize: 28, fontWeight: 800, color: '#FF6B35' }}>{animatedStats.ins}</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase' }}>Inseriti</div>
+                {/* STATS CARDS - PIU GRANDI */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+                  <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.25), rgba(255,107,53,0.08))', borderRadius: 16, padding: '18px 12px', textAlign: 'center', border: '1px solid rgba(255,107,53,0.4)' }}>
+                    <div style={{ fontSize: 36, fontWeight: 800, color: '#FF6B35' }}>{animatedStats.ins}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', marginTop: 4 }}>Inseriti</div>
                   </div>
-                  <div style={{ background: 'linear-gradient(135deg, rgba(76,175,80,0.2), rgba(76,175,80,0.05))', borderRadius: 12, padding: '12px 8px', textAlign: 'center', border: '1px solid rgba(76,175,80,0.3)' }}>
-                    <div style={{ fontSize: 28, fontWeight: 800, color: '#4CAF50' }}>{animatedStats.acc}</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase' }}>Accettati</div>
+                  <div style={{ background: 'linear-gradient(135deg, rgba(76,175,80,0.25), rgba(76,175,80,0.08))', borderRadius: 16, padding: '18px 12px', textAlign: 'center', border: '1px solid rgba(76,175,80,0.4)' }}>
+                    <div style={{ fontSize: 36, fontWeight: 800, color: '#4CAF50' }}>{animatedStats.acc}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', marginTop: 4 }}>Accettati</div>
                   </div>
-                  <div style={{ background: 'linear-gradient(135deg, rgba(124,77,255,0.2), rgba(124,77,255,0.05))', borderRadius: 12, padding: '12px 8px', textAlign: 'center', border: '1px solid rgba(124,77,255,0.3)' }}>
-                    <div style={{ fontSize: 28, fontWeight: 800, color: '#7C4DFF' }}>{animatedStats.part}</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase' }}>Partecipanti</div>
+                  <div style={{ background: 'linear-gradient(135deg, rgba(124,77,255,0.25), rgba(124,77,255,0.08))', borderRadius: 16, padding: '18px 12px', textAlign: 'center', border: '1px solid rgba(124,77,255,0.4)' }}>
+                    <div style={{ fontSize: 36, fontWeight: 800, color: '#7C4DFF' }}>{animatedStats.part}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', marginTop: 4 }}>Partecipanti</div>
                   </div>
-                  <div style={{ background: 'linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.05))', borderRadius: 12, padding: '12px 8px', textAlign: 'center', border: '1px solid rgba(255,215,0,0.3)' }}>
-                    <div style={{ fontSize: 28, fontWeight: 800, color: '#FFD700' }}>{animatedStats.conv}%</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase' }}>Conversione</div>
+                  <div style={{ background: 'linear-gradient(135deg, rgba(255,215,0,0.25), rgba(255,215,0,0.08))', borderRadius: 16, padding: '18px 12px', textAlign: 'center', border: '1px solid rgba(255,215,0,0.4)' }}>
+                    <div style={{ fontSize: 36, fontWeight: 800, color: '#FFD700' }}>{animatedStats.conv}%</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', marginTop: 4 }}>Conversione</div>
                   </div>
                 </div>
 
-                {/* PODIO + TOP 7 affiancati */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
-                  {/* PODIO - compatto */}
-                  <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, padding: 15, border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <h3 style={{ color: '#FFD700', fontSize: 14, marginBottom: 12, textAlign: 'center' }}>🏆 PODIO</h3>
-                    <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 8, height: 140 }}>
+                {/* PODIO + TOP 7 affiancati - PIU GRANDI */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 15 }}>
+                  {/* PODIO */}
+                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <h3 style={{ color: '#FFD700', fontSize: 16, marginBottom: 15, textAlign: 'center' }}>🏆 PODIO</h3>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 10, height: 170 }}>
                       {/* 2° */}
                       <div style={{ textAlign: 'center', flex: 1 }}>
-                        <div style={{ fontSize: 11, color: '#fff', fontWeight: 600, marginBottom: 5, lineHeight: 1.2 }}>{stats.top3[1]?.name || '-'}</div>
-                        <div style={{ background: 'linear-gradient(180deg, #E8E8E8, #A0A0A0)', borderRadius: '8px 8px 0 0', height: 75, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                          <span style={{ fontSize: 20, fontWeight: 800, color: '#333' }}>2</span>
-                          <span style={{ fontSize: 14, fontWeight: 700, color: '#333' }}>{stats.top3[1]?.v1 || 0}</span>
+                        <div style={{ fontSize: 12, color: '#fff', fontWeight: 600, marginBottom: 8, lineHeight: 1.3 }}>{stats.top3[1]?.name || '-'}</div>
+                        <div style={{ background: 'linear-gradient(180deg, #E8E8E8, #A0A0A0)', borderRadius: '10px 10px 0 0', height: 90, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ fontSize: 24, fontWeight: 800, color: '#333' }}>🥈</span>
+                          <span style={{ fontSize: 18, fontWeight: 700, color: '#333' }}>{stats.top3[1]?.v1 || 0}</span>
                         </div>
                       </div>
                       {/* 1° */}
                       <div style={{ textAlign: 'center', flex: 1 }}>
-                        <div style={{ fontSize: 12, color: '#FFD700', fontWeight: 700, marginBottom: 5, lineHeight: 1.2 }}>{stats.top3[0]?.name || '-'}</div>
-                        <div style={{ background: 'linear-gradient(180deg, #FFE082, #FFD700)', borderRadius: '8px 8px 0 0', height: 105, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 20px rgba(255,215,0,0.3)' }}>
-                          <span style={{ fontSize: 28, fontWeight: 800, color: '#333' }}>1</span>
-                          <span style={{ fontSize: 18, fontWeight: 700, color: '#333' }}>{stats.top3[0]?.v1 || 0}</span>
+                        <div style={{ fontSize: 14, color: '#FFD700', fontWeight: 700, marginBottom: 8, lineHeight: 1.3 }}>{stats.top3[0]?.name || '-'}</div>
+                        <div style={{ background: 'linear-gradient(180deg, #FFE082, #FFD700)', borderRadius: '10px 10px 0 0', height: 130, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 25px rgba(255,215,0,0.4)' }}>
+                          <span style={{ fontSize: 32, fontWeight: 800, color: '#333' }}>🥇</span>
+                          <span style={{ fontSize: 24, fontWeight: 700, color: '#333' }}>{stats.top3[0]?.v1 || 0}</span>
                         </div>
                       </div>
                       {/* 3° */}
                       <div style={{ textAlign: 'center', flex: 1 }}>
-                        <div style={{ fontSize: 11, color: '#fff', fontWeight: 600, marginBottom: 5, lineHeight: 1.2 }}>{stats.top3[2]?.name || '-'}</div>
-                        <div style={{ background: 'linear-gradient(180deg, #FFAB91, #CD7F32)', borderRadius: '8px 8px 0 0', height: 55, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                          <span style={{ fontSize: 18, fontWeight: 800, color: '#333' }}>3</span>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: '#333' }}>{stats.top3[2]?.v1 || 0}</span>
+                        <div style={{ fontSize: 12, color: '#fff', fontWeight: 600, marginBottom: 8, lineHeight: 1.3 }}>{stats.top3[2]?.name || '-'}</div>
+                        <div style={{ background: 'linear-gradient(180deg, #FFAB91, #CD7F32)', borderRadius: '10px 10px 0 0', height: 65, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ fontSize: 20, fontWeight: 800, color: '#333' }}>🥉</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: '#333' }}>{stats.top3[2]?.v1 || 0}</span>
                         </div>
                       </div>
                     </div>
                   </div>
 
                   {/* TOP 4-10 */}
-                  <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, padding: 15, border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <h3 style={{ color: '#FF6B35', fontSize: 14, marginBottom: 10 }}>📈 TOP 4° - 10°</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <h3 style={{ color: '#FF6B35', fontSize: 16, marginBottom: 12 }}>📈 TOP 4° - 10°</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {stats.top10.slice(3, 10).map((p, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ width: 24, fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{i + 4}°</span>
-                          <div style={{ flex: 1, height: 22, background: 'rgba(255,255,255,0.05)', borderRadius: 5, overflow: 'hidden', position: 'relative' }}>
-                            <div style={{ width: `${(p.v1 / stats.maxV1) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #7C4DFF, #9575CD)', borderRadius: 5 }} />
-                            <span style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#fff', fontWeight: 500 }}>{p.name}</span>
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span style={{ width: 28, fontSize: 13, color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{i + 4}°</span>
+                          <div style={{ flex: 1, height: 28, background: 'rgba(255,255,255,0.06)', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
+                            <div style={{ width: `${(p.v1 / stats.maxV1) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #7C4DFF, #9575CD)', borderRadius: 6 }} />
+                            <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: '#fff', fontWeight: 500 }}>{p.name}</span>
                           </div>
-                          <span style={{ width: 24, fontSize: 12, fontWeight: 700, color: '#FF6B35', textAlign: 'right' }}>{p.v1}</span>
+                          <span style={{ width: 28, fontSize: 14, fontWeight: 700, color: '#FF6B35', textAlign: 'right' }}>{p.v1}</span>
                         </div>
                       ))}
                     </div>
@@ -1064,14 +1157,13 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* BOTTONE DOWNLOAD SLIDE */}
-                <div style={{ background: 'linear-gradient(135deg, rgba(42,170,138,0.2), rgba(42,170,138,0.05))', borderRadius: 16, padding: 15, border: '1px solid rgba(42,170,138,0.3)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-                    <div>
-                      <div style={{ fontSize: 14, color: '#2AAA8A', fontWeight: 600 }}>📥 SCARICA PER SLIDE</div>
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>PNG 1920x1080 (16:9) • Podio + TOP 10</div>
-                    </div>
-                    <button style={{ ...S.btn, padding: '12px 30px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', minWidth: 200 }} onClick={downloadSlidePNG}>🏆 Scarica Classifica WOW</button>
+                {/* BOTTONI DOWNLOAD SLIDE */}
+                <div style={{ background: 'linear-gradient(135deg, rgba(42,170,138,0.2), rgba(42,170,138,0.05))', borderRadius: 16, padding: 20, border: '1px solid rgba(42,170,138,0.3)' }}>
+                  <div style={{ fontSize: 16, color: '#2AAA8A', fontWeight: 700, marginBottom: 5 }}>📥 SCARICA PER SLIDE</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 15 }}>PNG 1920x1080 (16:9) - Sfondo verde NWG</div>
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                    <button style={{ ...S.btn, flex: 1, minWidth: 180, padding: '14px 20px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', fontSize: 14 }} onClick={() => downloadSlidePNG('full')}>📊 Podio + Classifica</button>
+                    <button style={{ ...S.btn, flex: 1, minWidth: 180, padding: '14px 20px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', color: '#1a1a2e', fontSize: 14 }} onClick={() => downloadSlidePNG('solo')}>🏆 Solo Podio</button>
                   </div>
                 </div>
               </div>
