@@ -393,50 +393,7 @@ export default function Home() {
     setReportData(null);
   };
 
-  // === SCREENSHOT/PDF DASHBOARD ===
-  const generateDashboardImage = async (format = 'png') => {
-    // Trova il container dashboard
-    const dashboardEl = document.getElementById('dashboard-content');
-    if (!dashboardEl) {
-      alert('Dashboard non trovata!');
-      return;
-    }
-    
-    // Usa html2canvas per catturare
-    const html2canvas = (await import('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/+esm')).default;
-    
-    try {
-      const canvas = await html2canvas(dashboardEl, {
-        backgroundColor: '#0a0a0f',
-        scale: 2,
-        useCORS: true,
-        logging: false
-      });
-      
-      if (format === 'png') {
-        // Download PNG
-        const link = document.createElement('a');
-        link.download = `dashboard_${eventDate.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-      } else if (format === 'pdf') {
-        // Genera PDF
-        const { jsPDF } = await import('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm');
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('landscape', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, Math.min(pdfHeight, pdf.internal.pageSize.getHeight()));
-        pdf.save(`dashboard_${eventDate.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
-      }
-    } catch (err) {
-      console.error('Errore generazione:', err);
-      // Fallback: genera canvas manualmente
-      generateDashboardCanvas(format);
-    }
-  };
-
-  // Fallback: genera dashboard su canvas
+  // === SCREENSHOT DASHBOARD (solo canvas nativo, no dipendenze esterne) ===
   const generateDashboardCanvas = (format = 'png') => {
     const stats = getDashboardStats();
     const pies = getPieDistributions();
