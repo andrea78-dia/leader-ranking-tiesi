@@ -222,8 +222,8 @@ export default function Home() {
     return { ins: totIns, acc: totAcc, part: ivdData.length, conv, top3, top10, maxV1, weeklyData };
   };
 
-  // Genera PNG per slide NWG (16:9)
-  const generateSlidePNG = (type = 'podio_top7') => {
+  // Genera PNG per slide NWG (16:9) - VERSIONE WOW
+  const generateSlidePNG = () => {
     const stats = getDashboardStats();
     if (!stats.top3.length) return null;
     
@@ -236,196 +236,201 @@ export default function Home() {
     ctx.fillStyle = '#2AAA8A';
     ctx.fillRect(0, 0, W, H);
     
-    // Pattern sottile
-    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < W; i += 40) {
-      ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, H); ctx.stroke();
-    }
-    for (let i = 0; i < H; i += 40) {
-      ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(W, i); ctx.stroke();
+    // Funzione per disegnare stelle
+    const drawStar = (cx, cy, spikes, outerR, innerR, color, alpha = 1) => {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      for (let i = 0; i < spikes * 2; i++) {
+        const r = i % 2 === 0 ? outerR : innerR;
+        const angle = (Math.PI * i) / spikes - Math.PI / 2;
+        const x = cx + Math.cos(angle) * r;
+        const y = cy + Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    };
+    
+    // Stelle decorative sparse (effetto celebrazione)
+    const starPositions = [
+      { x: 180, y: 150, size: 12 }, { x: 250, y: 280, size: 8 }, { x: 150, y: 450, size: 10 },
+      { x: 1750, y: 120, size: 14 }, { x: 1820, y: 300, size: 9 }, { x: 1700, y: 500, size: 11 },
+      { x: 600, y: 100, size: 8 }, { x: 750, y: 180, size: 6 }, { x: 1200, y: 130, size: 10 },
+      { x: 1350, y: 200, size: 7 }, { x: 500, y: 700, size: 9 }, { x: 1500, y: 750, size: 8 },
+      { x: 300, y: 600, size: 6 }, { x: 1650, y: 650, size: 7 }
+    ];
+    starPositions.forEach(s => drawStar(s.x, s.y, 4, s.size, s.size * 0.4, '#FFD700', 0.4));
+    
+    // === PODIO (spostato a destra per bollino) ===
+    const podioOffsetX = 100; // Spostamento a destra
+    const podioY = 80;
+    const podioBaseY = 750;
+    const barW = 220;
+    const gap = 30;
+    const centerX = 550 + podioOffsetX;
+    
+    // Calcolo altezze proporzionali
+    const maxVal = Math.max(stats.top3[0]?.v1 || 1, stats.top3[1]?.v1 || 1, stats.top3[2]?.v1 || 1);
+    const maxH = 450;
+    const minH = 180;
+    
+    const positions = [
+      { x: centerX - barW - gap, data: stats.top3[1], medal: '🥈', pos: 2, colors: ['#F5F5F5', '#B0B0B0', '#808080'] },
+      { x: centerX, data: stats.top3[0], medal: '🥇', pos: 1, colors: ['#FFF8E1', '#FFD700', '#FFA000'] },
+      { x: centerX + barW + gap, data: stats.top3[2], medal: '🥉', pos: 3, colors: ['#FFE0B2', '#CD7F32', '#8B4513'] }
+    ];
+    
+    // Calcola altezze
+    positions.forEach(p => {
+      if (p.data) {
+        const ratio = p.data.v1 / maxVal;
+        p.h = minH + (maxH - minH) * ratio;
+        if (p.pos === 1) p.h = maxH; // Primo sempre massimo
+      } else {
+        p.h = minH;
+      }
+    });
+    
+    // Disegna podio
+    positions.forEach(p => {
+      if (!p.data) return;
+      const barX = p.x - barW / 2;
+      const barY = podioBaseY - p.h;
+      
+      // Glow per primo posto
+      if (p.pos === 1) {
+        ctx.save();
+        ctx.shadowColor = 'rgba(255, 215, 0, 0.6)';
+        ctx.shadowBlur = 60;
+        ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
+        ctx.beginPath();
+        ctx.roundRect(barX - 15, barY - 15, barW + 30, p.h + 15, [25, 25, 0, 0]);
+        ctx.fill();
+        ctx.restore();
+      }
+      
+      // Barra gradient
+      const grad = ctx.createLinearGradient(barX, barY, barX, barY + p.h);
+      grad.addColorStop(0, p.colors[0]);
+      grad.addColorStop(0.5, p.colors[1]);
+      grad.addColorStop(1, p.colors[2]);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.roundRect(barX, barY, barW, p.h, [20, 20, 0, 0]);
+      ctx.fill();
+      
+      // Riflesso lucido
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.beginPath();
+      ctx.roundRect(barX + 10, barY + 10, barW * 0.3, p.h - 20, [10, 10, 10, 10]);
+      ctx.fill();
+      
+      // Medaglia emoji grande
+      ctx.font = '80px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.medal, p.x, barY + 90);
+      
+      // Numero inseriti GRANDE
+      ctx.fillStyle = '#1a1a2e';
+      ctx.font = `bold ${p.pos === 1 ? 100 : 70}px Arial`;
+      ctx.fillText(p.data.v1.toString(), p.x, barY + (p.pos === 1 ? 200 : 170));
+      
+      // Nome su due righe sopra la barra
+      const nameParts = p.data.name.toUpperCase().split(' ');
+      const cognome = nameParts[0] || '';
+      const nome = nameParts.slice(1).join(' ') || '';
+      
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = `bold ${p.pos === 1 ? 36 : 28}px Arial`;
+      ctx.fillText(cognome, p.x, barY - 45);
+      ctx.font = `${p.pos === 1 ? 28 : 22}px Arial`;
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.fillText(nome, p.x, barY - 15);
+    });
+    
+    // Stelle attorno al vincitore
+    const winnerX = centerX;
+    const winnerY = podioBaseY - positions[1].h;
+    for (let i = 0; i < 8; i++) {
+      const angle = (Math.PI * 2 * i) / 8;
+      const dist = 160 + Math.random() * 40;
+      const sx = winnerX + Math.cos(angle) * dist;
+      const sy = winnerY + 100 + Math.sin(angle) * dist * 0.6;
+      drawStar(sx, sy, 4, 10 + Math.random() * 8, 4, '#FFD700', 0.5 + Math.random() * 0.3);
     }
     
-    // Titolo
+    // === CLASSIFICA 4°-10° a destra ===
+    const listX = 1150 + podioOffsetX;
+    const listY = 120;
+    const rowH = 75;
+    
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 48px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(`🏆 CLASSIFICA ${eventName.toUpperCase()}`, W/2, 70);
-    ctx.font = '24px Arial';
-    ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    ctx.fillText(eventDate, W/2, 110);
+    ctx.font = 'bold 32px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText('📊 CLASSIFICA', listX, listY);
     
-    if (type === 'solo_podio') {
-      // SOLO PODIO - centrato e grande
-      const podioY = 200;
-      const podioH = 500;
-      const barW = 200;
-      const gap = 40;
-      const centerX = W / 2;
+    const top7 = stats.top10.slice(3, 10);
+    const maxV1 = stats.maxV1;
+    
+    top7.forEach((p, i) => {
+      const y = listY + 50 + i * rowH;
+      const pos = i + 4;
       
-      // Podio bars
-      const positions = [
-        { x: centerX - barW - gap, h: podioH * 0.7, color: ['#E8E8E8', '#A0A0A0'], pos: 2, data: stats.top3[1] },
-        { x: centerX, h: podioH, color: ['#FFE082', '#FFD700'], pos: 1, data: stats.top3[0] },
-        { x: centerX + barW + gap, h: podioH * 0.5, color: ['#FFAB91', '#CD7F32'], pos: 3, data: stats.top3[2] }
-      ];
+      // Sfondo riga
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      ctx.beginPath();
+      ctx.roundRect(listX, y, 550, 60, 12);
+      ctx.fill();
       
-      positions.forEach(p => {
-        if (!p.data) return;
-        const barX = p.x - barW/2;
-        const barY = podioY + podioH - p.h;
-        
-        // Bar gradient
-        const grad = ctx.createLinearGradient(0, barY, 0, barY + p.h);
-        grad.addColorStop(0, p.color[0]);
-        grad.addColorStop(1, p.color[1]);
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.roundRect(barX, barY, barW, p.h, [20, 20, 0, 0]);
-        ctx.fill();
-        
-        // Shadow glow for 1st
-        if (p.pos === 1) {
-          ctx.shadowColor = 'rgba(255,215,0,0.5)';
-          ctx.shadowBlur = 30;
-          ctx.fill();
-          ctx.shadowBlur = 0;
-        }
-        
-        // Position number
-        ctx.fillStyle = '#333';
-        ctx.font = 'bold 72px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(p.pos.toString(), p.x, barY + 80);
-        
-        // Value
-        ctx.font = 'bold 48px Arial';
-        ctx.fillText(p.data.v1.toString(), p.x, barY + 140);
-        
-        // Name above bar
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = 'bold 28px Arial';
-        const name = p.data.name.toUpperCase();
-        ctx.fillText(name, p.x, barY - 20);
-      });
+      // Barra progresso
+      const barWidth = (p.v1 / maxV1) * 400;
+      const barGrad = ctx.createLinearGradient(listX, 0, listX + barWidth, 0);
+      barGrad.addColorStop(0, 'rgba(124,77,255,0.6)');
+      barGrad.addColorStop(1, 'rgba(124,77,255,0.2)');
+      ctx.fillStyle = barGrad;
+      ctx.beginPath();
+      ctx.roundRect(listX, y, barWidth, 60, 12);
+      ctx.fill();
       
-      // Footer stats
-      ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      ctx.font = '24px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(`${stats.ins} Inseriti • ${stats.acc} Accettati • ${stats.conv}% Conversione`, W/2, H - 50);
-      
-    } else {
-      // PODIO + TOP 7 (4°-10° posizione)
-      const leftX = 150;
-      const rightX = W - 500;
-      
-      // PODIO a sinistra
-      const podioY = 180;
-      const podioH = 350;
-      const barW = 180;
-      const gap = 20;
-      const podioCenter = leftX + 350;
-      
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 32px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('🏆 PODIO', podioCenter, podioY - 30);
-      
-      const positions = [
-        { x: podioCenter - barW - gap, h: podioH * 0.7, color: ['#E8E8E8', '#A0A0A0'], pos: 2, data: stats.top3[1] },
-        { x: podioCenter, h: podioH, color: ['#FFE082', '#FFD700'], pos: 1, data: stats.top3[0] },
-        { x: podioCenter + barW + gap, h: podioH * 0.5, color: ['#FFAB91', '#CD7F32'], pos: 3, data: stats.top3[2] }
-      ];
-      
-      positions.forEach(p => {
-        if (!p.data) return;
-        const barX = p.x - barW/2;
-        const barY = podioY + podioH - p.h;
-        
-        const grad = ctx.createLinearGradient(0, barY, 0, barY + p.h);
-        grad.addColorStop(0, p.color[0]);
-        grad.addColorStop(1, p.color[1]);
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.roundRect(barX, barY, barW, p.h, [15, 15, 0, 0]);
-        ctx.fill();
-        
-        ctx.fillStyle = '#333';
-        ctx.font = 'bold 48px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(p.pos.toString(), p.x, barY + 55);
-        
-        ctx.font = 'bold 36px Arial';
-        ctx.fillText(p.data.v1.toString(), p.x, barY + 100);
-        
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = 'bold 20px Arial';
-        const name = p.data.name.toUpperCase();
-        ctx.fillText(name, p.x, barY - 15);
-      });
-      
-      // TOP 7 (4°-10°) a destra
-      const top7 = stats.top10.slice(3, 10);
-      const listX = rightX;
-      const listY = 180;
-      const rowH = 70;
-      
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 32px Arial';
+      // Posizione
+      ctx.fillStyle = '#FFD700';
+      ctx.font = 'bold 28px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText('📊 CLASSIFICA 4° - 10°', listX, listY - 30);
+      ctx.fillText(`${pos}°`, listX + 15, y + 40);
       
-      top7.forEach((p, i) => {
-        const y = listY + i * rowH + 30;
-        const pos = i + 4;
-        
-        // Bar background
-        ctx.fillStyle = 'rgba(255,255,255,0.1)';
-        ctx.beginPath();
-        ctx.roundRect(listX, y, 450, 55, 10);
-        ctx.fill();
-        
-        // Bar fill
-        const barWidth = (p.v1 / stats.maxV1) * 350;
-        ctx.fillStyle = 'rgba(255,255,255,0.3)';
-        ctx.beginPath();
-        ctx.roundRect(listX, y, barWidth, 55, 10);
-        ctx.fill();
-        
-        // Position
-        ctx.fillStyle = '#FFD700';
-        ctx.font = 'bold 24px Arial';
-        ctx.textAlign = 'left';
-        ctx.fillText(`${pos}°`, listX + 15, y + 37);
-        
-        // Name
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = '22px Arial';
-        ctx.fillText(p.name.toUpperCase(), listX + 60, y + 37);
-        
-        // Value
-        ctx.font = 'bold 28px Arial';
-        ctx.textAlign = 'right';
-        ctx.fillText(p.v1.toString(), listX + 430, y + 37);
-        ctx.textAlign = 'left';
-      });
+      // Nome
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '24px Arial';
+      ctx.fillText(p.name.toUpperCase(), listX + 70, y + 40);
       
-      // Footer stats
-      ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      ctx.font = '28px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(`📥 ${stats.ins} Inseriti   ✅ ${stats.acc} Accettati   📈 ${stats.conv}% Conversione   👥 ${stats.part} Partecipanti`, W/2, H - 40);
-    }
+      // Valore
+      ctx.font = 'bold 32px Arial';
+      ctx.textAlign = 'right';
+      ctx.fillText(p.v1.toString(), listX + 530, y + 42);
+      ctx.textAlign = 'left';
+    });
+    
+    // === FOOTER STATS ===
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillRect(0, H - 70, W, 70);
+    
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = '24px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(`📥 ${stats.ins} Inseriti   •   ✅ ${stats.acc} Accettati   •   📈 ${stats.conv}% Conversione   •   👥 ${stats.part} Partecipanti`, W / 2 + 50, H - 28);
     
     return canvas.toDataURL('image/png');
   };
 
-  const downloadSlidePNG = (type) => {
-    const img = generateSlidePNG(type);
+  const downloadSlidePNG = () => {
+    const img = generateSlidePNG();
     if (img) {
       const a = document.createElement('a');
-      a.download = `classifica_${type}_${eventDate.replace(/\s/g, '_')}.png`;
+      a.download = `classifica_podio_${eventDate.replace(/\s/g, '_')}.png`;
       a.href = img;
       a.click();
     }
@@ -865,7 +870,7 @@ export default function Home() {
       {loginError && <p style={{ color: '#f44', fontSize: 13, marginBottom: 10 }}>{loginError}</p>}
       <button style={S.btn} onClick={handleLogin}>ACCEDI</button>
       <div style={S.categoryIcons}><span style={S.catIcon}>🟠</span><span style={S.catIcon}>🔵</span><span style={S.catIcon}>⭐</span><span style={S.catIcon}>👑</span></div>
-      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v8.9</p>
+      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v9.0</p>
     </div></div></>);
 
   // HOMEPAGE CSV
@@ -1051,15 +1056,22 @@ export default function Home() {
                         );
                       })}
                     </div>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#4CAF50' }} /><span style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)' }}>Alto (&gt;70%)</span></div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#FFC107' }} /><span style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)' }}>Medio (40-70%)</span></div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#FF6B35' }} /><span style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)' }}>Basso (&lt;40%)</span></div>
+                    </div>
                   </div>
                 </div>
 
-                {/* BOTTONI DOWNLOAD SLIDE */}
+                {/* BOTTONE DOWNLOAD SLIDE */}
                 <div style={{ background: 'linear-gradient(135deg, rgba(42,170,138,0.2), rgba(42,170,138,0.05))', borderRadius: 16, padding: 15, border: '1px solid rgba(42,170,138,0.3)' }}>
-                  <div style={{ fontSize: 12, color: '#2AAA8A', marginBottom: 10, fontWeight: 600 }}>📥 SCARICA PER SLIDE (16:9)</div>
-                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                    <button style={{ ...S.btn, flex: 1, minWidth: 150, padding: '10px 15px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)' }} onClick={() => downloadSlidePNG('solo_podio')}>🏆 Solo Podio</button>
-                    <button style={{ ...S.btn, flex: 1, minWidth: 150, padding: '10px 15px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)' }} onClick={() => downloadSlidePNG('podio_top7')}>📊 Podio + TOP 7</button>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 14, color: '#2AAA8A', fontWeight: 600 }}>📥 SCARICA PER SLIDE</div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>PNG 1920x1080 (16:9) • Podio + TOP 10</div>
+                    </div>
+                    <button style={{ ...S.btn, padding: '12px 30px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', minWidth: 200 }} onClick={downloadSlidePNG}>🏆 Scarica Classifica WOW</button>
                   </div>
                 </div>
               </div>
