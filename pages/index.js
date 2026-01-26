@@ -305,12 +305,12 @@ export default function Home() {
     'Non perfezionato': '#999999', 'Respinto': '#f44336', 'Da attivare': '#FFD700', 'Risoluzione': '#2AAA8A'
   };
   
-  // Colori heatmap
+  // Colori heatmap - FREDDO = ROSSO
   const HEATMAP_COLORS = {
-    hot: '#4CAF50',      // >70% 🟢
-    warm: '#FFD700',     // 40-70% 🟡
-    cool: '#2AAA8A',     // 10-40% 🟠
-    cold: '#2AAA8A',     // <10% 🔴
+    hot: '#4CAF50',      // >70% 🟢 Verde
+    warm: '#FFD700',     // 40-70% 🟡 Giallo
+    cool: '#E53935',     // 10-40% 🔴 Rosso (era verde)
+    cold: '#E53935',     // <10% 🔴 Rosso
     zero: '#F5F5F5' // 0 ⬜
   };
   
@@ -657,6 +657,189 @@ export default function Home() {
         totaleK: collabData.classifiche ? collabData.classifiche.k.reduce((s, [,v]) => s + v.total, 0) : 0,
         catLabels: { c1: '📝 Iscritti', c2: '✅ Presenti', c3: '🟠 Attivati' },
         catKeys: ['iscritti', 'presenti', 'attivati']
+      };
+    }
+    
+    // ═══════════════════════════════════════════════════════════
+    // 🚨 ALERT DA ATTIVARE - Luce Amica
+    // ═══════════════════════════════════════════════════════════
+    if (reportCSVs.energy?.data?.length > 0) {
+      const laData = reportCSVs.energy.data;
+      const oggi = new Date();
+      const alertDaAttivare = [];
+      
+      laData.forEach(row => {
+        const statoEnergia = (row['Stato NWG Energia'] || '').toLowerCase();
+        if (statoEnergia.includes('da attivare') || statoEnergia.includes('attivazione')) {
+          const dateStr = row['Inserimento'] || row['Data'] || '';
+          if (dateStr) {
+            try {
+              const dataIns = new Date(dateStr.replace(' ', 'T'));
+              const giorni = Math.floor((oggi - dataIns) / (1000 * 60 * 60 * 24));
+              let fascia = 'verde';
+              if (giorni > 60) fascia = 'rosso';
+              else if (giorni > 30) fascia = 'giallo';
+              
+              alertDaAttivare.push({
+                contratto: row['N° Contratto'] || row['Contratto'] || row['ID'] || '-',
+                cliente: row['Cliente'] || row['Nome Cliente'] || row['Cognome Cliente'] || '-',
+                intermediario: row['Nome Intermediario'] || '-',
+                dataInserimento: dateStr.split(' ')[0],
+                giorni,
+                fascia
+              });
+            } catch (e) {}
+          }
+        }
+      });
+      
+      // Ordina per giorni (più urgenti prima)
+      alertDaAttivare.sort((a, b) => b.giorni - a.giorni);
+      
+      result.alertDaAttivare = {
+        totale: alertDaAttivare.length,
+        rosso: alertDaAttivare.filter(a => a.fascia === 'rosso'),
+        giallo: alertDaAttivare.filter(a => a.fascia === 'giallo'),
+        verde: alertDaAttivare.filter(a => a.fascia === 'verde'),
+        lista: alertDaAttivare
+      };
+    }
+    
+    // ═══════════════════════════════════════════════════════════
+    // 🎯 TRACKER COACHING - Performance nuovi attivati
+    // ═══════════════════════════════════════════════════════════
+    if (reportCSVs.ivd?.data?.length > 0) {
+      const ivdData = reportCSVs.ivd.data;
+      const laData = reportCSVs.energy?.data || [];
+      const fvData = reportCSVs.fv?.data || [];
+      const semData = reportCSVs.consultings?.data || [];
+      
+      const trackerCoaching = [];
+      const oggi = new Date();
+      
+      ivdData.forEach(row => {
+        const nomeIvd = row['Nome Intermediario'] || '';
+        const dataAttStr = row['Inserimento'] || row['Data'] || row['Data Attivazione'] || '';
+        
+        if (nomeIvd && dataAttStr) {
+          try {
+            const dataAttivazione = new Date(dataAttStr.replace(' ', 'T'));
+            if (isNaN(dataAttivazione.getTime())) return;
+            
+            const tracker = {
+              nome: nomeIvd,
+              dataAttivazione: dataAttStr.split(' ')[0],
+              primaLA: null,
+              giorniLA: null,
+              primaFV: null,
+              giorniFV: null,
+              primoIscritto: null,
+              giorniIscritto: null,
+              primoAttivato: null,
+              giorniAttivato: null
+            };
+            
+            // Cerca prima Luce Amica
+            laData.forEach(la => {
+              const intermediario = la['Nome Intermediario'] || '';
+              if (intermediario.toLowerCase().includes(nomeIvd.toLowerCase()) || 
+                  nomeIvd.toLowerCase().includes(intermediario.toLowerCase())) {
+                const dataLA = la['Inserimento'] || la['Data'] || '';
+                if (dataLA) {
+                  const d = new Date(dataLA.replace(' ', 'T'));
+                  if (!isNaN(d.getTime()) && d >= dataAttivazione) {
+                    if (!tracker.primaLA || d < new Date(tracker.primaLA.replace(' ', 'T'))) {
+                      tracker.primaLA = dataLA.split(' ')[0];
+                      tracker.giorniLA = Math.floor((d - dataAttivazione) / (1000 * 60 * 60 * 24));
+                    }
+                  }
+                }
+              }
+            });
+            
+            // Cerca primo Fotovoltaico
+            fvData.forEach(fv => {
+              const intermediario = fv['Nome Intermediario'] || '';
+              if (intermediario.toLowerCase().includes(nomeIvd.toLowerCase()) || 
+                  nomeIvd.toLowerCase().includes(intermediario.toLowerCase())) {
+                const dataFV = fv['Inserimento'] || fv['Data'] || '';
+                if (dataFV) {
+                  const d = new Date(dataFV.replace(' ', 'T'));
+                  if (!isNaN(d.getTime()) && d >= dataAttivazione) {
+                    if (!tracker.primaFV || d < new Date(tracker.primaFV.replace(' ', 'T'))) {
+                      tracker.primaFV = dataFV.split(' ')[0];
+                      tracker.giorniFV = Math.floor((d - dataAttivazione) / (1000 * 60 * 60 * 24));
+                    }
+                  }
+                }
+              }
+            });
+            
+            // Cerca primo Iscritto (seminario)
+            semData.forEach(sem => {
+              const intermediario = sem['Nome Intermediario'] || sem['Nome Primo Networker'] || '';
+              if (intermediario.toLowerCase().includes(nomeIvd.toLowerCase()) || 
+                  nomeIvd.toLowerCase().includes(intermediario.toLowerCase())) {
+                const dataSem = sem['Inserimento'] || sem['Data'] || sem['Data SI'] || '';
+                if (dataSem) {
+                  const d = new Date(dataSem.replace(' ', 'T'));
+                  if (!isNaN(d.getTime()) && d >= dataAttivazione) {
+                    if (!tracker.primoIscritto || d < new Date(tracker.primoIscritto.replace(' ', 'T'))) {
+                      tracker.primoIscritto = dataSem.split(' ')[0];
+                      tracker.giorniIscritto = Math.floor((d - dataAttivazione) / (1000 * 60 * 60 * 24));
+                    }
+                  }
+                }
+              }
+            });
+            
+            // Cerca primo Attivato (collaboratore)
+            ivdData.forEach(ivd => {
+              const sponsor = ivd['Nome Primo Networker'] || ivd['Sponsor'] || '';
+              if (sponsor.toLowerCase().includes(nomeIvd.toLowerCase()) || 
+                  nomeIvd.toLowerCase().includes(sponsor.toLowerCase())) {
+                const dataAtt = ivd['Inserimento'] || ivd['Data'] || '';
+                if (dataAtt) {
+                  const d = new Date(dataAtt.replace(' ', 'T'));
+                  if (!isNaN(d.getTime()) && d >= dataAttivazione) {
+                    if (!tracker.primoAttivato || d < new Date(tracker.primoAttivato.replace(' ', 'T'))) {
+                      tracker.primoAttivato = dataAtt.split(' ')[0];
+                      tracker.giorniAttivato = Math.floor((d - dataAttivazione) / (1000 * 60 * 60 * 24));
+                    }
+                  }
+                }
+              }
+            });
+            
+            trackerCoaching.push(tracker);
+          } catch (e) {}
+        }
+      });
+      
+      // Ordina per data attivazione (più recenti prima)
+      trackerCoaching.sort((a, b) => new Date(b.dataAttivazione) - new Date(a.dataAttivazione));
+      
+      // Calcola medie
+      const conLA = trackerCoaching.filter(t => t.giorniLA !== null);
+      const conFV = trackerCoaching.filter(t => t.giorniFV !== null);
+      const conIscr = trackerCoaching.filter(t => t.giorniIscritto !== null);
+      const conAtt = trackerCoaching.filter(t => t.giorniAttivato !== null);
+      
+      result.trackerCoaching = {
+        lista: trackerCoaching.slice(0, 50), // Limita a 50
+        totale: trackerCoaching.length,
+        medie: {
+          la: conLA.length > 0 ? Math.round(conLA.reduce((s, t) => s + t.giorniLA, 0) / conLA.length) : null,
+          fv: conFV.length > 0 ? Math.round(conFV.reduce((s, t) => s + t.giorniFV, 0) / conFV.length) : null,
+          iscritto: conIscr.length > 0 ? Math.round(conIscr.reduce((s, t) => s + t.giorniIscritto, 0) / conIscr.length) : null,
+          attivato: conAtt.length > 0 ? Math.round(conAtt.reduce((s, t) => s + t.giorniAttivato, 0) / conAtt.length) : null
+        },
+        completamento: {
+          la: Math.round(conLA.length / trackerCoaching.length * 100) || 0,
+          fv: Math.round(conFV.length / trackerCoaching.length * 100) || 0,
+          iscritto: Math.round(conIscr.length / trackerCoaching.length * 100) || 0,
+          attivato: Math.round(conAtt.length / trackerCoaching.length * 100) || 0
+        }
       };
     }
     
@@ -1744,10 +1927,26 @@ export default function Home() {
   const labels = getLabels(), config = getConfig();
 
   // LOGIN
-  if (!user) return (<><Head><title>Leader Ranking | Team Analytics</title><meta name="viewport" content="width=device-width,initial-scale=1" /></Head>
+  if (!user) return (<><Head><title>Leader Ranking | Team Analytics</title><meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>{`
+      @keyframes kenBurns {
+        0% { transform: scale(1) translate(0, 0); }
+        50% { transform: scale(1.15) translate(-2%, -1%); }
+        100% { transform: scale(1.08) translate(1%, 2%); }
+      }
+      @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .login-card { animation: fadeInUp 0.8s ease-out; }
+      .login-input:focus { border-color: #2AAA8A; box-shadow: 0 0 0 3px rgba(42,170,138,0.2); }
+      .login-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 35px rgba(42,170,138,0.45); }
+    `}</style>
+  </Head>
     <div style={S.loginWrap}>
+      <div style={S.loginBgImage} />
       <div style={S.loginOverlay} />
-      <div style={S.loginCard}>
+      <div className="login-card" style={S.loginCard}>
         <div style={S.logoContainer}>
           <div style={S.logoIcon}><div style={S.podium}>
             <div style={{ ...S.podiumBar, height: 40, background: 'linear-gradient(180deg, #E8E8E8 0%, #C0C0C0 100%)' }}><span style={S.podiumNum}>2</span></div>
@@ -1759,40 +1958,136 @@ export default function Home() {
         </div>
         <div style={S.loginDivider} />
         <p style={{ color: '#555555', marginBottom: 28, fontSize: 15 }}>Accedi per visualizzare le classifiche del team</p>
-        <input style={S.input} placeholder="Username" value={loginForm.username} onChange={e => setLoginForm({ ...loginForm, username: e.target.value })} />
-        <input style={S.input} type="password" placeholder="Password" value={loginForm.password} onChange={e => setLoginForm({ ...loginForm, password: e.target.value })} onKeyPress={e => e.key === 'Enter' && handleLogin()} />
+        <input className="login-input" style={S.input} placeholder="Username" value={loginForm.username} onChange={e => setLoginForm({ ...loginForm, username: e.target.value })} />
+        <input className="login-input" style={S.input} type="password" placeholder="Password" value={loginForm.password} onChange={e => setLoginForm({ ...loginForm, password: e.target.value })} onKeyPress={e => e.key === 'Enter' && handleLogin()} />
         {loginError && <p style={{ color: '#E53935', fontSize: 14, marginBottom: 12, fontWeight: 500 }}>{loginError}</p>}
-        <button style={S.btn} onClick={handleLogin}>ACCEDI</button>
+        <button className="login-btn" style={S.btn} onClick={handleLogin}>ACCEDI</button>
         <div style={S.categoryIcons}>
           <span style={S.catIcon} title="IVD">🟠</span>
           <span style={S.catIcon} title="SDP">🔵</span>
           <span style={S.catIcon} title="Networker">⭐</span>
           <span style={S.catIcon} title="K Manager">👑</span>
         </div>
-        <p style={{ color: '#999999', fontSize: 12, marginTop: 30 }}>v10.3</p>
+        <p style={{ color: '#999999', fontSize: 12, marginTop: 30 }}>v10.5</p>
       </div>
     </div></>);
 
-  // HOMEPAGE CSV
+  // HOMEPAGE CSV - ORA CON TABS SEMPRE VISIBILI
   if (!csvData && (user.role === 'admin' || user.role === 'assistente' || user.role === 'k')) return (<><Head><title>Leader Ranking</title><meta name="viewport" content="width=device-width,initial-scale=1" /></Head>
     <div style={S.homeWrap}>
       <header style={S.homeHeader}><div style={S.homeLogoSmall}><span style={{ color: '#2AAA8A', fontWeight: 800 }}>LEADER</span><span style={{ fontWeight: 300 }}> RANKING</span></div><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={{ fontSize: 12, color: '#666666' }}>Ciao, {user.name}</span><button style={S.logoutBtn} onClick={() => setUser(null)}>Esci</button></div></header>
-      <main style={S.homeMain}>
-        <div style={S.homeLogo}>
-          <div style={S.homeLogoIcon}><div style={S.homePodium}>
-            <div style={{ ...S.homePodiumBar, height: 55, background: 'linear-gradient(180deg, #E0E0E0 0%, #999999 100%)' }}><span style={S.homePodiumNum}>2</span></div>
-            <div style={{ ...S.homePodiumBar, height: 80, background: 'linear-gradient(180deg, #FFE082 0%, #FFD700 100%)' }}><span style={S.homePodiumNum}>1</span></div>
-            <div style={{ ...S.homePodiumBar, height: 40, background: 'linear-gradient(180deg, #B2DFDB 0%, #CD7F32 100%)' }}><span style={S.homePodiumNum}>3</span></div>
-          </div></div>
-          <h1 style={S.homeTitle}><span style={{ color: '#2AAA8A' }}>LEADER</span> RANKING</h1>
-          <p style={S.homeSubtitle}>Power your team rankings</p>
+      <main style={{ padding: 20, maxWidth: 1200, margin: '0 auto' }}>
+        {/* TABS SEMPRE VISIBILI */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 25, background: '#FFFFFF', padding: 8, borderRadius: 12, border: '1px solid #E0E0E0' }}>
+          <button 
+            style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'dashboard' ? 'transparent' : 'transparent', color: '#999999', border: 'none', opacity: 0.5 }} 
+            disabled
+          >📊 Dashboard</button>
+          <button 
+            style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'classifiche' ? 'transparent' : 'transparent', color: '#999999', border: 'none', opacity: 0.5 }} 
+            disabled
+          >🏆 Classifiche</button>
+          <button 
+            style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'report' ? '#2AAA8A' : 'transparent', color: activeTab === 'report' ? '#fff' : '#666666', border: 'none' }} 
+            onClick={() => setActiveTab('report')}
+          >📈 Report</button>
         </div>
-        <div style={{ ...S.uploadArea, ...(isDragging ? S.uploadAreaActive : {}) }} onDragOver={e => { e.preventDefault(); setIsDragging(true); }} onDragLeave={e => { e.preventDefault(); setIsDragging(false); }} onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.csv')) processFile(f); }}>
-          <input type="file" accept=".csv" id="csvUpload" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processFile(e.target.files[0]); }} />
-          <label htmlFor="csvUpload" style={S.uploadLabel}><div style={S.uploadIcon}>📊</div><div style={S.uploadText}>CARICA FILE CSV</div><div style={S.uploadHint}>Trascina qui o clicca per selezionare</div></label>
-        </div>
-        <div style={S.categoriesPreview}><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>🟠</span><span>IVD</span></div><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>🔵</span><span>SDP</span></div><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>⭐</span><span>NW</span></div><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>👑</span><span>K</span></div></div>
-        <p style={S.homeFooter}>Formati supportati: Luce Amica, Fotovoltaico, Seminario, Attivazioni</p>
+        
+        {activeTab !== 'report' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 0' }}>
+            <div style={S.homeLogo}>
+              <div style={S.homeLogoIcon}><div style={S.homePodium}>
+                <div style={{ ...S.homePodiumBar, height: 55, background: 'linear-gradient(180deg, #E0E0E0 0%, #999999 100%)' }}><span style={S.homePodiumNum}>2</span></div>
+                <div style={{ ...S.homePodiumBar, height: 80, background: 'linear-gradient(180deg, #FFE082 0%, #FFD700 100%)' }}><span style={S.homePodiumNum}>1</span></div>
+                <div style={{ ...S.homePodiumBar, height: 40, background: 'linear-gradient(180deg, #B2DFDB 0%, #CD7F32 100%)' }}><span style={S.homePodiumNum}>3</span></div>
+              </div></div>
+              <h1 style={S.homeTitle}><span style={{ color: '#2AAA8A' }}>LEADER</span> RANKING</h1>
+              <p style={S.homeSubtitle}>Team Performance Analytics</p>
+            </div>
+            <div style={{ ...S.uploadArea, ...(isDragging ? S.uploadAreaActive : {}) }} onDragOver={e => { e.preventDefault(); setIsDragging(true); }} onDragLeave={e => { e.preventDefault(); setIsDragging(false); }} onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.csv')) processFile(f); }}>
+              <input type="file" accept=".csv" id="csvUpload" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processFile(e.target.files[0]); }} />
+              <label htmlFor="csvUpload" style={S.uploadLabel}><div style={S.uploadIcon}>📊</div><div style={S.uploadText}>CARICA FILE CSV</div><div style={S.uploadHint}>Trascina qui o clicca per selezionare</div></label>
+            </div>
+            <div style={S.categoriesPreview}><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>🟠</span><span>IVD</span></div><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>🔵</span><span>SDP</span></div><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>⭐</span><span>NW</span></div><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>👑</span><span>K</span></div></div>
+            <p style={S.homeFooter}>Formati supportati: Luce Amica, Fotovoltaico, Seminario, Attivazioni</p>
+          </div>
+        ) : (
+          /* TAB REPORT nella homepage */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+            <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
+              <h2 style={{ color: '#2AAA8A', fontSize: 18, marginBottom: 5 }}>📈 REPORT AGGREGATO</h2>
+              <p style={{ color: '#666666', fontSize: 12, marginBottom: 15 }}>Carica più CSV per generare classifiche mensili/trimestrali/annuali</p>
+              
+              {/* 4 UPLOAD CSV - Palette NWG */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 20 }}>
+                {/* IVD */}
+                <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, border: reportCSVs.ivd ? '2px solid #4CAF50' : '1px solid #E0E0E0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <span style={{ fontSize: 20 }}>🟠</span>
+                    <span style={{ color: '#2AAA8A', fontWeight: 600 }}>IVD Attivati</span>
+                  </div>
+                  <input type="file" accept=".csv" id="csv-ivd-home" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('ivd', e.target.files[0]); }} />
+                  <label htmlFor="csv-ivd-home" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(42,170,138,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.ivd ? '#4CAF50' : '#666666', fontSize: 12 }}>
+                    {reportCSVs.ivd ? `✅ ${reportCSVs.ivd.rows} righe` : '📤 Carica CSV'}
+                  </label>
+                  <p style={{ color: '#999999', fontSize: 10, marginTop: 5, textAlign: 'center' }}>Solo Attivazione START&GO</p>
+                </div>
+                
+                {/* Luce Amica */}
+                <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, border: reportCSVs.energy ? '2px solid #4CAF50' : '1px solid #E0E0E0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <span style={{ fontSize: 20 }}>⚡</span>
+                    <span style={{ color: '#2AAA8A', fontWeight: 600 }}>Luce Amica</span>
+                  </div>
+                  <input type="file" accept=".csv" id="csv-energy-home" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('energy', e.target.files[0]); }} />
+                  <label htmlFor="csv-energy-home" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(42,170,138,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.energy ? '#4CAF50' : '#666666', fontSize: 12 }}>
+                    {reportCSVs.energy ? `✅ ${reportCSVs.energy.rows} righe` : '📤 Carica CSV'}
+                  </label>
+                </div>
+                
+                {/* FV */}
+                <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, border: reportCSVs.fv ? '2px solid #4CAF50' : '1px solid #E0E0E0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <span style={{ fontSize: 20 }}>☀️</span>
+                    <span style={{ color: '#2AAA8A', fontWeight: 600 }}>Fotovoltaico</span>
+                  </div>
+                  <input type="file" accept=".csv" id="csv-fv-home" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('fv', e.target.files[0]); }} />
+                  <label htmlFor="csv-fv-home" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(42,170,138,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.fv ? '#4CAF50' : '#666666', fontSize: 12 }}>
+                    {reportCSVs.fv ? `✅ ${reportCSVs.fv.rows} righe` : '📤 Carica CSV'}
+                  </label>
+                </div>
+                
+                {/* Seminari */}
+                <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, border: reportCSVs.consultings ? '2px solid #4CAF50' : '1px solid #E0E0E0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <span style={{ fontSize: 20 }}>🎓</span>
+                    <span style={{ color: '#2AAA8A', fontWeight: 600 }}>Seminari</span>
+                  </div>
+                  <input type="file" accept=".csv" id="csv-consultings-home" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('consultings', e.target.files[0]); }} />
+                  <label htmlFor="csv-consultings-home" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(42,170,138,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.consultings ? '#4CAF50' : '#666666', fontSize: 12 }}>
+                    {reportCSVs.consultings ? `✅ ${reportCSVs.consultings.rows} righe` : '📤 Carica CSV'}
+                  </label>
+                </div>
+              </div>
+              
+              {/* Bottoni */}
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <button 
+                  style={{ ...S.btn, flex: 1, minWidth: 150, padding: '14px 20px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', color: '#FFFFFF', opacity: Object.values(reportCSVs).some(v => v) ? 1 : 0.5 }} 
+                  onClick={() => setReportData(generateReportData())}
+                  disabled={!Object.values(reportCSVs).some(v => v)}
+                >📊 Genera Report</button>
+                <button 
+                  style={{ ...S.btn, flex: 1, minWidth: 150, padding: '14px 20px', background: 'transparent', border: '1px solid #E0E0E0', color: '#666666' }} 
+                  onClick={clearReportCSVs}
+                >🗑️ Reset</button>
+              </div>
+            </div>
+            
+            {/* Mostra report se generato */}
+            {reportData && <ReportResults reportData={reportData} />}
+          </div>
+        )}
       </main>
     </div></>);
 
@@ -1846,11 +2141,11 @@ export default function Home() {
           {/* TAB REPORT AGGREGATO - Accessibile a TUTTI */}
           {activeTab === 'report' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
-              <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.15), rgba(255,107,53,0.05))', borderRadius: 20, padding: 20, border: '1px solid rgba(255,107,53,0.3)' }}>
+              <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
                 <h2 style={{ color: '#2AAA8A', fontSize: 18, marginBottom: 5 }}>📈 REPORT AGGREGATO</h2>
                 <p style={{ color: '#666666', fontSize: 12, marginBottom: 15 }}>Carica più CSV per generare classifiche mensili/trimestrali/annuali</p>
                 
-                {/* 4 UPLOAD CSV */}
+                {/* 4 UPLOAD CSV - Palette NWG coerente */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 20 }}>
                   {/* IVD */}
                   <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, border: reportCSVs.ivd ? '2px solid #4CAF50' : '1px solid #E0E0E0' }}>
@@ -1859,20 +2154,20 @@ export default function Home() {
                       <span style={{ color: '#2AAA8A', fontWeight: 600 }}>IVD Attivati</span>
                     </div>
                     <input type="file" accept=".csv" id="csv-ivd" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('ivd', e.target.files[0]); }} />
-                    <label htmlFor="csv-ivd" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(255,107,53,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.ivd ? '#4CAF50' : '#666666', fontSize: 12 }}>
+                    <label htmlFor="csv-ivd" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(42,170,138,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.ivd ? '#4CAF50' : '#666666', fontSize: 12 }}>
                       {reportCSVs.ivd ? `✅ ${reportCSVs.ivd.rows} righe` : '📤 Carica CSV'}
                     </label>
                     <p style={{ color: '#999999', fontSize: 10, marginTop: 5, textAlign: 'center' }}>Solo Attivazione START&GO</p>
                   </div>
                   
-                  {/* Energy */}
+                  {/* Luce Amica - rimosso arancione */}
                   <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, border: reportCSVs.energy ? '2px solid #4CAF50' : '1px solid #E0E0E0' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                       <span style={{ fontSize: 20 }}>⚡</span>
-                      <span style={{ color: '#FFD700', fontWeight: 600 }}>Luce Amica</span>
+                      <span style={{ color: '#2AAA8A', fontWeight: 600 }}>Luce Amica</span>
                     </div>
                     <input type="file" accept=".csv" id="csv-energy" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('energy', e.target.files[0]); }} />
-                    <label htmlFor="csv-energy" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(255,193,7,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.energy ? '#4CAF50' : '#666666', fontSize: 12 }}>
+                    <label htmlFor="csv-energy" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(42,170,138,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.energy ? '#4CAF50' : '#666666', fontSize: 12 }}>
                       {reportCSVs.energy ? `✅ ${reportCSVs.energy.rows} righe` : '📤 Carica CSV'}
                     </label>
                   </div>
@@ -1884,33 +2179,33 @@ export default function Home() {
                       <span style={{ color: '#2AAA8A', fontWeight: 600 }}>Fotovoltaico</span>
                     </div>
                     <input type="file" accept=".csv" id="csv-fv" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('fv', e.target.files[0]); }} />
-                    <label htmlFor="csv-fv" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(255,152,0,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.fv ? '#4CAF50' : '#666666', fontSize: 12 }}>
+                    <label htmlFor="csv-fv" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(42,170,138,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.fv ? '#4CAF50' : '#666666', fontSize: 12 }}>
                       {reportCSVs.fv ? `✅ ${reportCSVs.fv.rows} righe` : '📤 Carica CSV'}
                     </label>
                   </div>
                   
-                  {/* Consultings */}
+                  {/* Seminari */}
                   <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, border: reportCSVs.consultings ? '2px solid #4CAF50' : '1px solid #E0E0E0' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                       <span style={{ fontSize: 20 }}>🎓</span>
                       <span style={{ color: '#2AAA8A', fontWeight: 600 }}>Seminari</span>
                     </div>
                     <input type="file" accept=".csv" id="csv-consultings" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('consultings', e.target.files[0]); }} />
-                    <label htmlFor="csv-consultings" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(156,39,176,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.consultings ? '#4CAF50' : '#666666', fontSize: 12 }}>
+                    <label htmlFor="csv-consultings" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(42,170,138,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.consultings ? '#4CAF50' : '#666666', fontSize: 12 }}>
                       {reportCSVs.consultings ? `✅ ${reportCSVs.consultings.rows} righe` : '📤 Carica CSV'}
                     </label>
                   </div>
                 </div>
                 
-                {/* Bottoni azione */}
+                {/* Bottoni */}
                 <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                   <button 
-                    style={{ ...S.btn, flex: 1, minWidth: 150, padding: '14px 20px', background: 'linear-gradient(135deg, #2AAA8A, #FF8F00)', opacity: Object.values(reportCSVs).some(v => v) ? 1 : 0.5 }} 
+                    style={{ ...S.btn, flex: 1, minWidth: 150, padding: '14px 20px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', color: '#FFFFFF', opacity: Object.values(reportCSVs).some(v => v) ? 1 : 0.5 }} 
                     onClick={() => setReportData(generateReportData())}
                     disabled={!Object.values(reportCSVs).some(v => v)}
                   >📊 Genera Report</button>
                   <button 
-                    style={{ ...S.btn, flex: 1, minWidth: 150, padding: '14px 20px', background: 'transparent', border: '1px solid #E0E0E0' }} 
+                    style={{ ...S.btn, flex: 1, minWidth: 150, padding: '14px 20px', background: 'transparent', border: '1px solid #E0E0E0', color: '#666666' }} 
                     onClick={clearReportCSVs}
                   >🗑️ Reset</button>
                 </div>
@@ -2312,12 +2607,133 @@ export default function Home() {
                     </div>
                   )}
                   
+                  {/* 🚨 ALERT DA ATTIVARE */}
+                  {reportData.alertDaAttivare && reportData.alertDaAttivare.totale > 0 && (
+                    <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
+                        <span style={{ fontSize: 24 }}>🚨</span>
+                        <div>
+                          <h3 style={{ color: '#E53935', fontSize: 18, margin: 0 }}>ALERT DA ATTIVARE</h3>
+                          <p style={{ color: '#666666', fontSize: 12, margin: 0 }}>Luce Amica in attesa di attivazione NWG Energia</p>
+                        </div>
+                      </div>
+                      
+                      {/* Riepilogo fasce */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+                        <div style={{ background: 'rgba(76,175,80,0.15)', borderRadius: 12, padding: 15, textAlign: 'center', border: '2px solid #4CAF50' }}>
+                          <div style={{ fontSize: 28, fontWeight: 800, color: '#4CAF50' }}>{reportData.alertDaAttivare.verde.length}</div>
+                          <div style={{ fontSize: 11, color: '#333', marginTop: 4 }}>🟢 0-30 giorni</div>
+                        </div>
+                        <div style={{ background: 'rgba(255,215,0,0.15)', borderRadius: 12, padding: 15, textAlign: 'center', border: '2px solid #FFD700' }}>
+                          <div style={{ fontSize: 28, fontWeight: 800, color: '#FFD700' }}>{reportData.alertDaAttivare.giallo.length}</div>
+                          <div style={{ fontSize: 11, color: '#333', marginTop: 4 }}>🟡 31-60 giorni</div>
+                        </div>
+                        <div style={{ background: 'rgba(229,57,53,0.15)', borderRadius: 12, padding: 15, textAlign: 'center', border: '2px solid #E53935' }}>
+                          <div style={{ fontSize: 28, fontWeight: 800, color: '#E53935' }}>{reportData.alertDaAttivare.rosso.length}</div>
+                          <div style={{ fontSize: 11, color: '#333', marginTop: 4 }}>🔴 &gt;60 giorni</div>
+                        </div>
+                      </div>
+                      
+                      {/* Lista critici (rosso + giallo) */}
+                      {(reportData.alertDaAttivare.rosso.length > 0 || reportData.alertDaAttivare.giallo.length > 0) && (
+                        <div style={{ background: '#FFF9F9', borderRadius: 12, padding: 15, border: '1px solid #FFCDD2' }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: '#E53935', marginBottom: 10 }}>⚠️ Richiede intervento ({reportData.alertDaAttivare.rosso.length + reportData.alertDaAttivare.giallo.length})</div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 100px 60px', gap: 4, fontSize: 10, color: '#999', marginBottom: 8, padding: '0 5px' }}>
+                            <span># Contratto</span>
+                            <span>Cliente</span>
+                            <span>Intermediario</span>
+                            <span style={{ textAlign: 'right' }}>Giorni</span>
+                          </div>
+                          <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                            {[...reportData.alertDaAttivare.rosso, ...reportData.alertDaAttivare.giallo].slice(0, 20).map((alert, i) => (
+                              <div key={i} style={{ display: 'grid', gridTemplateColumns: '80px 1fr 100px 60px', gap: 4, padding: '8px 5px', background: i % 2 === 0 ? '#FFF' : '#FFF5F5', borderRadius: 6, marginBottom: 2, alignItems: 'center' }}>
+                                <span style={{ fontSize: 10, color: '#666' }}>{alert.contratto}</span>
+                                <span style={{ fontSize: 11, color: '#333', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alert.cliente}</span>
+                                <span style={{ fontSize: 10, color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alert.intermediario}</span>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: alert.fascia === 'rosso' ? '#E53935' : '#FFD700', textAlign: 'right' }}>{alert.giorni}g</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* 🎯 TRACKER COACHING */}
+                  {reportData.trackerCoaching && reportData.trackerCoaching.totale > 0 && (
+                    <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
+                        <span style={{ fontSize: 24 }}>🎯</span>
+                        <div>
+                          <h3 style={{ color: '#2AAA8A', fontSize: 18, margin: 0 }}>TRACKER COACHING</h3>
+                          <p style={{ color: '#666666', fontSize: 12, margin: 0 }}>Performance nuovi attivati - Milestone raggiunte</p>
+                        </div>
+                      </div>
+                      
+                      {/* Medie e completamento */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+                        <div style={{ background: '#F5F5F5', borderRadius: 12, padding: 12, textAlign: 'center' }}>
+                          <div style={{ fontSize: 10, color: '#666', marginBottom: 5 }}>⚡ 1° Luce Amica</div>
+                          <div style={{ fontSize: 22, fontWeight: 700, color: '#2AAA8A' }}>{reportData.trackerCoaching.medie.la !== null ? `${reportData.trackerCoaching.medie.la}g` : '-'}</div>
+                          <div style={{ fontSize: 10, color: '#4CAF50' }}>{reportData.trackerCoaching.completamento.la}% completato</div>
+                        </div>
+                        <div style={{ background: '#F5F5F5', borderRadius: 12, padding: 12, textAlign: 'center' }}>
+                          <div style={{ fontSize: 10, color: '#666', marginBottom: 5 }}>☀️ 1° Fotovoltaico</div>
+                          <div style={{ fontSize: 22, fontWeight: 700, color: '#FFD700' }}>{reportData.trackerCoaching.medie.fv !== null ? `${reportData.trackerCoaching.medie.fv}g` : '-'}</div>
+                          <div style={{ fontSize: 10, color: '#4CAF50' }}>{reportData.trackerCoaching.completamento.fv}% completato</div>
+                        </div>
+                        <div style={{ background: '#F5F5F5', borderRadius: 12, padding: 12, textAlign: 'center' }}>
+                          <div style={{ fontSize: 10, color: '#666', marginBottom: 5 }}>📝 1° Iscritto</div>
+                          <div style={{ fontSize: 22, fontWeight: 700, color: '#2AAA8A' }}>{reportData.trackerCoaching.medie.iscritto !== null ? `${reportData.trackerCoaching.medie.iscritto}g` : '-'}</div>
+                          <div style={{ fontSize: 10, color: '#4CAF50' }}>{reportData.trackerCoaching.completamento.iscritto}% completato</div>
+                        </div>
+                        <div style={{ background: '#F5F5F5', borderRadius: 12, padding: 12, textAlign: 'center' }}>
+                          <div style={{ fontSize: 10, color: '#666', marginBottom: 5 }}>🟠 1° Attivato</div>
+                          <div style={{ fontSize: 22, fontWeight: 700, color: '#FF9800' }}>{reportData.trackerCoaching.medie.attivato !== null ? `${reportData.trackerCoaching.medie.attivato}g` : '-'}</div>
+                          <div style={{ fontSize: 10, color: '#4CAF50' }}>{reportData.trackerCoaching.completamento.attivato}% completato</div>
+                        </div>
+                      </div>
+                      
+                      {/* Lista tracker */}
+                      <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, border: '1px solid #E0E0E0' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 70px 70px 70px 70px', gap: 4, fontSize: 9, color: '#999', marginBottom: 8, padding: '0 5px', textTransform: 'uppercase' }}>
+                          <span>Nome</span>
+                          <span style={{ textAlign: 'center' }}>Attivazione</span>
+                          <span style={{ textAlign: 'center' }}>1° LA</span>
+                          <span style={{ textAlign: 'center' }}>1° FV</span>
+                          <span style={{ textAlign: 'center' }}>1° Iscr.</span>
+                          <span style={{ textAlign: 'center' }}>1° Attiv.</span>
+                        </div>
+                        <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+                          {reportData.trackerCoaching.lista.map((t, i) => (
+                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 70px 70px 70px 70px', gap: 4, padding: '8px 5px', background: i % 2 === 0 ? '#FFF' : '#F8F8F8', borderRadius: 6, marginBottom: 2, alignItems: 'center' }}>
+                              <span style={{ fontSize: 11, color: '#333', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.nome}</span>
+                              <span style={{ fontSize: 10, color: '#666', textAlign: 'center' }}>{t.dataAttivazione}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, textAlign: 'center', color: t.giorniLA !== null ? '#4CAF50' : '#E53935' }}>
+                                {t.giorniLA !== null ? `${t.giorniLA}g ✓` : '❌'}
+                              </span>
+                              <span style={{ fontSize: 11, fontWeight: 600, textAlign: 'center', color: t.giorniFV !== null ? '#4CAF50' : '#E53935' }}>
+                                {t.giorniFV !== null ? `${t.giorniFV}g ✓` : '❌'}
+                              </span>
+                              <span style={{ fontSize: 11, fontWeight: 600, textAlign: 'center', color: t.giorniIscritto !== null ? '#4CAF50' : '#E53935' }}>
+                                {t.giorniIscritto !== null ? `${t.giorniIscritto}g ✓` : '❌'}
+                              </span>
+                              <span style={{ fontSize: 11, fontWeight: 600, textAlign: 'center', color: t.giorniAttivato !== null ? '#4CAF50' : '#E53935' }}>
+                                {t.giorniAttivato !== null ? `${t.giorniAttivato}g ✓` : '❌'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   {/* BOTTONE SCREENSHOT REPORT */}
-                  <div style={{ background: 'linear-gradient(135deg, rgba(124,77,255,0.2), rgba(124,77,255,0.05))', borderRadius: 16, padding: 20, border: '1px solid rgba(124,77,255,0.3)' }}>
+                  <div style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, border: '1px solid #E0E0E0' }}>
                     <div style={{ fontSize: 16, color: '#2AAA8A', fontWeight: 700, marginBottom: 5 }}>📷 SCARICA REPORT</div>
                     <div style={{ fontSize: 12, color: '#666666', marginBottom: 15 }}>Scarica il report come immagine</div>
                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                      <button style={{ ...S.btn, flex: 1, minWidth: 140, padding: '14px 20px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', fontSize: 14 }} onClick={() => generateDashboardCanvas('png')}>📷 Salva PNG</button>
+                      <button style={{ ...S.btn, flex: 1, minWidth: 140, padding: '14px 20px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', color: '#FFF', fontSize: 14 }} onClick={() => generateDashboardCanvas('png')}>📷 Salva PNG</button>
                     </div>
                   </div>
                 </div>
@@ -2622,10 +3038,10 @@ export default function Home() {
                   );
                 })()}
 
-                {/* CLASSIFICHE COMPLETE CON CONVERSIONI */}
+                {/* CLASSIFICHE COMPLETE - SENZA Conv% + SDP e IVD */}
                 {(() => {
                   const pies = getPieDistributions();
-                  // Crea tabella con conversioni per K, NW
+                  // Tabella semplice senza conversione
                   const ClassificaTable = ({ title, emoji, data, color }) => {
                     if (!data || data.length === 0) return null;
                     return (
@@ -2633,32 +3049,25 @@ export default function Home() {
                         <div style={{ fontSize: 14, color: color, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span>{emoji}</span> {title}
                         </div>
-                        <div style={{ overflowX: 'auto' }}>
+                        <div style={{ overflowX: 'auto', maxHeight: 280, overflowY: 'auto' }}>
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                             <thead>
                               <tr style={{ borderBottom: '2px solid #E0E0E0' }}>
                                 <th style={{ padding: '8px 4px', textAlign: 'center', color: '#666666', fontWeight: 600, width: 30 }}>#</th>
-                                <th style={{ padding: '8px 4px', textAlign: 'left', color: '#666666', fontWeight: 600 }}>Nome Completo</th>
-                                <th style={{ padding: '8px 4px', textAlign: 'center', color: '#2AAA8A', fontWeight: 600 }}>Ins</th>
-                                <th style={{ padding: '8px 4px', textAlign: 'center', color: '#4CAF50', fontWeight: 600 }}>Acc</th>
-                                <th style={{ padding: '8px 4px', textAlign: 'center', color: '#FFD700', fontWeight: 600 }}>Conv%</th>
+                                <th style={{ padding: '8px 4px', textAlign: 'left', color: '#666666', fontWeight: 600 }}>Nome</th>
+                                <th style={{ padding: '8px 4px', textAlign: 'center', color: color, fontWeight: 600 }}>Tot</th>
                               </tr>
                             </thead>
                             <tbody>
-                              {data.slice(0, 10).map(([name, val], i) => {
-                                // val può essere un numero o un oggetto con v1,v2
-                                const ins = typeof val === 'object' ? (val.v1 || val.total || 0) : val;
-                                const acc = typeof val === 'object' ? (val.v2 || 0) : 0;
-                                const conv = ins > 0 ? Math.round((acc / ins) * 100) : 0;
+                              {data.slice(0, 15).map(([name, val], i) => {
+                                const tot = typeof val === 'object' ? (val.v1 || val.total || 0) : val;
                                 return (
                                   <tr key={i} style={{ borderBottom: '1px solid #F5F5F5', background: i < 3 ? `${color}08` : 'transparent' }}>
-                                    <td style={{ padding: '10px 4px', textAlign: 'center', fontWeight: i < 3 ? 700 : 400 }}>
+                                    <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: i < 3 ? 700 : 400, fontSize: 11 }}>
                                       {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}
                                     </td>
-                                    <td style={{ padding: '10px 4px', fontWeight: i < 3 ? 600 : 400, color: '#333333' }}>{name}</td>
-                                    <td style={{ padding: '10px 4px', textAlign: 'center', color: '#2AAA8A', fontWeight: 600 }}>{ins}</td>
-                                    <td style={{ padding: '10px 4px', textAlign: 'center', color: '#4CAF50', fontWeight: 600 }}>{acc}</td>
-                                    <td style={{ padding: '10px 4px', textAlign: 'center', fontWeight: 700, color: conv >= 50 ? '#4CAF50' : conv >= 30 ? '#FFD700' : '#999999' }}>{conv}%</td>
+                                    <td style={{ padding: '8px 4px', fontWeight: i < 3 ? 600 : 400, color: '#333333', fontSize: 11, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</td>
+                                    <td style={{ padding: '8px 4px', textAlign: 'center', color: color, fontWeight: 700, fontSize: 13 }}>{tot}</td>
                                   </tr>
                                 );
                               })}
@@ -2670,9 +3079,11 @@ export default function Home() {
                   };
                   
                   return (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 15 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
                       <ClassificaTable title="K MANAGER" emoji="👑" data={pies.k} color="#FFD700" />
                       <ClassificaTable title="NETWORKER" emoji="⭐" data={pies.nw} color="#2AAA8A" />
+                      <ClassificaTable title="SDP" emoji="🔵" data={rankings?.sdp_inseriti || []} color="#2196F3" />
+                      <ClassificaTable title="IVD" emoji="🟠" data={rankings?.ivd_inseriti || []} color="#FF9800" />
                     </div>
                   );
                 })()}
@@ -2721,21 +3132,28 @@ export default function Home() {
 const S = {
   loginWrap: { 
     minHeight: '100vh', 
-    backgroundImage: 'url(https://images.unsplash.com/photo-1509391366360-2e959784a276?w=1920&q=80)',
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    backgroundAttachment: 'fixed',
     display: 'flex', 
     alignItems: 'center', 
     justifyContent: 'center', 
     padding: 20, 
     fontFamily: '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif',
-    position: 'relative'
+    position: 'relative',
+    overflow: 'hidden',
+    background: '#0a0a0f'
+  },
+  loginBgImage: {
+    position: 'absolute',
+    inset: '-20px',
+    backgroundImage: 'url(https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=1920&q=80)',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    animation: 'kenBurns 25s ease-in-out infinite alternate',
+    zIndex: 0
   },
   loginOverlay: {
     position: 'absolute',
     inset: 0,
-    background: 'linear-gradient(135deg, rgba(0,0,0,0.5) 0%, rgba(42,170,138,0.3) 50%, rgba(0,0,0,0.6) 100%)',
+    background: 'linear-gradient(135deg, rgba(0,0,0,0.6) 0%, rgba(42,170,138,0.25) 50%, rgba(0,0,0,0.7) 100%)',
     zIndex: 1
   },
   loginCard: { 
