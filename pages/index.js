@@ -298,6 +298,12 @@ export default function Home() {
 
   // Colori per torte e stati
   const PIE_COLORS = ['#FFD700', '#7C4DFF', '#FF6B35', '#4CAF50', '#2196F3', '#E91E63', '#00BCD4', '#9C27B0', '#FF9800', '#607D8B'];
+  const STATO_COLORS = { 
+    'Accettato': '#4CAF50', 'Sospeso': '#FFC107', 'In sospeso': '#FFC107', 'Presente': '#4CAF50', 'Assente': '#FF6B35', 
+    'In lavorazione': '#2196F3', 'Installato': '#00BCD4', 'Impianto installato': '#00BCD4', 'Recesso': '#f44336', 
+    'Annullato': '#9E9E9E', 'In fornitura': '#4CAF50', 'Attivo': '#4CAF50', 'Cessato': '#607D8B', 'Negativo': '#f44336',
+    'Non perfezionato': '#9E9E9E', 'Respinto': '#f44336', 'Da attivare': '#FFC107', 'Risoluzione': '#FF5722'
+  };
   
   // Colori heatmap
   const HEATMAP_COLORS = {
@@ -1756,7 +1762,7 @@ export default function Home() {
       {loginError && <p style={{ color: '#f44', fontSize: 13, marginBottom: 10 }}>{loginError}</p>}
       <button style={S.btn} onClick={handleLogin}>ACCEDI</button>
       <div style={S.categoryIcons}><span style={S.catIcon}>🟠</span><span style={S.catIcon}>🔵</span><span style={S.catIcon}>⭐</span><span style={S.catIcon}>👑</span></div>
-      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v9.8</p>
+      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v9.8.1</p>
     </div></div></>);
 
   // HOMEPAGE CSV
@@ -2024,6 +2030,7 @@ export default function Home() {
                       </div>
                       
                       {/* Stati FV Dettaglio */}
+                      {reportData.pilastri.fv.statiDettaglio && reportData.pilastri.fv.statiDettaglio.length > 0 && (
                       <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 15, marginBottom: 15 }}>
                         <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 10 }}>📋 DETTAGLIO STATI</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -2040,6 +2047,7 @@ export default function Home() {
                           })}
                         </div>
                       </div>
+                      )}
                       
                       {/* Classifiche FV con 3 colonne */}
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
@@ -2112,6 +2120,7 @@ export default function Home() {
                       </div>
                       
                       {/* Stati NWG Spa */}
+                      {reportData.pilastri.energy.statiNwgSpa && reportData.pilastri.energy.statiNwgSpa.length > 0 && (
                       <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 15, marginBottom: 10 }}>
                         <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 10 }}>📋 STATI NWG SPA</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -2129,9 +2138,10 @@ export default function Home() {
                           })}
                         </div>
                       </div>
+                      )}
                       
                       {/* Stati NWG Energia (se presenti) */}
-                      {reportData.pilastri.energy.statiNwgEnergia.length > 0 && (
+                      {reportData.pilastri.energy.statiNwgEnergia && reportData.pilastri.energy.statiNwgEnergia.length > 0 && (
                         <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 15, marginBottom: 15 }}>
                           <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 10 }}>⚡ STATI NWG ENERGIA</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -2207,75 +2217,92 @@ export default function Home() {
                       </div>
                       
                       {/* Funnel Collaboratori */}
-                      <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 20, marginBottom: 15 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 15, flexWrap: 'wrap' }}>
+                      <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 16, padding: 20, marginBottom: 15 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, flexWrap: 'wrap' }}>
                           {/* Iscritti */}
-                          <div style={{ textAlign: 'center', minWidth: 100 }}>
-                            <div style={{ fontSize: 32, fontWeight: 800, color: '#9C27B0' }}>{reportData.pilastri.collaboratori.iscritti}</div>
-                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>📝 Iscritti</div>
+                          <div style={{ textAlign: 'center', minWidth: 90 }}>
+                            <div style={{ fontSize: 28, fontWeight: 800, color: '#9C27B0' }}>{reportData.pilastri.collaboratori.funnel?.iscritti || 0}</div>
+                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>📝 Iscritti</div>
                           </div>
                           
-                          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 24 }}>→</div>
+                          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 20 }}>→</div>
                           
                           {/* Presenti */}
-                          <div style={{ textAlign: 'center', minWidth: 100 }}>
-                            <div style={{ fontSize: 32, fontWeight: 800, color: '#4CAF50' }}>{reportData.pilastri.collaboratori.presenti}</div>
-                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>✅ Presenti</div>
-                            <div style={{ fontSize: 10, color: '#4CAF50', marginTop: 2 }}>{reportData.pilastri.collaboratori.convPresenti}%</div>
+                          <div style={{ textAlign: 'center', minWidth: 90 }}>
+                            <div style={{ fontSize: 28, fontWeight: 800, color: '#4CAF50' }}>{reportData.pilastri.collaboratori.funnel?.presenti || 0}</div>
+                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>✅ Presenti</div>
+                            <div style={{ fontSize: 9, color: '#4CAF50' }}>{reportData.pilastri.collaboratori.funnel?.pctPresenti || 0}%</div>
                           </div>
                           
-                          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 24 }}>→</div>
+                          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 20 }}>→</div>
                           
                           {/* Attivati */}
-                          <div style={{ textAlign: 'center', minWidth: 100 }}>
-                            <div style={{ fontSize: 32, fontWeight: 800, color: '#FF6B35' }}>{reportData.pilastri.collaboratori.attivati}</div>
-                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>🟠 Attivati</div>
-                            <div style={{ fontSize: 10, color: '#FF6B35', marginTop: 2 }}>{reportData.pilastri.collaboratori.convAttivati}% dei presenti</div>
+                          <div style={{ textAlign: 'center', minWidth: 90 }}>
+                            <div style={{ fontSize: 28, fontWeight: 800, color: '#FF6B35' }}>{reportData.pilastri.collaboratori.funnel?.attivati || 0}</div>
+                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>🟠 Attivati</div>
+                            <div style={{ fontSize: 9, color: '#FF6B35' }}>{reportData.pilastri.collaboratori.funnel?.pctAttivati || 0}%</div>
                           </div>
                         </div>
                       </div>
                       
-                      {/* Classifiche Collaboratori */}
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
+                      {/* Classifiche Collaboratori con 3 colonne */}
+                      {reportData.pilastri.collaboratori.classifiche && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
                         {/* K Manager Coll */}
                         <div style={{ background: 'rgba(255,215,0,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(255,215,0,0.2)' }}>
                           <div style={{ fontSize: 12, color: '#FFD700', fontWeight: 600, marginBottom: 8 }}>👑 K MANAGER</div>
-                          {reportData.pilastri.collaboratori.classifiche.k.map(([name, val], i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                              <span style={{ width: 20, fontSize: 10, color: i < 3 ? '#FFD700' : 'rgba(255,255,255,0.5)' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
-                              <span style={{ flex: 1, fontSize: 11, color: '#fff' }}>{name}</span>
-                              <span style={{ fontSize: 12, fontWeight: 700, color: '#FFD700' }}>{val}</span>
+                          <div style={{ display: 'grid', gridTemplateColumns: '30px 1fr 45px 45px 45px', gap: 4, fontSize: 9, color: 'rgba(255,255,255,0.5)', marginBottom: 6 }}>
+                            <span>#</span><span>Nome</span><span style={{ textAlign: 'center' }}>📝</span><span style={{ textAlign: 'center' }}>✅</span><span style={{ textAlign: 'center' }}>🟠</span>
+                          </div>
+                          {reportData.pilastri.collaboratori.classifiche.k.map(([name, stats], i) => (
+                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 45px 45px 45px', gap: 4, alignItems: 'center', marginBottom: 4, padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                              <span style={{ fontSize: 10, color: i < 3 ? '#FFD700' : 'rgba(255,255,255,0.5)' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
+                              <span style={{ fontSize: 11, color: '#fff', fontWeight: i < 3 ? 600 : 400 }}>{name}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#9C27B0', textAlign: 'center' }}>{typeof stats === 'object' ? (stats.iscritti || stats.total || 0) : stats}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#4CAF50', textAlign: 'center' }}>{typeof stats === 'object' ? (stats.presenti || 0) : '-'}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#FF6B35', textAlign: 'center' }}>{typeof stats === 'object' ? (stats.attivati || 0) : '-'}</span>
                             </div>
                           ))}
                           <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 8, paddingTop: 8, textAlign: 'right', fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
-                            Totale: <strong style={{ color: '#FFD700' }}>{reportData.pilastri.collaboratori.totaleK}</strong>
+                            Totale K: <strong style={{ color: '#FFD700' }}>{reportData.pilastri.collaboratori.totaleK}</strong>
                           </div>
                         </div>
                         
                         {/* NW Coll */}
-                        <div style={{ background: 'rgba(156,39,176,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(156,39,176,0.2)', maxHeight: 250, overflowY: 'auto' }}>
+                        <div style={{ background: 'rgba(156,39,176,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(156,39,176,0.2)', maxHeight: 280, overflowY: 'auto' }}>
                           <div style={{ fontSize: 12, color: '#9C27B0', fontWeight: 600, marginBottom: 8 }}>⭐ NETWORKER ({reportData.pilastri.collaboratori.classifiche.nw.length})</div>
-                          {reportData.pilastri.collaboratori.classifiche.nw.map(([name, val], i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                              <span style={{ width: 20, fontSize: 9, color: i < 3 ? '#9C27B0' : 'rgba(255,255,255,0.4)' }}>{i+1}°</span>
-                              <span style={{ flex: 1, fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>{name}</span>
-                              <span style={{ fontSize: 11, fontWeight: 600, color: '#9C27B0' }}>{val}</span>
+                          <div style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, fontSize: 8, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>
+                            <span>#</span><span>Nome</span><span style={{ textAlign: 'center' }}>📝</span><span style={{ textAlign: 'center' }}>✅</span><span style={{ textAlign: 'center' }}>🟠</span>
+                          </div>
+                          {reportData.pilastri.collaboratori.classifiche.nw.slice(0, 20).map(([name, stats], i) => (
+                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, alignItems: 'center', marginBottom: 2, fontSize: 10 }}>
+                              <span style={{ color: i < 3 ? '#9C27B0' : 'rgba(255,255,255,0.4)' }}>{i+1}°</span>
+                              <span style={{ color: 'rgba(255,255,255,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                              <span style={{ color: '#9C27B0', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.iscritti || stats.total || 0) : stats}</span>
+                              <span style={{ color: '#4CAF50', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.presenti || 0) : '-'}</span>
+                              <span style={{ color: '#FF6B35', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.attivati || 0) : '-'}</span>
                             </div>
                           ))}
                         </div>
                         
                         {/* SDP Coll */}
-                        <div style={{ background: 'rgba(33,150,243,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(33,150,243,0.2)', maxHeight: 250, overflowY: 'auto' }}>
+                        <div style={{ background: 'rgba(33,150,243,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(33,150,243,0.2)', maxHeight: 280, overflowY: 'auto' }}>
                           <div style={{ fontSize: 12, color: '#2196F3', fontWeight: 600, marginBottom: 8 }}>🔵 SDP ({reportData.pilastri.collaboratori.classifiche.sdp.length})</div>
-                          {reportData.pilastri.collaboratori.classifiche.sdp.map(([name, val], i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                              <span style={{ width: 20, fontSize: 9, color: i < 3 ? '#2196F3' : 'rgba(255,255,255,0.4)' }}>{i+1}°</span>
-                              <span style={{ flex: 1, fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>{name}</span>
-                              <span style={{ fontSize: 11, fontWeight: 600, color: '#2196F3' }}>{val}</span>
+                          <div style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, fontSize: 8, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>
+                            <span>#</span><span>Nome</span><span style={{ textAlign: 'center' }}>📝</span><span style={{ textAlign: 'center' }}>✅</span><span style={{ textAlign: 'center' }}>🟠</span>
+                          </div>
+                          {reportData.pilastri.collaboratori.classifiche.sdp.slice(0, 20).map(([name, stats], i) => (
+                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, alignItems: 'center', marginBottom: 2, fontSize: 10 }}>
+                              <span style={{ color: i < 3 ? '#2196F3' : 'rgba(255,255,255,0.4)' }}>{i+1}°</span>
+                              <span style={{ color: 'rgba(255,255,255,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                              <span style={{ color: '#9C27B0', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.iscritti || stats.total || 0) : stats}</span>
+                              <span style={{ color: '#4CAF50', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.presenti || 0) : '-'}</span>
+                              <span style={{ color: '#FF6B35', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.attivati || 0) : '-'}</span>
                             </div>
                           ))}
                         </div>
                       </div>
+                      )}
                     </div>
                   )}
                   
