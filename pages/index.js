@@ -11,7 +11,7 @@ const USERS = {
   leonardo: { password: 'leonardo2026', role: 'k', name: 'Leonardo Colletta' },
 };
 
-const K_NAMES = [];
+const K_NAMES = ['TIESI PATRIZIO', 'MAGRI THOMAS', 'COLLETTA LEONARDO', 'VENTURA MARCELLO', 'TIESI ANDREA', 'PATRIZIO TIESI', 'THOMAS MAGRI', 'LEONARDO COLLETTA', 'MARCELLO VENTURA', 'ANDREA TIESI'];
 const EVENT_TYPES = ['LUCE AMICA', 'FOTOVOLTAICO', 'INSERITI SEMINARIO', 'ATTIVATI', 'FORMAZIONE', 'ENERGIA', 'GAS'];
 const WEBHOOK_URL = 'https://hook.eu1.make.com/sm6lrhpoet204lv6xkwj10xiypwnn4qm';
 
@@ -1996,15 +1996,15 @@ export default function Home() {
               <div style={{ fontSize: 24, color: '#E0E0E0' }}>→</div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 42, fontWeight: 800, color: '#4CAF50' }}>{reportData.pilastri.fv.funnel.positivi}</div>
-                <div style={{ fontSize: 12, color: '#4CAF50' }}>🟢 Positivi <span style={{ fontSize: 10 }}>({reportData.pilastri.fv.funnel.pctPositivi}%)</span></div>
+                <div style={{ fontSize: 12, color: '#333' }}>🟢 Positivi <span style={{ fontSize: 10, color: '#4CAF50' }}>({reportData.pilastri.fv.funnel.pctPositivi}%)</span></div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 42, fontWeight: 800, color: '#FFD700' }}>{reportData.pilastri.fv.funnel.lavorazione}</div>
-                <div style={{ fontSize: 12, color: '#FFD700' }}>🟡 Lavoraz.</div>
+                <div style={{ fontSize: 12, color: '#333' }}>🟡 Lavoraz.</div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 42, fontWeight: 800, color: '#E53935' }}>{reportData.pilastri.fv.funnel.negativi}</div>
-                <div style={{ fontSize: 12, color: '#E53935' }}>🔴 Persi <span style={{ fontSize: 10 }}>({reportData.pilastri.fv.funnel.pctNegativi}%)</span></div>
+                <div style={{ fontSize: 12, color: '#333' }}>🔴 Persi <span style={{ fontSize: 10, color: '#E53935' }}>({reportData.pilastri.fv.funnel.pctNegativi}%)</span></div>
               </div>
             </div>
             
@@ -2348,7 +2348,7 @@ export default function Home() {
           <span style={S.catIcon} title="Networker">⭐</span>
           <span style={S.catIcon} title="K Manager">👑</span>
         </div>
-        <p style={{ color: '#999999', fontSize: 12, marginTop: 30 }}>v10.6</p>
+        <p style={{ color: '#999999', fontSize: 12, marginTop: 30 }}>v10.7</p>
       </div>
     </div></>);
 
@@ -2540,9 +2540,9 @@ export default function Home() {
       <p style={{ color: '#666666', fontSize: 13, marginBottom: 15 }}>✅ {getData().length} partecipanti • {getClassificaTotal()} contratti</p>
       <div style={S.previewImg}><img src={previewImage} style={{ maxWidth: '100%', maxHeight: '55vh' }} /></div>
       <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 15, flexWrap: 'wrap' }}>
-        <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'transparent', border: '1px solid #E0E0E0' }} onClick={() => setShowPreview(false)}>Chiudi</button>
-        <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'linear-gradient(135deg,#4CAF50,#81C784)' }} onClick={download}>📥 Scarica</button>
-        <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'linear-gradient(135deg,#2AAA8A,#4DB6AC)' }} onClick={handleSendToBot}>🤖 Invia a Bot</button>
+        <button style={{ ...S.btn, flex: 1, minWidth: 100, background: '#F5F5F5', border: '1px solid #E0E0E0', color: '#333333' }} onClick={() => setShowPreview(false)}>✕ Chiudi</button>
+        <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'linear-gradient(135deg,#2AAA8A,#20917A)', color: '#FFFFFF' }} onClick={download}>📥 SCARICA</button>
+        <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'linear-gradient(135deg,#FFD700,#FFC107)', color: '#333333' }} onClick={handleSendToBot}>🤖 INVIA A BOT</button>
       </div>
       {sendStatus && <p style={{ textAlign: 'center', marginTop: 10, color: sendStatus.includes('✅') ? '#4CAF50' : sendStatus.includes('❌') ? '#f44' : '#FFD700' }}>{sendStatus}</p>}
     </div></div></>);
@@ -3349,7 +3349,7 @@ export default function Home() {
                                 const intensity = val / maxM;
                                 const bgColor = val === 0 ? '#F5F5F5' : 
                                                intensity > 0.7 ? '#4CAF50' : 
-                                               intensity > 0.4 ? '#FFD700' : '#2AAA8A';
+                                               intensity > 0.4 ? '#FFD700' : '#E53935';
                                 const isHot = intensity > 0.7 && val > 0;
                                 return (
                                   <div key={i} style={{ 
@@ -3375,7 +3375,7 @@ export default function Home() {
                             <div style={{ display: 'flex', justifyContent: 'center', gap: 15, marginTop: 12 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#4CAF50', boxShadow: '0 0 6px rgba(76,175,80,0.5)' }} /><span style={{ fontSize: 10, color: '#666666' }}>🔥 Caldo</span></div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FFD700' }} /><span style={{ fontSize: 10, color: '#666666' }}>Tiepido</span></div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#2AAA8A' }} /><span style={{ fontSize: 10, color: '#666666' }}>Freddo</span></div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#E53935' }} /><span style={{ fontSize: 10, color: '#666666' }}>Freddo</span></div>
                             </div>
                           </div>
                         );
@@ -3497,7 +3497,7 @@ export default function Home() {
                               <tr style={{ borderBottom: '2px solid #E0E0E0' }}>
                                 <th style={{ padding: '8px 4px', textAlign: 'center', color: '#666666', fontWeight: 600, width: 30 }}>#</th>
                                 <th style={{ padding: '8px 4px', textAlign: 'left', color: '#666666', fontWeight: 600 }}>Nome</th>
-                                <th style={{ padding: '8px 4px', textAlign: 'center', color: color, fontWeight: 600 }}>Tot</th>
+                                <th style={{ padding: '8px 4px', textAlign: 'center', color: '#333333', fontWeight: 600 }}>Tot</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -3505,11 +3505,11 @@ export default function Home() {
                                 const tot = typeof val === 'object' ? (val.v1 || val.total || 0) : val;
                                 return (
                                   <tr key={i} style={{ borderBottom: '1px solid #F5F5F5', background: i < 3 ? `${color}08` : 'transparent' }}>
-                                    <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: i < 3 ? 700 : 400, fontSize: 11 }}>
+                                    <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: i < 3 ? 700 : 400, fontSize: 11, color: '#333333' }}>
                                       {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}
                                     </td>
                                     <td style={{ padding: '8px 4px', fontWeight: i < 3 ? 600 : 400, color: '#333333', fontSize: 11, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</td>
-                                    <td style={{ padding: '8px 4px', textAlign: 'center', color: color, fontWeight: 700, fontSize: 13 }}>{tot}</td>
+                                    <td style={{ padding: '8px 4px', textAlign: 'center', color: '#333333', fontWeight: 700, fontSize: 13 }}>{tot}</td>
                                   </tr>
                                 );
                               })}
