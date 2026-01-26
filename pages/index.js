@@ -762,6 +762,7 @@ export default function Home() {
       ivdData.forEach(row => {
         const nomeIvd = row['IVD'] || row['Cliente'] || '';
         const dataAttStr = row['Data Inserimento'] || '';
+        const networker = row['Nome Primo Networker'] || ''; // Chi lo ha formato
         
         if (nomeIvd && dataAttStr) {
           try {
@@ -774,6 +775,7 @@ export default function Home() {
             const tracker = {
               nome: nomeIvd,
               dataAttivazione: dataAttStr.split(' ')[0],
+              networker: networker, // Chi lo ha formato/sponsorizzato
               primaLA: null,
               giorniLA: null,
               primaFV: null,
@@ -1130,7 +1132,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v12.0 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v12.1 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -2065,7 +2067,7 @@ export default function Home() {
     ctx.fillStyle = '#999999';
     ctx.font = '14px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v12.0 • ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 40);
+    ctx.fillText(`Leader Ranking v12.1 • ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 40);
     
     // Download
     const link = document.createElement('a');
@@ -2105,11 +2107,16 @@ export default function Home() {
             {!heatmapDrilldown ? (
               /* VISTA MESI - Cliccabile */
               <>
-                {/* LEGENDA COLORI */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 15, marginBottom: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><div style={{ width: 14, height: 14, borderRadius: 3, background: '#4CAF50' }} /><span style={{ fontSize: 11, color: '#666' }}>Caldo (&gt;70%)</span></div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><div style={{ width: 14, height: 14, borderRadius: 3, background: '#FFD700' }} /><span style={{ fontSize: 11, color: '#666' }}>Tiepido (30-70%)</span></div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><div style={{ width: 14, height: 14, borderRadius: 3, background: '#FF8F00' }} /><span style={{ fontSize: 11, color: '#666' }}>Freddo (&lt;30%)</span></div>
+                {/* LEGENDA COLORI + SPIEGAZIONE ORARI */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
+                  <div style={{ fontSize: 10, color: '#888', fontStyle: 'italic' }}>
+                    💡 Il numero piccolo sotto indica la <strong>fascia oraria più produttiva</strong> (es. 09-12 = mattina)
+                  </div>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#4CAF50' }} /><span style={{ fontSize: 10, color: '#666' }}>Caldo</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FFD700' }} /><span style={{ fontSize: 10, color: '#666' }}>Tiepido</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FF8F00' }} /><span style={{ fontSize: 10, color: '#666' }}>Freddo</span></div>
+                  </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 15 }}>
                   {Object.entries(reportData.heatmapMesi).map(([type, heatData]) => {
@@ -2534,7 +2541,7 @@ export default function Home() {
               </div>
             </div>
             
-            {/* CLASSIFICHE LA */}
+            {/* CLASSIFICHE LA - CON 3 COLONNE COME FV */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
               {[
                 { title: 'K MANAGER', emoji: '👑', data: reportData.pilastri.energy.classifiche.k, color: '#FFD700' },
@@ -2547,7 +2554,11 @@ export default function Home() {
                     {data.slice(0, 10).map(([name, stats], i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #F0F0F0', fontSize: 11 }}>
                         <span style={{ color: '#333', fontWeight: i < 3 ? 600 : 400 }}>{i+1}° {name}</span>
-                        <span style={{ color: '#FFD700', fontWeight: 600 }}>{stats.total || 0}</span>
+                        <div style={{ display: 'flex', gap: 10, minWidth: 70, justifyContent: 'flex-end' }}>
+                          <span style={{ color: '#4CAF50', fontWeight: 600 }}>{stats.positivo || 0}</span>
+                          <span style={{ color: '#FFD700' }}>{stats.lavorabile || 0}</span>
+                          <span style={{ color: '#E53935' }}>{stats.meno || 0}</span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -2734,9 +2745,9 @@ export default function Home() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, fontSize: 9, color: '#666', marginBottom: 4, padding: '0 4px' }}>
                     <span>Cliente</span><span>Intermediario</span><span style={{ textAlign: 'right' }}>Giorni</span>
                   </div>
-                  <div style={{ maxHeight: 100, overflowY: 'auto', fontSize: 10 }}>
+                  <div style={{ maxHeight: 100, overflowY: 'auto', fontSize: 10, paddingRight: 8 }}>
                     {reportData.alertDaAttivare.verde.slice(0,6).map((a,i) => (
-                      <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, padding: '4px', color: '#333', background: i % 2 === 0 ? 'transparent' : 'rgba(76,175,80,0.05)', borderRadius: 4 }}>
+                      <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 60px', gap: 8, padding: '4px', color: '#333', background: i % 2 === 0 ? 'transparent' : 'rgba(76,175,80,0.05)', borderRadius: 4 }}>
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.cliente}</span>
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#666' }}>{a.intermediario}</span>
                         <span style={{ textAlign: 'right', color: '#4CAF50', fontWeight: 600 }}>{a.giorni}g</span>
@@ -2760,7 +2771,7 @@ export default function Home() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, fontSize: 9, color: '#666', marginBottom: 4, padding: '0 4px' }}>
                     <span>Cliente</span><span>Intermediario</span><span style={{ textAlign: 'right' }}>Giorni</span>
                   </div>
-                  <div style={{ maxHeight: 100, overflowY: 'auto', fontSize: 10 }}>
+                  <div style={{ maxHeight: 100, overflowY: 'auto', fontSize: 10, paddingRight: 8 }}>
                     {reportData.alertDaAttivare.giallo.slice(0,6).map((a,i) => (
                       <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, padding: '4px', color: '#333', background: i % 2 === 0 ? 'transparent' : 'rgba(255,215,0,0.05)', borderRadius: 4 }}>
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.cliente}</span>
@@ -2787,7 +2798,7 @@ export default function Home() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, fontSize: 9, color: '#666', marginBottom: 4, padding: '0 4px' }}>
                     <span>Cliente</span><span>Intermediario</span><span style={{ textAlign: 'right' }}>Giorni</span>
                   </div>
-                  <div style={{ maxHeight: 100, overflowY: 'auto', fontSize: 10 }}>
+                  <div style={{ maxHeight: 100, overflowY: 'auto', fontSize: 10, paddingRight: 8 }}>
                     {reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150).slice(0,6).map((a,i) => (
                       <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, padding: '4px', color: '#333', background: i % 2 === 0 ? 'transparent' : 'rgba(229,57,53,0.05)', borderRadius: 4 }}>
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.cliente}</span>
@@ -2820,12 +2831,22 @@ export default function Home() {
           {/* TRACKER COACHING */}
           {reportData.trackerCoaching && reportData.trackerCoaching.totale > 0 ? (
             <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
-                <span style={{ fontSize: 24 }}>🎯</span>
-                <div>
-                  <h3 style={{ color: '#2AAA8A', fontSize: 16, margin: 0, fontWeight: 700 }}>TRACKER COACHING</h3>
-                  <p style={{ color: '#666', fontSize: 11, margin: 0 }}>Milestone nuovi IVD attivati ({reportData.trackerCoaching.totale} IVD)</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 15 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 24 }}>🎯</span>
+                  <div>
+                    <h3 style={{ color: '#2AAA8A', fontSize: 16, margin: 0, fontWeight: 700 }}>TRACKER COACHING</h3>
+                    <p style={{ color: '#666', fontSize: 11, margin: 0 }}>Milestone nuovi IVD attivati ({reportData.trackerCoaching.totale} IVD)</p>
+                  </div>
                 </div>
+                <button onClick={() => {
+                  const csv = 'Nome IVD;Data Attivazione;Networker;LA (giorni);FV (giorni);Iscritto (giorni);Attivato (giorni)\n' + 
+                    reportData.trackerCoaching.lista.map(t => 
+                      `${t.nome};${t.dataAttivazione};${t.networker || '-'};${t.giorniLA !== null ? t.giorniLA : '-'};${t.giorniFV !== null ? t.giorniFV : '-'};${t.giorniIscritto !== null ? t.giorniIscritto : '-'};${t.giorniAttivato !== null ? t.giorniAttivato : '-'}`
+                    ).join('\n');
+                  const blob = new Blob([csv], {type: 'text/csv'}); const url = URL.createObjectURL(blob);
+                  const link = document.createElement('a'); link.href = url; link.download = 'tracker_coaching_completo.csv'; link.click();
+                }} style={{ padding: '6px 12px', background: '#2AAA8A', color: '#FFF', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>📥 Scarica CSV</button>
               </div>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 15 }}>
@@ -2851,20 +2872,22 @@ export default function Home() {
                 </div>
               </div>
               
-              {/* Header lista */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 45px)', gap: 4, padding: '8px 12px', background: '#F0F0F0', borderRadius: '8px 8px 0 0', fontSize: 9, color: '#666', fontWeight: 600 }}>
+              {/* Header lista con colonna Networker */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px repeat(4, 40px)', gap: 4, padding: '8px 12px', background: '#F0F0F0', borderRadius: '8px 8px 0 0', fontSize: 9, color: '#666', fontWeight: 600 }}>
                 <span>Nome IVD</span>
+                <span>Networker</span>
                 <span style={{ textAlign: 'center' }}>LA</span>
                 <span style={{ textAlign: 'center' }}>FV</span>
                 <span style={{ textAlign: 'center' }}>Iscr</span>
                 <span style={{ textAlign: 'center' }}>Att</span>
               </div>
               
-              {/* Lista */}
-              <div style={{ background: '#FAFAFA', borderRadius: '0 0 10px 10px', padding: '0 12px', maxHeight: 220, overflowY: 'auto' }}>
-                {reportData.trackerCoaching.lista.slice(0, 15).map((t, i) => (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 45px)', gap: 4, padding: '8px 0', borderBottom: '1px solid #E8E8E8', fontSize: 10, alignItems: 'center' }}>
+              {/* Lista COMPLETA con scroll */}
+              <div style={{ background: '#FAFAFA', borderRadius: '0 0 10px 10px', padding: '0 12px', maxHeight: 350, overflowY: 'auto', paddingRight: 8 }}>
+                {reportData.trackerCoaching.lista.map((t, i) => (
+                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 100px repeat(4, 40px)', gap: 4, padding: '6px 0', borderBottom: '1px solid #E8E8E8', fontSize: 10, alignItems: 'center' }}>
                     <span style={{ color: '#333', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.nome}</span>
+                    <span style={{ color: '#666', fontSize: 9, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.networker || '-'}</span>
                     <span style={{ textAlign: 'center', color: t.giorniLA !== null ? '#4CAF50' : '#CCC', fontWeight: t.giorniLA !== null ? 600 : 400 }}>{t.giorniLA !== null ? `${t.giorniLA}g` : '-'}</span>
                     <span style={{ textAlign: 'center', color: t.giorniFV !== null ? '#4CAF50' : '#CCC', fontWeight: t.giorniFV !== null ? 600 : 400 }}>{t.giorniFV !== null ? `${t.giorniFV}g` : '-'}</span>
                     <span style={{ textAlign: 'center', color: t.giorniIscritto !== null ? '#4CAF50' : '#CCC', fontWeight: t.giorniIscritto !== null ? 600 : 400 }}>{t.giorniIscritto !== null ? `${t.giorniIscritto}g` : '-'}</span>
@@ -2983,7 +3006,7 @@ export default function Home() {
         </div>
         
         {/* Footer versione */}
-        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v12.0</p>
+        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v12.1</p>
       </div>
     </div></>);
 
@@ -3177,7 +3200,7 @@ export default function Home() {
           </div>
         )}
       </main>
-      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v12.0 • Leader Ranking</footer>
+      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v12.1 • Leader Ranking</footer>
     </div></>);
 
   // PREVIEW
