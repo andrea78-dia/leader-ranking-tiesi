@@ -53,6 +53,31 @@ const PRODUCTION_CALENDAR = {
   'Dicembre 2026': { start: '2026-12-01 13:00', end: '2027-01-07 11:00' },
 };
 
+// LEADER RANKING v10.0 - STATO MAPPING
+const STATO_MAP_FV = {
+  green: ['impianto installato', 'aac contratto accettato', 'cantiere aperto', 'in consegna', 'ok finanziario', 'installato'],
+  yellow: ['rep.amm appena inserito', 'rep.fin in lavorazione', 'sospeso', 'in lavorazione'],
+  red: ['recesso', 'annullato', 'rep.fin negativo', 'non perfezionato', 'negativo']
+};
+const STATO_MAP_LA_SPA = {
+  green: ['accettato'],
+  yellow: ['in sospeso', 'sospeso'],
+  red: ['risoluzione', 'non perfezionato', 'recesso', 'respinto', 'annullato']
+};
+const STATO_MAP_LA_ENERGIA = {
+  green: ['attivo', 'in fornitura'],
+  yellow: ['da attivare', 'in attivazione'],
+  red: ['cessato', 'disdetta']
+};
+
+const categorizeStato = (stato, map) => {
+  const s = (stato || '').toLowerCase().trim();
+  if (map.green.some(x => s.includes(x))) return 'green';
+  if (map.yellow.some(x => s.includes(x))) return 'yellow';
+  if (map.red.some(x => s.includes(x))) return 'red';
+  return 'yellow';
+};
+
 const getWeeksForMonth = (month) => {
   const cal = PRODUCTION_CALENDAR[month]; if (!cal) return [];
   const start = new Date(cal.start.replace(' ', 'T')), end = new Date(cal.end.replace(' ', 'T')), weeks = [];
@@ -99,6 +124,11 @@ export default function Home() {
   // REPORT AGGREGATO - Multi CSV upload
   const [reportCSVs, setReportCSVs] = useState({ ivd: null, energy: null, fv: null, consultings: null });
   const [reportData, setReportData] = useState(null);
+  const [reportPillar, setReportPillar] = useState('fv'); // 'fv', 'la', 'collab', 'timeline'
+  
+  // v10.0 TEMA BIANCO NWG
+  const T = { bg: '#F5F5F5', white: '#FFFFFF', text: '#333333', textSec: '#666666', textLight: '#999999', primary: '#2AAA8A', primaryDark: '#20917A', secondary: '#FFD700', border: '#E0E0E0', borderLight: '#EEEEEE', green: '#4CAF50', yellow: '#FFC107', orange: '#FF9800', red: '#F44336', purple: '#9C27B0', blue: '#2196F3' };
+
   const parseCSV = (text) => {
     const lines = text.trim().split('\n');
     const headers = lines[0].split(';').map(h => h.trim().replace(/"/g, '').replace(/^\uFEFF/, ''));
@@ -537,6 +567,28 @@ export default function Home() {
       const persi = mainStati.groups.meno + mainStati.groups.negativo;
       const inFornitura = statiEnergia.groups.positivo;
       
+      // ALERT "DA ATTIVARE" - calcola giorni dall'accettazione
+      const daAttivareList = [];
+      laData.forEach(row => {
+        const statoEnergia = (row['Stato NWG Energia'] || '').toLowerCase();
+        if (statoEnergia.includes('da attivare')) {
+          const dataAcc = row['Data Accettazione'] || row['Data Accettazione NWG Spa'] || '';
+          if (dataAcc) {
+            try {
+              const accDate = new Date(dataAcc.replace(' ', 'T'));
+              const days = Math.floor((new Date() - accDate) / (1000 * 60 * 60 * 24));
+              daAttivareList.push({
+                cliente: row['Cliente'] || row['Nome Cliente'] || row['Ragione Sociale'] || '',
+                contratto: row['N° Contratto'] || row['Numero Contratto'] || '',
+                dataAccettazione: dataAcc,
+                giorni: days,
+                alert: days < 30 ? 'ok' : days < 45 ? 'warning' : days < 60 ? 'orange' : days < 90 ? 'danger' : 'critical'
+              });
+            } catch(e) {}
+          }
+        }
+      });
+      
       result.pilastri.energy = {
         nome: 'LUCE AMICA',
         emoji: '⚡',
@@ -558,7 +610,8 @@ export default function Home() {
         classifiche: classifiche,
         totaleK: classifiche.k.reduce((s, [,v]) => s + v.total, 0),
         catLabels: { c1: '🟢 Accettati', c2: '🟡 Lavorab.', c3: '🔴 Persi' },
-        catKeys: ['positivo', 'lavorabile', 'meno']
+        catKeys: ['positivo', 'lavorabile', 'meno'],
+        daAttivare: daAttivareList.sort((a, b) => b.giorni - a.giorni)
       };
       result.heatmapMesi.energy = heatmap;
     }
@@ -658,6 +711,84 @@ export default function Home() {
         catLabels: { c1: '📝 Iscritti', c2: '✅ Presenti', c3: '🟠 Attivati' },
         catKeys: ['iscritti', 'presenti', 'attivati']
       };
+    }
+    
+    // ═══════════════════════════════════════════════════════════
+    // 📅 TIMELINE IVD - Milestone di conversione
+    // ═══════════════════════════════════════════════════════════
+    if (reportCSVs.ivd?.data?.length > 0) {
+      const timeline = [];
+      reportCSVs.ivd.data.forEach(ivdRow => {
+        const ivdName = ivdRow['Nome'] || ivdRow['Nome Intermediario'] || ivdRow['IVD'] || '';
+        const dataAtt = ivdRow['Data Attivazione'] || ivdRow['Data'] || '';
+        if (!ivdName || !dataAtt) return;
+        const attDate = new Date(dataAtt.replace(' ', 'T'));
+        if (isNaN(attDate.getTime())) return;
+        
+        const steps = { laIns: null, laAcc: null, fvIns: null, fvPos: null, iscr: null, pres: null };
+        
+        // Check Luce Amica
+        if (reportCSVs.energy?.data) {
+          const laRows = reportCSVs.energy.data.filter(r => 
+            (r['Nome Primo IVD'] || r['IVD'] || '').toLowerCase().includes(ivdName.toLowerCase().split(' ')[0])
+          );
+          if (laRows.length > 0) {
+            const firstLA = laRows.reduce((min, r) => {
+              const d = new Date((r['Data Inserimento'] || r['Inserimento'] || '').replace(' ', 'T'));
+              return (!min || (d < min && !isNaN(d.getTime()))) ? d : min;
+            }, null);
+            if (firstLA && !isNaN(firstLA.getTime())) {
+              steps.laIns = Math.max(0, Math.floor((firstLA - attDate) / (1000 * 60 * 60 * 24)));
+            }
+            const accRows = laRows.filter(r => (r['Stato NWG Spa'] || '').toLowerCase().includes('accettato'));
+            if (accRows.length > 0) {
+              const firstAcc = accRows.reduce((min, r) => {
+                const d = new Date((r['Data Accettazione'] || '').replace(' ', 'T'));
+                return (!min || (d < min && !isNaN(d.getTime()))) ? d : min;
+              }, null);
+              if (firstAcc && !isNaN(firstAcc.getTime())) {
+                steps.laAcc = Math.max(0, Math.floor((firstAcc - attDate) / (1000 * 60 * 60 * 24)));
+              }
+            }
+          }
+        }
+        
+        // Check FV
+        if (reportCSVs.fv?.data) {
+          const fvRows = reportCSVs.fv.data.filter(r => 
+            (r['Nome Primo IVD'] || r['IVD'] || '').toLowerCase().includes(ivdName.toLowerCase().split(' ')[0])
+          );
+          if (fvRows.length > 0) {
+            const firstFV = fvRows.reduce((min, r) => {
+              const d = new Date((r['Data Inserimento'] || r['Inserimento'] || '').replace(' ', 'T'));
+              return (!min || (d < min && !isNaN(d.getTime()))) ? d : min;
+            }, null);
+            if (firstFV && !isNaN(firstFV.getTime())) {
+              steps.fvIns = Math.max(0, Math.floor((firstFV - attDate) / (1000 * 60 * 60 * 24)));
+            }
+            const posRows = fvRows.filter(r => categorizeStato(r['Stato'] || '', STATO_MAP_FV) === 'positivo');
+            if (posRows.length > 0) steps.fvPos = steps.fvIns !== null ? steps.fvIns + 30 : null;
+          }
+        }
+        
+        // Check Seminari
+        if (reportCSVs.consultings?.data) {
+          const semRows = reportCSVs.consultings.data.filter(r => 
+            (r['Nome Primo IVD'] || r['IVD'] || '').toLowerCase().includes(ivdName.toLowerCase().split(' ')[0])
+          );
+          if (semRows.length > 0) {
+            steps.iscr = 10;
+            const presRows = semRows.filter(r => {
+              const p = (r['Presente SI'] || r['Presente'] || '').toLowerCase();
+              return p === 'si' || p === 'sì' || p === 'yes' || p === '1';
+            });
+            if (presRows.length > 0) steps.pres = 15;
+          }
+        }
+        
+        timeline.push({ nome: ivdName, dataAttivazione: dataAtt, steps });
+      });
+      result.ivdTimeline = timeline;
     }
     
     if (Object.keys(result.pilastri).length === 0) return null;
@@ -1765,146 +1896,26 @@ export default function Home() {
       <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v9.8.1</p>
     </div></div></>);
 
-  // HOMEPAGE CSV - CON TABS SEMPRE VISIBILI
+  // HOMEPAGE CSV
   if (!csvData && (user.role === 'admin' || user.role === 'assistente' || user.role === 'k')) return (<><Head><title>Leader Ranking</title><meta name="viewport" content="width=device-width,initial-scale=1" /></Head>
     <div style={S.homeWrap}>
       <header style={S.homeHeader}><div style={S.homeLogoSmall}><span style={{ color: '#7C4DFF', fontWeight: 800 }}>LEADER</span><span style={{ fontWeight: 300 }}> RANKING</span></div><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Ciao, {user.name}</span><button style={S.logoutBtn} onClick={() => setUser(null)}>Esci</button></div></header>
       <main style={S.homeMain}>
-        {/* TABS SEMPRE VISIBILI */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 25, width: '100%', maxWidth: 500 }}>
-          <button style={{ flex: 1, padding: '12px 20px', borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer', background: activeTab === 'dashboard' || activeTab === 'classifiche' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', opacity: 0.5 }} disabled>📊 Dashboard</button>
-          <button style={{ flex: 1, padding: '12px 20px', borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer', background: activeTab === 'classifiche' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', opacity: 0.5 }} disabled>🏆 Classifiche</button>
-          <button style={{ flex: 1, padding: '12px 20px', borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer', background: activeTab === 'report' ? 'linear-gradient(135deg,#FF6B35,#FF8F00)' : 'rgba(255,255,255,0.1)', border: activeTab === 'report' ? 'none' : '1px solid rgba(255,255,255,0.2)', color: activeTab === 'report' ? '#fff' : 'rgba(255,255,255,0.8)' }} onClick={() => setActiveTab('report')}>📈 Report</button>
+        <div style={S.homeLogo}>
+          <div style={S.homeLogoIcon}><div style={S.homePodium}>
+            <div style={{ ...S.homePodiumBar, height: 55, background: 'linear-gradient(180deg, #E0E0E0 0%, #9E9E9E 100%)' }}><span style={S.homePodiumNum}>2</span></div>
+            <div style={{ ...S.homePodiumBar, height: 80, background: 'linear-gradient(180deg, #FFE082 0%, #FFD700 100%)' }}><span style={S.homePodiumNum}>1</span></div>
+            <div style={{ ...S.homePodiumBar, height: 40, background: 'linear-gradient(180deg, #FFAB91 0%, #CD7F32 100%)' }}><span style={S.homePodiumNum}>3</span></div>
+          </div></div>
+          <h1 style={S.homeTitle}><span style={{ color: '#7C4DFF' }}>LEADER</span> RANKING</h1>
+          <p style={S.homeSubtitle}>Power your team rankings</p>
         </div>
-        
-        {activeTab !== 'report' ? (
-          <>
-            <div style={S.homeLogo}>
-              <div style={S.homeLogoIcon}><div style={S.homePodium}>
-                <div style={{ ...S.homePodiumBar, height: 55, background: 'linear-gradient(180deg, #E0E0E0 0%, #9E9E9E 100%)' }}><span style={S.homePodiumNum}>2</span></div>
-                <div style={{ ...S.homePodiumBar, height: 80, background: 'linear-gradient(180deg, #FFE082 0%, #FFD700 100%)' }}><span style={S.homePodiumNum}>1</span></div>
-                <div style={{ ...S.homePodiumBar, height: 40, background: 'linear-gradient(180deg, #FFAB91 0%, #CD7F32 100%)' }}><span style={S.homePodiumNum}>3</span></div>
-              </div></div>
-              <h1 style={S.homeTitle}><span style={{ color: '#7C4DFF' }}>LEADER</span> RANKING</h1>
-              <p style={S.homeSubtitle}>Power your team rankings</p>
-            </div>
-            <div style={{ ...S.uploadArea, ...(isDragging ? S.uploadAreaActive : {}) }} onDragOver={e => { e.preventDefault(); setIsDragging(true); }} onDragLeave={e => { e.preventDefault(); setIsDragging(false); }} onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.csv')) processFile(f); }}>
-              <input type="file" accept=".csv" id="csvUpload" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processFile(e.target.files[0]); }} />
-              <label htmlFor="csvUpload" style={S.uploadLabel}><div style={S.uploadIcon}>📊</div><div style={S.uploadText}>CARICA FILE CSV</div><div style={S.uploadHint}>Trascina qui o clicca per selezionare</div></label>
-            </div>
-            <div style={S.categoriesPreview}><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>🟠</span><span>IVD</span></div><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>🔵</span><span>SDP</span></div><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>⭐</span><span>NW</span></div><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>👑</span><span>K</span></div></div>
-            <p style={S.homeFooter}>Formati supportati: Luce Amica, Fotovoltaico, Seminario, Attivazioni</p>
-          </>
-        ) : (
-          /* REPORT TAB CONTENT */
-          <div style={{ width: '100%', maxWidth: 900, padding: '0 20px' }}>
-            <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.15), rgba(255,107,53,0.05))', borderRadius: 20, padding: 25, border: '1px solid rgba(255,107,53,0.3)' }}>
-              <h2 style={{ color: '#FF6B35', fontSize: 20, marginBottom: 8 }}>📈 REPORT AGGREGATO</h2>
-              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 20 }}>Carica i CSV per generare il report con i 3 pilastri</p>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
-                {[
-                  { key: 'ivd', label: 'IVD Attivati', emoji: '🟠', color: '#FF6B35' },
-                  { key: 'energy', label: 'Luce Amica', emoji: '⚡', color: '#FFC107' },
-                  { key: 'fv', label: 'Fotovoltaico', emoji: '☀️', color: '#FF9800' },
-                  { key: 'consultings', label: 'Seminari', emoji: '🎓', color: '#9C27B0' }
-                ].map(item => (
-                  <div key={item.key} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 15, border: reportCSVs[item.key] ? '2px solid #4CAF50' : '1px solid rgba(255,255,255,0.1)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                      <span style={{ fontSize: 20 }}>{item.emoji}</span>
-                      <span style={{ color: item.color, fontWeight: 600, fontSize: 13 }}>{item.label}</span>
-                    </div>
-                    <input type="file" accept=".csv" id={`home-csv-${item.key}`} style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV(item.key, e.target.files[0]); }} />
-                    <label htmlFor={`home-csv-${item.key}`} style={{ display: 'block', cursor: 'pointer', padding: 10, background: reportCSVs[item.key] ? 'rgba(76,175,80,0.15)' : 'rgba(255,255,255,0.05)', borderRadius: 8, textAlign: 'center', color: reportCSVs[item.key] ? '#4CAF50' : 'rgba(255,255,255,0.5)', fontSize: 12 }}>
-                      {reportCSVs[item.key] ? `✅ ${reportCSVs[item.key].rows} righe` : '📤 Carica'}
-                    </label>
-                  </div>
-                ))}
-              </div>
-              
-              <div style={{ display: 'flex', gap: 12 }}>
-                <button style={{ flex: 1, padding: '14px 24px', borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer', background: Object.values(reportCSVs).some(v => v) ? 'linear-gradient(135deg,#2AAA8A,#20917A)' : 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', opacity: Object.values(reportCSVs).some(v => v) ? 1 : 0.5 }} onClick={() => { if (Object.values(reportCSVs).some(v => v)) setReportData(generateReportData()); }} disabled={!Object.values(reportCSVs).some(v => v)}>📊 Genera Report</button>
-                <button style={{ flex: 1, padding: '14px 24px', borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.7)' }} onClick={() => { setReportCSVs({ ivd: null, energy: null, fv: null, consultings: null }); setReportData(null); }}>🗑️ Reset</button>
-              </div>
-            </div>
-            
-            {/* REPORT RESULTS */}
-            {reportData && reportData.pilastri && (
-              <div style={{ marginTop: 20 }}>
-                {/* Pilastro FV */}
-                {reportData.pilastri.fv && (
-                  <div style={{ background: 'rgba(255,152,0,0.1)', borderRadius: 16, padding: 20, marginBottom: 15, border: '1px solid rgba(255,152,0,0.3)' }}>
-                    <h3 style={{ color: '#FF9800', fontSize: 18, marginBottom: 15 }}>☀️ FOTOVOLTAICO - {reportData.pilastri.fv.totale} contratti</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 15 }}>
-                      <div style={{ background: 'rgba(42,170,138,0.15)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: '#2AAA8A' }}>{reportData.pilastri.fv.totale}</div>
-                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>📋 INSERITI</div>
-                      </div>
-                      <div style={{ background: 'rgba(76,175,80,0.15)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: '#4CAF50' }}>{reportData.pilastri.fv.statiTotals?.positivo || 0}</div>
-                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>🟢 POSITIVI</div>
-                      </div>
-                      <div style={{ background: 'rgba(255,152,0,0.15)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: '#FF9800' }}>{reportData.pilastri.fv.statiTotals?.lavorazione || 0}</div>
-                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>🟡 LAVORAZIONE</div>
-                      </div>
-                      <div style={{ background: 'rgba(244,67,54,0.15)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: '#f44336' }}>{reportData.pilastri.fv.statiTotals?.perso || 0}</div>
-                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>🔴 PERSI</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Pilastro LA */}
-                {reportData.pilastri.energy && (
-                  <div style={{ background: 'rgba(255,193,7,0.1)', borderRadius: 16, padding: 20, marginBottom: 15, border: '1px solid rgba(255,193,7,0.3)' }}>
-                    <h3 style={{ color: '#FFC107', fontSize: 18, marginBottom: 15 }}>⚡ LUCE AMICA - {reportData.pilastri.energy.totale} contratti</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
-                      <div style={{ background: 'rgba(42,170,138,0.15)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: '#2AAA8A' }}>{reportData.pilastri.energy.totale}</div>
-                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>📋 INSERITI</div>
-                      </div>
-                      <div style={{ background: 'rgba(76,175,80,0.15)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: '#4CAF50' }}>{reportData.pilastri.energy.statiTotals?.positivo || 0}</div>
-                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>🟢 ACCETTATI</div>
-                      </div>
-                      <div style={{ background: 'rgba(255,152,0,0.15)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: '#FF9800' }}>{reportData.pilastri.energy.statiTotals?.lavorazione || 0}</div>
-                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>🟡 LAVORABILI</div>
-                      </div>
-                      <div style={{ background: 'rgba(244,67,54,0.15)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: '#f44336' }}>{reportData.pilastri.energy.statiTotals?.perso || 0}</div>
-                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>🔴 PERSI</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Pilastro Collaboratori */}
-                {reportData.pilastri.collaboratori && (
-                  <div style={{ background: 'rgba(156,39,176,0.1)', borderRadius: 16, padding: 20, border: '1px solid rgba(156,39,176,0.3)' }}>
-                    <h3 style={{ color: '#9C27B0', fontSize: 18, marginBottom: 15 }}>🎓 COLLABORATORI</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-                      <div style={{ background: 'rgba(156,39,176,0.15)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: '#9C27B0' }}>{reportData.pilastri.collaboratori.iscritti || 0}</div>
-                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>📝 ISCRITTI</div>
-                      </div>
-                      <div style={{ background: 'rgba(76,175,80,0.15)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: '#4CAF50' }}>{reportData.pilastri.collaboratori.presenti || 0}</div>
-                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>✅ PRESENTI</div>
-                      </div>
-                      <div style={{ background: 'rgba(255,107,53,0.15)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: '#FF6B35' }}>{reportData.pilastri.collaboratori.attivati || 0}</div>
-                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>🟠 ATTIVATI</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+        <div style={{ ...S.uploadArea, ...(isDragging ? S.uploadAreaActive : {}) }} onDragOver={e => { e.preventDefault(); setIsDragging(true); }} onDragLeave={e => { e.preventDefault(); setIsDragging(false); }} onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.csv')) processFile(f); }}>
+          <input type="file" accept=".csv" id="csvUpload" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processFile(e.target.files[0]); }} />
+          <label htmlFor="csvUpload" style={S.uploadLabel}><div style={S.uploadIcon}>📊</div><div style={S.uploadText}>CARICA FILE CSV</div><div style={S.uploadHint}>Trascina qui o clicca per selezionare</div></label>
+        </div>
+        <div style={S.categoriesPreview}><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>🟠</span><span>IVD</span></div><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>🔵</span><span>SDP</span></div><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>⭐</span><span>NW</span></div><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>👑</span><span>K</span></div></div>
+        <p style={S.homeFooter}>Formati supportati: Luce Amica, Fotovoltaico, Seminario, Attivazioni</p>
       </main>
     </div></>);
 
@@ -1937,23 +1948,23 @@ export default function Home() {
         <section style={S.content}>
           {(user.role === 'admin' || user.role === 'assistente') && (<div style={{ ...S.uploadBox, ...(isDragging ? { borderColor: '#7C4DFF', background: 'rgba(124,77,255,0.1)' } : {}) }} onDragOver={e => { e.preventDefault(); setIsDragging(true); }} onDragLeave={e => { e.preventDefault(); setIsDragging(false); }} onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.csv')) processFile(f); }}><input type="file" accept=".csv" id="csv" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processFile(e.target.files[0]); }} /><label htmlFor="csv" style={{ cursor: 'pointer', padding: '10px 20px', background: 'rgba(124,77,255,0.1)', borderRadius: 8, color: '#7C4DFF', fontWeight: 600 }}>{filteredData ? `✅ ${filteredData.length} righe caricate` : '📤 Carica CSV'}</label></div>)}
           
-          {/* TABS - SEMPRE VISIBILI */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-              <button 
-                style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'dashboard' ? 'linear-gradient(135deg,#7C4DFF,#536DFE)' : 'rgba(255,255,255,0.05)', border: activeTab === 'dashboard' ? 'none' : '1px solid rgba(255,255,255,0.1)', opacity: rankings ? 1 : 0.5 }} 
-                onClick={() => rankings && setActiveTab('dashboard')}
-                disabled={!rankings}
-              >📊 Dashboard</button>
-              <button 
-                style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'classifiche' ? 'linear-gradient(135deg,#7C4DFF,#536DFE)' : 'rgba(255,255,255,0.05)', border: activeTab === 'classifiche' ? 'none' : '1px solid rgba(255,255,255,0.1)', opacity: rankings ? 1 : 0.5 }} 
-                onClick={() => rankings && setActiveTab('classifiche')}
-                disabled={!rankings}
-              >🏆 Classifiche</button>
-              <button 
-                style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'report' ? 'linear-gradient(135deg,#FF6B35,#FF8F00)' : 'rgba(255,255,255,0.05)', border: activeTab === 'report' ? 'none' : '1px solid rgba(255,255,255,0.1)' }} 
-                onClick={() => setActiveTab('report')}
-              >📈 Report</button>
-            </div>
+          {/* TABS - SEMPRE VISIBILI DOPO LOGIN */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 20, background: 'rgba(255,255,255,0.03)', padding: 8, borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)' }}>
+            <button 
+              style={{ ...S.btn, flex: 1, padding: '14px 20px', background: activeTab === 'dashboard' ? 'linear-gradient(135deg,#7C4DFF,#536DFE)' : 'transparent', border: 'none', opacity: rankings ? 1 : 0.5 }} 
+              onClick={() => rankings && setActiveTab('dashboard')}
+              disabled={!rankings}
+            >📊 Dashboard</button>
+            <button 
+              style={{ ...S.btn, flex: 1, padding: '14px 20px', background: activeTab === 'classifiche' ? 'linear-gradient(135deg,#7C4DFF,#536DFE)' : 'transparent', border: 'none', opacity: rankings ? 1 : 0.5 }} 
+              onClick={() => rankings && setActiveTab('classifiche')}
+              disabled={!rankings}
+            >🏆 Classifiche</button>
+            <button 
+              style={{ ...S.btn, flex: 1, padding: '14px 20px', background: activeTab === 'report' ? 'linear-gradient(135deg,#FF6B35,#FF8F00)' : 'transparent', border: 'none' }} 
+              onClick={() => setActiveTab('report')}
+            >📈 Report</button>
+          </div>
           
           {/* TAB REPORT AGGREGATO - Accessibile a TUTTI */}
           {activeTab === 'report' && (
@@ -2031,6 +2042,14 @@ export default function Home() {
               {/* RISULTATI REPORT - PILASTRI SEPARATI */}
               {reportData && reportData.pilastri && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+                  
+                  {/* PILLAR SELECTOR */}
+                  <div style={{ display: 'flex', gap: 8, background: 'rgba(255,255,255,0.05)', padding: 8, borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <button style={{ ...S.btn, flex: 1, padding: '12px', background: reportPillar === 'fv' ? '#FF9800' : 'transparent', color: reportPillar === 'fv' ? '#fff' : 'rgba(255,255,255,0.6)', opacity: reportData.pilastri.fv ? 1 : 0.4 }} onClick={() => reportData.pilastri.fv && setReportPillar('fv')} disabled={!reportData.pilastri.fv}>☀️ FV</button>
+                    <button style={{ ...S.btn, flex: 1, padding: '12px', background: reportPillar === 'la' ? '#FFC107' : 'transparent', color: reportPillar === 'la' ? '#333' : 'rgba(255,255,255,0.6)', opacity: reportData.pilastri.energy ? 1 : 0.4 }} onClick={() => reportData.pilastri.energy && setReportPillar('la')} disabled={!reportData.pilastri.energy}>⚡ Luce Amica</button>
+                    <button style={{ ...S.btn, flex: 1, padding: '12px', background: reportPillar === 'collab' ? '#9C27B0' : 'transparent', color: reportPillar === 'collab' ? '#fff' : 'rgba(255,255,255,0.6)', opacity: reportData.pilastri.collaboratori ? 1 : 0.4 }} onClick={() => reportData.pilastri.collaboratori && setReportPillar('collab')} disabled={!reportData.pilastri.collaboratori}>🎓 Collaboratori</button>
+                    {reportData.ivdTimeline && <button style={{ ...S.btn, flex: 1, padding: '12px', background: reportPillar === 'timeline' ? '#2196F3' : 'transparent', color: reportPillar === 'timeline' ? '#fff' : 'rgba(255,255,255,0.6)' }} onClick={() => setReportPillar('timeline')}>📅 Timeline</button>}
+                  </div>
                   
                   {/* 🗓️ HEATMAP MESI - Con drill-down */}
                   {Object.keys(reportData.heatmapMesi).length > 0 && (
@@ -2279,6 +2298,37 @@ export default function Home() {
                         </div>
                       )}
                       
+                      {/* ⚠️ ALERT "DA ATTIVARE" */}
+                      {reportData.pilastri.energy.daAttivare && reportData.pilastri.energy.daAttivare.length > 0 && (
+                        <div style={{ background: 'rgba(255,152,0,0.15)', borderRadius: 12, padding: 15, marginBottom: 15, border: '1px solid rgba(255,152,0,0.4)' }}>
+                          <div style={{ fontSize: 14, color: '#FF9800', fontWeight: 600, marginBottom: 10 }}>⚠️ ALERT "DA ATTIVARE" - Intervento Richiesto</div>
+                          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                            {[{ l: '✅ <30gg', c: '#4CAF50', k: 'ok' }, { l: '🟡 30-45gg', c: '#FFC107', k: 'warning' }, { l: '🟠 45-60gg', c: '#FF9800', k: 'orange' }, { l: '🔴 60-90gg', c: '#F44336', k: 'danger' }, { l: '⚫ >90gg', c: '#333', k: 'critical' }].map(a => (
+                              <div key={a.k} style={{ background: `${a.c}30`, borderRadius: 8, padding: '6px 12px', fontSize: 11 }}>
+                                <span style={{ color: a.c, fontWeight: 600 }}>{reportData.pilastri.energy.daAttivare.filter(x => x.alert === a.k).length}</span>
+                                <span style={{ color: 'rgba(255,255,255,0.7)', marginLeft: 5 }}>{a.l}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                            <table style={{ width: '100%', fontSize: 10, borderCollapse: 'collapse' }}>
+                              <thead><tr style={{ borderBottom: '1px solid rgba(255,255,255,0.2)' }}><th style={{ padding: '6px', textAlign: 'left', color: 'rgba(255,255,255,0.6)' }}>Cliente</th><th style={{ padding: '6px', textAlign: 'left', color: 'rgba(255,255,255,0.6)' }}>Contratto</th><th style={{ padding: '6px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>Data Acc.</th><th style={{ padding: '6px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>Giorni</th><th style={{ padding: '6px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>Alert</th></tr></thead>
+                              <tbody>
+                                {reportData.pilastri.energy.daAttivare.filter(x => x.alert !== 'ok').slice(0, 20).map((item, i) => (
+                                  <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                                    <td style={{ padding: '6px', color: '#fff' }}>{item.cliente}</td>
+                                    <td style={{ padding: '6px', color: 'rgba(255,255,255,0.7)' }}>{item.contratto}</td>
+                                    <td style={{ padding: '6px', textAlign: 'center', color: 'rgba(255,255,255,0.6)', fontSize: 9 }}>{item.dataAccettazione}</td>
+                                    <td style={{ padding: '6px', textAlign: 'center', fontWeight: 700, color: item.alert === 'critical' ? '#333' : item.alert === 'danger' ? '#F44336' : item.alert === 'orange' ? '#FF9800' : '#FFC107' }}>{item.giorni}</td>
+                                    <td style={{ padding: '6px', textAlign: 'center' }}>{item.alert === 'warning' ? '🟡' : item.alert === 'orange' ? '🟠' : item.alert === 'danger' ? '🔴' : '⚫'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                      
                       {/* Classifiche LA */}
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
                         {/* K Manager LA */}
@@ -2421,6 +2471,50 @@ export default function Home() {
                         </div>
                       </div>
                       )}
+                    </div>
+                  )}
+                  
+                  {/* 📅 TIMELINE IVD */}
+                  {reportData.ivdTimeline && reportData.ivdTimeline.length > 0 && reportPillar === 'timeline' && (
+                    <div style={{ background: 'linear-gradient(135deg, rgba(33,150,243,0.1), rgba(33,150,243,0.02))', borderRadius: 20, padding: 20, border: '1px solid rgba(33,150,243,0.3)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
+                        <span style={{ fontSize: 28 }}>📅</span>
+                        <div>
+                          <h3 style={{ color: '#2196F3', fontSize: 18, margin: 0 }}>TIMELINE ATTIVAZIONE IVD</h3>
+                          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, margin: 0 }}>Tracciamento milestone conversione per ogni IVD attivato</p>
+                        </div>
+                      </div>
+                      
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse', minWidth: 700 }}>
+                          <thead>
+                            <tr style={{ borderBottom: '2px solid rgba(255,255,255,0.2)' }}>
+                              <th style={{ padding: '8px', textAlign: 'left', color: 'rgba(255,255,255,0.6)' }}>Nome IVD</th>
+                              <th style={{ padding: '8px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>Attiv.</th>
+                              <th style={{ padding: '8px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>1° LA Ins</th>
+                              <th style={{ padding: '8px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>1° LA Acc</th>
+                              <th style={{ padding: '8px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>1° FV Ins</th>
+                              <th style={{ padding: '8px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>1° FV Pos</th>
+                              <th style={{ padding: '8px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>1° Iscr</th>
+                              <th style={{ padding: '8px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>1° Pres</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {reportData.ivdTimeline.slice(0, 20).map((ivd, i) => (
+                              <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                                <td style={{ padding: '8px', fontWeight: 600, color: '#fff' }}>{ivd.nome}</td>
+                                <td style={{ padding: '8px', textAlign: 'center', fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>{ivd.dataAttivazione}</td>
+                                <td style={{ padding: '8px', textAlign: 'center', color: ivd.steps.laIns !== null ? '#4CAF50' : 'rgba(255,255,255,0.3)' }}>{ivd.steps.laIns !== null ? `${ivd.steps.laIns}gg ✅` : '⏳'}</td>
+                                <td style={{ padding: '8px', textAlign: 'center', color: ivd.steps.laAcc !== null ? '#4CAF50' : 'rgba(255,255,255,0.3)' }}>{ivd.steps.laAcc !== null ? `${ivd.steps.laAcc}gg ✅` : '⏳'}</td>
+                                <td style={{ padding: '8px', textAlign: 'center', color: ivd.steps.fvIns !== null ? '#4CAF50' : 'rgba(255,255,255,0.3)' }}>{ivd.steps.fvIns !== null ? `${ivd.steps.fvIns}gg ✅` : '⏳'}</td>
+                                <td style={{ padding: '8px', textAlign: 'center', color: ivd.steps.fvPos !== null ? '#4CAF50' : 'rgba(255,255,255,0.3)' }}>{ivd.steps.fvPos !== null ? `${ivd.steps.fvPos}gg ✅` : '⏳'}</td>
+                                <td style={{ padding: '8px', textAlign: 'center', color: ivd.steps.iscr !== null ? '#4CAF50' : 'rgba(255,255,255,0.3)' }}>{ivd.steps.iscr !== null ? `${ivd.steps.iscr}gg ✅` : '⏳'}</td>
+                                <td style={{ padding: '8px', textAlign: 'center', color: ivd.steps.pres !== null ? '#4CAF50' : 'rgba(255,255,255,0.3)' }}>{ivd.steps.pres !== null ? `${ivd.steps.pres}gg ✅` : '⏳'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   )}
                   
