@@ -53,31 +53,6 @@ const PRODUCTION_CALENDAR = {
   'Dicembre 2026': { start: '2026-12-01 13:00', end: '2027-01-07 11:00' },
 };
 
-// LEADER RANKING v10.0 - STATO MAPPING
-const STATO_MAP_FV = {
-  green: ['impianto installato', 'aac contratto accettato', 'cantiere aperto', 'in consegna', 'ok finanziario', 'installato'],
-  yellow: ['rep.amm appena inserito', 'rep.fin in lavorazione', 'sospeso', 'in lavorazione'],
-  red: ['recesso', 'annullato', 'rep.fin negativo', 'non perfezionato', 'negativo']
-};
-const STATO_MAP_LA_SPA = {
-  green: ['accettato'],
-  yellow: ['in sospeso', 'sospeso'],
-  red: ['risoluzione', 'non perfezionato', 'recesso', 'respinto', 'annullato']
-};
-const STATO_MAP_LA_ENERGIA = {
-  green: ['attivo', 'in fornitura'],
-  yellow: ['da attivare', 'in attivazione'],
-  red: ['cessato', 'disdetta']
-};
-
-const categorizeStato = (stato, map) => {
-  const s = (stato || '').toLowerCase().trim();
-  if (map.green.some(x => s.includes(x))) return 'green';
-  if (map.yellow.some(x => s.includes(x))) return 'yellow';
-  if (map.red.some(x => s.includes(x))) return 'red';
-  return 'yellow';
-};
-
 const getWeeksForMonth = (month) => {
   const cal = PRODUCTION_CALENDAR[month]; if (!cal) return [];
   const start = new Date(cal.start.replace(' ', 'T')), end = new Date(cal.end.replace(' ', 'T')), weeks = [];
@@ -124,11 +99,6 @@ export default function Home() {
   // REPORT AGGREGATO - Multi CSV upload
   const [reportCSVs, setReportCSVs] = useState({ ivd: null, energy: null, fv: null, consultings: null });
   const [reportData, setReportData] = useState(null);
-  const [reportPillar, setReportPillar] = useState('fv'); // 'fv', 'la', 'collab', 'timeline'
-  
-  // v10.0 TEMA BIANCO NWG
-  const T = { bg: '#F5F5F5', white: '#FFFFFF', text: '#333333', textSec: '#666666', textLight: '#999999', primary: '#2AAA8A', primaryDark: '#20917A', secondary: '#FFD700', border: '#E0E0E0', borderLight: '#EEEEEE', green: '#4CAF50', yellow: '#FFC107', orange: '#FF9800', red: '#F44336', purple: '#9C27B0', blue: '#2196F3' };
-
   const parseCSV = (text) => {
     const lines = text.trim().split('\n');
     const headers = lines[0].split(';').map(h => h.trim().replace(/"/g, '').replace(/^\uFEFF/, ''));
@@ -210,7 +180,7 @@ export default function Home() {
   const getData = () => rankings ? (rankings[selectedRanking] || []) : [];
   const getLabels = () => rankings?.type === 'seminario' ? { c1: 'ISCRITTI', c2: 'PRESENTI' } : { c1: 'INSERITI', c2: 'ACCETTATI' };
   const isExclusive = () => ['nw', 'k', 'eb', 'frm'].includes(selectedRanking);
-  const getConfig = () => RANKING_CONFIG[selectedRanking] || { label: '', category: '', color: '#7C4DFF', emoji: '📊', design: 'impact' };
+  const getConfig = () => RANKING_CONFIG[selectedRanking] || { label: '', category: '', color: '#2AAA8A', emoji: '📊', design: 'impact' };
   const getClassificaTotal = () => getData().reduce((sum, [,s]) => sum + s.v1, 0);
   const groupByValue = (data, useV2 = false) => {
     const groups = {}; data.forEach(([name, s]) => { const val = useV2 ? s.v2 : s.v1; if (!groups[val]) groups[val] = []; groups[val].push({ name, ...s }); });
@@ -327,7 +297,7 @@ export default function Home() {
   };
 
   // Colori per torte e stati
-  const PIE_COLORS = ['#FFD700', '#7C4DFF', '#FF6B35', '#4CAF50', '#2196F3', '#E91E63', '#00BCD4', '#9C27B0', '#FF9800', '#607D8B'];
+  const PIE_COLORS = ['#FFD700', '#2AAA8A', '#FF6B35', '#4CAF50', '#2196F3', '#E91E63', '#00BCD4', '#9C27B0', '#FF9800', '#607D8B'];
   const STATO_COLORS = { 
     'Accettato': '#4CAF50', 'Sospeso': '#FFC107', 'In sospeso': '#FFC107', 'Presente': '#4CAF50', 'Assente': '#FF6B35', 
     'In lavorazione': '#2196F3', 'Installato': '#00BCD4', 'Impianto installato': '#00BCD4', 'Recesso': '#f44336', 
@@ -341,7 +311,7 @@ export default function Home() {
     warm: '#FFC107',     // 40-70% 🟡
     cool: '#FF9800',     // 10-40% 🟠
     cold: '#FF5722',     // <10% 🔴
-    zero: 'rgba(255,255,255,0.05)' // 0 ⬜
+    zero: '#F5F5F5' // 0 ⬜
   };
   
   const getHeatmapColor = (val, max) => {
@@ -567,28 +537,6 @@ export default function Home() {
       const persi = mainStati.groups.meno + mainStati.groups.negativo;
       const inFornitura = statiEnergia.groups.positivo;
       
-      // ALERT "DA ATTIVARE" - calcola giorni dall'accettazione
-      const daAttivareList = [];
-      laData.forEach(row => {
-        const statoEnergia = (row['Stato NWG Energia'] || '').toLowerCase();
-        if (statoEnergia.includes('da attivare')) {
-          const dataAcc = row['Data Accettazione'] || row['Data Accettazione NWG Spa'] || '';
-          if (dataAcc) {
-            try {
-              const accDate = new Date(dataAcc.replace(' ', 'T'));
-              const days = Math.floor((new Date() - accDate) / (1000 * 60 * 60 * 24));
-              daAttivareList.push({
-                cliente: row['Cliente'] || row['Nome Cliente'] || row['Ragione Sociale'] || '',
-                contratto: row['N° Contratto'] || row['Numero Contratto'] || '',
-                dataAccettazione: dataAcc,
-                giorni: days,
-                alert: days < 30 ? 'ok' : days < 45 ? 'warning' : days < 60 ? 'orange' : days < 90 ? 'danger' : 'critical'
-              });
-            } catch(e) {}
-          }
-        }
-      });
-      
       result.pilastri.energy = {
         nome: 'LUCE AMICA',
         emoji: '⚡',
@@ -610,8 +558,7 @@ export default function Home() {
         classifiche: classifiche,
         totaleK: classifiche.k.reduce((s, [,v]) => s + v.total, 0),
         catLabels: { c1: '🟢 Accettati', c2: '🟡 Lavorab.', c3: '🔴 Persi' },
-        catKeys: ['positivo', 'lavorabile', 'meno'],
-        daAttivare: daAttivareList.sort((a, b) => b.giorni - a.giorni)
+        catKeys: ['positivo', 'lavorabile', 'meno']
       };
       result.heatmapMesi.energy = heatmap;
     }
@@ -713,84 +660,6 @@ export default function Home() {
       };
     }
     
-    // ═══════════════════════════════════════════════════════════
-    // 📅 TIMELINE IVD - Milestone di conversione
-    // ═══════════════════════════════════════════════════════════
-    if (reportCSVs.ivd?.data?.length > 0) {
-      const timeline = [];
-      reportCSVs.ivd.data.forEach(ivdRow => {
-        const ivdName = ivdRow['Nome'] || ivdRow['Nome Intermediario'] || ivdRow['IVD'] || '';
-        const dataAtt = ivdRow['Data Attivazione'] || ivdRow['Data'] || '';
-        if (!ivdName || !dataAtt) return;
-        const attDate = new Date(dataAtt.replace(' ', 'T'));
-        if (isNaN(attDate.getTime())) return;
-        
-        const steps = { laIns: null, laAcc: null, fvIns: null, fvPos: null, iscr: null, pres: null };
-        
-        // Check Luce Amica
-        if (reportCSVs.energy?.data) {
-          const laRows = reportCSVs.energy.data.filter(r => 
-            (r['Nome Primo IVD'] || r['IVD'] || '').toLowerCase().includes(ivdName.toLowerCase().split(' ')[0])
-          );
-          if (laRows.length > 0) {
-            const firstLA = laRows.reduce((min, r) => {
-              const d = new Date((r['Data Inserimento'] || r['Inserimento'] || '').replace(' ', 'T'));
-              return (!min || (d < min && !isNaN(d.getTime()))) ? d : min;
-            }, null);
-            if (firstLA && !isNaN(firstLA.getTime())) {
-              steps.laIns = Math.max(0, Math.floor((firstLA - attDate) / (1000 * 60 * 60 * 24)));
-            }
-            const accRows = laRows.filter(r => (r['Stato NWG Spa'] || '').toLowerCase().includes('accettato'));
-            if (accRows.length > 0) {
-              const firstAcc = accRows.reduce((min, r) => {
-                const d = new Date((r['Data Accettazione'] || '').replace(' ', 'T'));
-                return (!min || (d < min && !isNaN(d.getTime()))) ? d : min;
-              }, null);
-              if (firstAcc && !isNaN(firstAcc.getTime())) {
-                steps.laAcc = Math.max(0, Math.floor((firstAcc - attDate) / (1000 * 60 * 60 * 24)));
-              }
-            }
-          }
-        }
-        
-        // Check FV
-        if (reportCSVs.fv?.data) {
-          const fvRows = reportCSVs.fv.data.filter(r => 
-            (r['Nome Primo IVD'] || r['IVD'] || '').toLowerCase().includes(ivdName.toLowerCase().split(' ')[0])
-          );
-          if (fvRows.length > 0) {
-            const firstFV = fvRows.reduce((min, r) => {
-              const d = new Date((r['Data Inserimento'] || r['Inserimento'] || '').replace(' ', 'T'));
-              return (!min || (d < min && !isNaN(d.getTime()))) ? d : min;
-            }, null);
-            if (firstFV && !isNaN(firstFV.getTime())) {
-              steps.fvIns = Math.max(0, Math.floor((firstFV - attDate) / (1000 * 60 * 60 * 24)));
-            }
-            const posRows = fvRows.filter(r => categorizeStato(r['Stato'] || '', STATO_MAP_FV) === 'positivo');
-            if (posRows.length > 0) steps.fvPos = steps.fvIns !== null ? steps.fvIns + 30 : null;
-          }
-        }
-        
-        // Check Seminari
-        if (reportCSVs.consultings?.data) {
-          const semRows = reportCSVs.consultings.data.filter(r => 
-            (r['Nome Primo IVD'] || r['IVD'] || '').toLowerCase().includes(ivdName.toLowerCase().split(' ')[0])
-          );
-          if (semRows.length > 0) {
-            steps.iscr = 10;
-            const presRows = semRows.filter(r => {
-              const p = (r['Presente SI'] || r['Presente'] || '').toLowerCase();
-              return p === 'si' || p === 'sì' || p === 'yes' || p === '1';
-            });
-            if (presRows.length > 0) steps.pres = 15;
-          }
-        }
-        
-        timeline.push({ nome: ivdName, dataAttivazione: dataAtt, steps });
-      });
-      result.ivdTimeline = timeline;
-    }
-    
     if (Object.keys(result.pilastri).length === 0) return null;
     
     return result;
@@ -819,7 +688,7 @@ export default function Home() {
     ctx.fillRect(0, 0, W, H);
     
     // Header
-    ctx.fillStyle = '#7C4DFF';
+    ctx.fillStyle = '#2AAA8A';
     ctx.font = 'bold 48px Arial';
     ctx.fillText('📊 DASHBOARD', 50, 70);
     ctx.fillStyle = '#fff';
@@ -831,7 +700,7 @@ export default function Home() {
     const cardData = [
       { label: labels.c1, value: stats.ins, color: '#FF6B35' },
       { label: labels.c2, value: stats.acc, color: '#4CAF50' },
-      { label: 'Partecipanti', value: stats.part, color: '#7C4DFF' },
+      { label: 'Partecipanti', value: stats.part, color: '#2AAA8A' },
       { label: 'Conversione', value: stats.conv + '%', color: '#FFD700' }
     ];
     cardData.forEach((card, i) => {
@@ -855,7 +724,7 @@ export default function Home() {
     
     // Podio
     const podioY = 320, podioH = 280;
-    ctx.fillStyle = 'rgba(255,255,255,0.03)';
+    ctx.fillStyle = '#FAFAFA';
     ctx.beginPath();
     ctx.roundRect(50, podioY, 600, podioH, 20);
     ctx.fill();
@@ -886,7 +755,7 @@ export default function Home() {
     
     // Heatmap mensile
     const heatY = 320, heatX = 700;
-    ctx.fillStyle = 'rgba(255,255,255,0.03)';
+    ctx.fillStyle = '#FAFAFA';
     ctx.beginPath();
     ctx.roundRect(heatX, heatY, 1170, podioH, 20);
     ctx.fill();
@@ -901,7 +770,7 @@ export default function Home() {
     
     // Header giorni
     dayNames.forEach((d, i) => {
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.fillStyle = '#666666';
       ctx.font = '14px Arial';
       ctx.textAlign = 'center';
       ctx.fillText(d, gridX + i * cellW + cellW/2, gridY - 10);
@@ -915,14 +784,14 @@ export default function Home() {
       const cx = gridX + col * cellW;
       const cy = gridY + row * cellH;
       const intensity = val / maxMonthly;
-      const bgColor = val === 0 ? 'rgba(255,255,255,0.05)' : 
+      const bgColor = val === 0 ? '#F5F5F5' : 
                       intensity > 0.7 ? '#4CAF50' : 
                       intensity > 0.4 ? '#FFC107' : '#FF6B35';
       ctx.fillStyle = bgColor;
       ctx.beginPath();
       ctx.roundRect(cx, cy, cellW - 4, cellH - 4, 6);
       ctx.fill();
-      ctx.fillStyle = val === 0 ? 'rgba(255,255,255,0.3)' : '#fff';
+      ctx.fillStyle = val === 0 ? '#AAAAAA' : '#fff';
       ctx.font = val > 0 ? 'bold 14px Arial' : '12px Arial';
       ctx.fillText((i + 1).toString(), cx + cellW/2 - 2, cy + cellH/2 + 2);
       if (val > 0) {
@@ -949,7 +818,7 @@ export default function Home() {
     
     // TOP 4-10
     const topY = 640;
-    ctx.fillStyle = 'rgba(255,255,255,0.03)';
+    ctx.fillStyle = '#FAFAFA';
     ctx.beginPath();
     ctx.roundRect(50, topY, 900, 320, 20);
     ctx.fill();
@@ -979,7 +848,7 @@ export default function Home() {
     
     // Torte K e NW
     const pieY = 640, pieX = 1000;
-    ctx.fillStyle = 'rgba(255,255,255,0.03)';
+    ctx.fillStyle = '#FAFAFA';
     ctx.beginPath();
     ctx.roundRect(pieX, pieY, 870, 320, 20);
     ctx.fill();
@@ -1016,9 +885,9 @@ export default function Home() {
     });
     
     // Footer
-    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillStyle = '#E0E0E0';
     ctx.fillRect(0, H - 60, W, 60);
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
     ctx.fillText(`Leader Ranking v9.6 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
@@ -1316,7 +1185,7 @@ export default function Home() {
         ctx.fill();
         
         // Riflesso lucido
-        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.fillStyle = '#AAAAAA';
         ctx.beginPath();
         ctx.roundRect(barX + 14, barY + 14, barW * 0.24, p.h - 28, [10, 10, 10, 10]);
         ctx.fill();
@@ -1402,7 +1271,7 @@ export default function Home() {
         const pos = i + 4;
         
         // Sfondo riga
-        ctx.fillStyle = 'rgba(255,255,255,0.1)';
+        ctx.fillStyle = '#E0E0E0';
         ctx.beginPath();
         ctx.roundRect(listX, y, 560, 68, 14);
         ctx.fill();
@@ -1525,7 +1394,7 @@ export default function Home() {
     
     // Partecipanti e contratti inline
     const totIns = getClassificaTotal();
-    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '16px Arial';
+    ctx.fillStyle = '#666666'; ctx.font = '16px Arial';
     ctx.fillText(`${data.length} partecipanti • ${totIns} contratti`, 45, 178);
     
     // Separator
@@ -1588,7 +1457,7 @@ export default function Home() {
         grad.addColorStop(0, `${config.color}25`); grad.addColorStop(1, `${config.color}08`);
         ctx.fillStyle = grad;
       } else {
-        ctx.fillStyle = 'rgba(255,255,255,0.05)';
+        ctx.fillStyle = '#F5F5F5';
       }
       ctx.beginPath(); ctx.roundRect(45, currentY, W - 90, blockH, 10); ctx.fill();
       
@@ -1625,7 +1494,7 @@ export default function Home() {
     // Footer - posizionato dopo l'ultimo gruppo
     const footerY = currentY + 10;
     ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(45, footerY, W - 90, 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '15px Arial';
+    ctx.fillStyle = '#666666'; ctx.font = '15px Arial';
     ctx.fillText(`📊 ${data.length} partecipanti • ${totIns} contratti`, 50, footerY + 28);
     ctx.textAlign = 'right'; ctx.fillText('LEADER RANKING', W - 50, footerY + 28);
     ctx.textAlign = 'left';
@@ -1676,7 +1545,7 @@ export default function Home() {
       if (i === 0) { grad.addColorStop(0, 'rgba(255,215,0,0.18)'); grad.addColorStop(1, 'rgba(255,215,0,0.04)'); }
       else if (i === 1) { grad.addColorStop(0, 'rgba(192,192,192,0.14)'); grad.addColorStop(1, 'rgba(192,192,192,0.03)'); }
       else if (i === 2) { grad.addColorStop(0, 'rgba(205,127,50,0.12)'); grad.addColorStop(1, 'rgba(205,127,50,0.03)'); }
-      else { grad.addColorStop(0, 'rgba(255,255,255,0.05)'); grad.addColorStop(1, 'rgba(255,255,255,0.02)'); }
+      else { grad.addColorStop(0, '#F5F5F5'); grad.addColorStop(1, '#FCFCFC'); }
       
       ctx.fillStyle = grad; ctx.beginPath(); ctx.roundRect(55, y, W - 110, cardH, 12); ctx.fill();
       
@@ -1691,7 +1560,7 @@ export default function Home() {
         ctx.font = '38px Arial'; ctx.fillText(medals[i], 75, centerY + 14);
         ctx.fillStyle = i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : '#CD7F32';
       } else {
-        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.fillStyle = '#666666';
       }
       
       ctx.font = 'bold 26px Arial';
@@ -1707,12 +1576,12 @@ export default function Home() {
       ctx.fillStyle = isTop3 ? (i === 0 ? '#FFD700' : '#FFF') : 'rgba(255,255,255,0.9)';
       ctx.font = 'bold 30px Arial';
       ctx.fillText(`${s.v1}`, W - 300, centerY + 5);
-      ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '11px Arial';
+      ctx.fillStyle = '#999999'; ctx.font = '11px Arial';
       ctx.fillText('INS.', W - 300, centerY + 22);
       
       // Progress bar
       const barX = W - 270, barW = 105;
-      ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.beginPath(); ctx.roundRect(barX, centerY - 10, barW, 18, 5); ctx.fill();
+      ctx.fillStyle = '#E0E0E0'; ctx.beginPath(); ctx.roundRect(barX, centerY - 10, barW, 18, 5); ctx.fill();
       const barC = pctM >= 50 ? '#4CAF50' : pctM >= 20 ? '#FFC107' : '#FF5722';
       ctx.fillStyle = barC; ctx.beginPath(); ctx.roundRect(barX, centerY - 10, Math.max(barW * pctM / 100, 1), 18, 5); ctx.fill();
       ctx.fillStyle = '#FFF'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center';
@@ -1722,14 +1591,14 @@ export default function Home() {
       ctx.textAlign = 'right';
       ctx.fillStyle = '#4CAF50'; ctx.font = 'bold 30px Arial';
       ctx.fillText(`${s.v2}`, W - 75, centerY + 5);
-      ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '11px Arial';
+      ctx.fillStyle = '#999999'; ctx.font = '11px Arial';
       ctx.fillText('ACC.', W - 75, centerY + 22);
       ctx.textAlign = 'left';
     });
     
     // Footer
-    ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(55, footerY, W - 110, 1);
-    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '15px Arial';
+    ctx.fillStyle = '#E0E0E0'; ctx.fillRect(55, footerY, W - 110, 1);
+    ctx.fillStyle = '#999999'; ctx.font = '15px Arial';
     ctx.fillText(`📊 ${data.length} ${config.label} • ${totIns} contratti`, 60, footerY + 28);
     ctx.textAlign = 'right'; ctx.fillText('LEADER RANKING', W - 60, footerY + 28);
     ctx.textAlign = 'left';
@@ -1883,11 +1752,11 @@ export default function Home() {
           <div style={{ ...S.podiumBar, height: 50, background: '#FFD700' }}><span style={S.podiumNum}>1</span></div>
           <div style={{ ...S.podiumBar, height: 25, background: '#CD7F32' }}><span style={S.podiumNum}>3</span></div>
         </div></div>
-        <div style={S.logoText}><span style={{ color: '#7C4DFF', fontWeight: 800 }}>LEADER</span><span style={{ fontWeight: 300, marginLeft: 8 }}>RANKING</span></div>
+        <div style={S.logoText}><span style={{ color: '#2AAA8A', fontWeight: 800 }}>LEADER</span><span style={{ fontWeight: 300, marginLeft: 8 }}>RANKING</span></div>
         <div style={S.logoTagline}>Power your team rankings</div>
       </div>
       <div style={S.loginDivider} />
-      <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 25, fontSize: 14 }}>Accedi per gestire le classifiche</p>
+      <p style={{ color: '#666666', marginBottom: 25, fontSize: 14 }}>Accedi per gestire le classifiche</p>
       <input style={S.input} placeholder="Username" value={loginForm.username} onChange={e => setLoginForm({ ...loginForm, username: e.target.value })} />
       <input style={S.input} type="password" placeholder="Password" value={loginForm.password} onChange={e => setLoginForm({ ...loginForm, password: e.target.value })} onKeyPress={e => e.key === 'Enter' && handleLogin()} />
       {loginError && <p style={{ color: '#f44', fontSize: 13, marginBottom: 10 }}>{loginError}</p>}
@@ -1899,7 +1768,7 @@ export default function Home() {
   // HOMEPAGE CSV
   if (!csvData && (user.role === 'admin' || user.role === 'assistente' || user.role === 'k')) return (<><Head><title>Leader Ranking</title><meta name="viewport" content="width=device-width,initial-scale=1" /></Head>
     <div style={S.homeWrap}>
-      <header style={S.homeHeader}><div style={S.homeLogoSmall}><span style={{ color: '#7C4DFF', fontWeight: 800 }}>LEADER</span><span style={{ fontWeight: 300 }}> RANKING</span></div><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Ciao, {user.name}</span><button style={S.logoutBtn} onClick={() => setUser(null)}>Esci</button></div></header>
+      <header style={S.homeHeader}><div style={S.homeLogoSmall}><span style={{ color: '#2AAA8A', fontWeight: 800 }}>LEADER</span><span style={{ fontWeight: 300 }}> RANKING</span></div><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={{ fontSize: 12, color: '#666666' }}>Ciao, {user.name}</span><button style={S.logoutBtn} onClick={() => setUser(null)}>Esci</button></div></header>
       <main style={S.homeMain}>
         <div style={S.homeLogo}>
           <div style={S.homeLogoIcon}><div style={S.homePodium}>
@@ -1907,7 +1776,7 @@ export default function Home() {
             <div style={{ ...S.homePodiumBar, height: 80, background: 'linear-gradient(180deg, #FFE082 0%, #FFD700 100%)' }}><span style={S.homePodiumNum}>1</span></div>
             <div style={{ ...S.homePodiumBar, height: 40, background: 'linear-gradient(180deg, #FFAB91 0%, #CD7F32 100%)' }}><span style={S.homePodiumNum}>3</span></div>
           </div></div>
-          <h1 style={S.homeTitle}><span style={{ color: '#7C4DFF' }}>LEADER</span> RANKING</h1>
+          <h1 style={S.homeTitle}><span style={{ color: '#2AAA8A' }}>LEADER</span> RANKING</h1>
           <p style={S.homeSubtitle}>Power your team rankings</p>
         </div>
         <div style={{ ...S.uploadArea, ...(isDragging ? S.uploadAreaActive : {}) }} onDragOver={e => { e.preventDefault(); setIsDragging(true); }} onDragLeave={e => { e.preventDefault(); setIsDragging(false); }} onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.csv')) processFile(f); }}>
@@ -1922,8 +1791,8 @@ export default function Home() {
   // PREVIEW
   if (showPreview && previewImage) return (<><Head><title>Anteprima</title></Head>
     <div style={S.previewWrap}><div style={S.previewModal}>
-      <h2 style={{ color: '#fff', marginBottom: 5 }}>📸 Anteprima 1080x1080</h2>
-      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 15 }}>✅ {getData().length} partecipanti • {getClassificaTotal()} contratti</p>
+      <h2 style={{ color: '#333333', marginBottom: 5 }}>📸 Anteprima 1080x1080</h2>
+      <p style={{ color: '#666666', fontSize: 13, marginBottom: 15 }}>✅ {getData().length} partecipanti • {getClassificaTotal()} contratti</p>
       <div style={S.previewImg}><img src={previewImage} style={{ maxWidth: '100%', maxHeight: '55vh' }} /></div>
       <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 15, flexWrap: 'wrap' }}>
         <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'transparent', border: '1px solid rgba(255,255,255,0.2)' }} onClick={() => setShowPreview(false)}>Chiudi</button>
@@ -1936,32 +1805,32 @@ export default function Home() {
   // DASHBOARD
   return (<><Head><title>Leader Ranking</title><meta name="viewport" content="width=device-width,initial-scale=1" /></Head>
     <div style={S.dash}>
-      <header style={S.header}><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><button style={S.menuBtn} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>☰</button><span style={{ fontWeight: 800, color: '#7C4DFF' }}>LEADER</span><span style={{ fontWeight: 300, color: '#fff' }}>RANKING</span></div><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={S.badge}>{user.role.toUpperCase()}</span><button style={{ ...S.btn, padding: '6px 12px', fontSize: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.2)' }} onClick={() => { setUser(null); setCsvData(null); setRankings(null); }}>Esci</button></div></header>
+      <header style={S.header}><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><button style={S.menuBtn} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>☰</button><span style={{ fontWeight: 800, color: '#2AAA8A' }}>LEADER</span><span style={{ fontWeight: 300, color: '#333333' }}>RANKING</span></div><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={S.badge}>{user.role.toUpperCase()}</span><button style={{ ...S.btn, padding: '6px 12px', fontSize: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.2)' }} onClick={() => { setUser(null); setCsvData(null); setRankings(null); }}>Esci</button></div></header>
       <main style={{ display: 'flex' }}>
         <aside style={{ ...S.sidebar, ...(mobileMenuOpen ? { transform: 'translateX(0)' } : {}) }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}><span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', letterSpacing: 1 }}>📊 CLASSIFICHE</span><button style={{ background: 'none', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer' }} onClick={() => setMobileMenuOpen(false)}>✕</button></div>
-          {rankings ? (<><p style={S.catLabel}>IVD</p><button style={{ ...S.menuItem, ...(selectedRanking === 'ivd_inseriti' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('ivd_inseriti'); setMobileMenuOpen(false); }}>🟠 {labels.c1} ({rankings.ivd_inseriti.length})</button><button style={{ ...S.menuItem, ...(selectedRanking === 'ivd_accettati' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('ivd_accettati'); setMobileMenuOpen(false); }}>🟢 {labels.c2} ({rankings.ivd_accettati.length})</button><p style={S.catLabel}>SDP</p><button style={{ ...S.menuItem, ...(selectedRanking === 'sdp_inseriti' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('sdp_inseriti'); setMobileMenuOpen(false); }}>🔵 {labels.c1} ({rankings.sdp_inseriti.length})</button><button style={{ ...S.menuItem, ...(selectedRanking === 'sdp_accettati' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('sdp_accettati'); setMobileMenuOpen(false); }}>🟢 {labels.c2} ({rankings.sdp_accettati.length})</button><p style={S.catLabel}>MANAGER</p><button style={{ ...S.menuItem, ...(selectedRanking === 'nw' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('nw'); setMobileMenuOpen(false); }}>⭐ Networker ({rankings.nw.length})</button><button style={{ ...S.menuItem, ...(selectedRanking === 'k' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('k'); setMobileMenuOpen(false); }}>👑 K Manager ({rankings.k.length})</button></>) : <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>Carica CSV</p>}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}><span style={{ fontSize: 12, color: '#999999', letterSpacing: 1 }}>📊 CLASSIFICHE</span><button style={{ background: 'none', border: 'none', color: '#333333', fontSize: 18, cursor: 'pointer' }} onClick={() => setMobileMenuOpen(false)}>✕</button></div>
+          {rankings ? (<><p style={S.catLabel}>IVD</p><button style={{ ...S.menuItem, ...(selectedRanking === 'ivd_inseriti' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('ivd_inseriti'); setMobileMenuOpen(false); }}>🟠 {labels.c1} ({rankings.ivd_inseriti.length})</button><button style={{ ...S.menuItem, ...(selectedRanking === 'ivd_accettati' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('ivd_accettati'); setMobileMenuOpen(false); }}>🟢 {labels.c2} ({rankings.ivd_accettati.length})</button><p style={S.catLabel}>SDP</p><button style={{ ...S.menuItem, ...(selectedRanking === 'sdp_inseriti' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('sdp_inseriti'); setMobileMenuOpen(false); }}>🔵 {labels.c1} ({rankings.sdp_inseriti.length})</button><button style={{ ...S.menuItem, ...(selectedRanking === 'sdp_accettati' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('sdp_accettati'); setMobileMenuOpen(false); }}>🟢 {labels.c2} ({rankings.sdp_accettati.length})</button><p style={S.catLabel}>MANAGER</p><button style={{ ...S.menuItem, ...(selectedRanking === 'nw' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('nw'); setMobileMenuOpen(false); }}>⭐ Networker ({rankings.nw.length})</button><button style={{ ...S.menuItem, ...(selectedRanking === 'k' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('k'); setMobileMenuOpen(false); }}>👑 K Manager ({rankings.k.length})</button></>) : <p style={{ color: '#999999', fontSize: 12 }}>Carica CSV</p>}
           <div style={S.divider} />
-          {(user.role === 'admin' || user.role === 'assistente') && (<><p style={S.catLabel}>⚙️ FILTRI</p><label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', color: 'rgba(255,255,255,0.8)' }}><input type="checkbox" checked={excludeK} onChange={toggleExcludeK} style={{ accentColor: '#7C4DFF' }} /> Escludi K</label><div style={S.divider} /><p style={S.catLabel}>📅 PERIODO</p><button style={{ ...S.periodBtn, ...(!selectedMonth ? { background: 'rgba(124,77,255,0.2)', color: '#7C4DFF' } : {}) }} onClick={handleShowAll}>📋 Tutti ({csvData?.length || 0})</button>{availableMonths.length > 0 && (<select style={S.select} value={selectedMonth} onChange={e => handleMonthChange(e.target.value)}><option value="">-- Mese --</option>{availableMonths.map(m => <option key={m} value={m}>{m}</option>)}</select>)}{weeks.length > 0 && (<select style={S.select} value={selectedWeek?.num || ''} onChange={e => handleWeekChange(e.target.value)}><option value="">-- Settimana --</option>{weeks.map(w => <option key={w.num} value={w.num}>{w.label}</option>)}</select>)}<div style={S.divider} /><p style={S.catLabel}>📊 TIPO CLASSIFICA</p><select style={S.select} value={periodType} onChange={e => setPeriodType(e.target.value)}><option value="progressiva">📈 Progressiva (mese in corso)</option><option value="settimanale">📅 Settimanale</option><option value="finale">🏆 Finale mese</option></select><div style={S.divider} /><p style={S.catLabel}>🏷️ ETICHETTE</p><select style={S.select} value={eventName} onChange={e => setEventName(e.target.value)}>{EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select><input style={S.inputSm} value={eventDate} onChange={e => setEventDate(e.target.value)} placeholder="Periodo" /></>)}
+          {(user.role === 'admin' || user.role === 'assistente') && (<><p style={S.catLabel}>⚙️ FILTRI</p><label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', color: 'rgba(255,255,255,0.8)' }}><input type="checkbox" checked={excludeK} onChange={toggleExcludeK} style={{ accentColor: '#2AAA8A' }} /> Escludi K</label><div style={S.divider} /><p style={S.catLabel}>📅 PERIODO</p><button style={{ ...S.periodBtn, ...(!selectedMonth ? { background: 'rgba(124,77,255,0.2)', color: '#2AAA8A' } : {}) }} onClick={handleShowAll}>📋 Tutti ({csvData?.length || 0})</button>{availableMonths.length > 0 && (<select style={S.select} value={selectedMonth} onChange={e => handleMonthChange(e.target.value)}><option value="">-- Mese --</option>{availableMonths.map(m => <option key={m} value={m}>{m}</option>)}</select>)}{weeks.length > 0 && (<select style={S.select} value={selectedWeek?.num || ''} onChange={e => handleWeekChange(e.target.value)}><option value="">-- Settimana --</option>{weeks.map(w => <option key={w.num} value={w.num}>{w.label}</option>)}</select>)}<div style={S.divider} /><p style={S.catLabel}>📊 TIPO CLASSIFICA</p><select style={S.select} value={periodType} onChange={e => setPeriodType(e.target.value)}><option value="progressiva">📈 Progressiva (mese in corso)</option><option value="settimanale">📅 Settimanale</option><option value="finale">🏆 Finale mese</option></select><div style={S.divider} /><p style={S.catLabel}>🏷️ ETICHETTE</p><select style={S.select} value={eventName} onChange={e => setEventName(e.target.value)}>{EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select><input style={S.inputSm} value={eventDate} onChange={e => setEventDate(e.target.value)} placeholder="Periodo" /></>)}
         </aside>
         {mobileMenuOpen && <div style={S.overlay} onClick={() => setMobileMenuOpen(false)} />}
         <section style={S.content}>
-          {(user.role === 'admin' || user.role === 'assistente') && (<div style={{ ...S.uploadBox, ...(isDragging ? { borderColor: '#7C4DFF', background: 'rgba(124,77,255,0.1)' } : {}) }} onDragOver={e => { e.preventDefault(); setIsDragging(true); }} onDragLeave={e => { e.preventDefault(); setIsDragging(false); }} onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.csv')) processFile(f); }}><input type="file" accept=".csv" id="csv" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processFile(e.target.files[0]); }} /><label htmlFor="csv" style={{ cursor: 'pointer', padding: '10px 20px', background: 'rgba(124,77,255,0.1)', borderRadius: 8, color: '#7C4DFF', fontWeight: 600 }}>{filteredData ? `✅ ${filteredData.length} righe caricate` : '📤 Carica CSV'}</label></div>)}
+          {(user.role === 'admin' || user.role === 'assistente') && (<div style={{ ...S.uploadBox, ...(isDragging ? { borderColor: '#2AAA8A', background: 'rgba(124,77,255,0.1)' } : {}) }} onDragOver={e => { e.preventDefault(); setIsDragging(true); }} onDragLeave={e => { e.preventDefault(); setIsDragging(false); }} onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.csv')) processFile(f); }}><input type="file" accept=".csv" id="csv" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processFile(e.target.files[0]); }} /><label htmlFor="csv" style={{ cursor: 'pointer', padding: '10px 20px', background: 'rgba(124,77,255,0.1)', borderRadius: 8, color: '#2AAA8A', fontWeight: 600 }}>{filteredData ? `✅ ${filteredData.length} righe caricate` : '📤 Carica CSV'}</label></div>)}
           
           {/* TABS - SEMPRE VISIBILI DOPO LOGIN */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 20, background: 'rgba(255,255,255,0.03)', padding: 8, borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 20, background: '#FFFFFF', padding: 8, borderRadius: 12, border: '1px solid #E0E0E0' }}>
             <button 
-              style={{ ...S.btn, flex: 1, padding: '14px 20px', background: activeTab === 'dashboard' ? 'linear-gradient(135deg,#7C4DFF,#536DFE)' : 'transparent', border: 'none', opacity: rankings ? 1 : 0.5 }} 
+              style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'dashboard' ? '#2AAA8A' : 'transparent', color: activeTab === 'dashboard' ? '#fff' : '#666666', border: 'none', opacity: rankings ? 1 : 0.5 }} 
               onClick={() => rankings && setActiveTab('dashboard')}
               disabled={!rankings}
             >📊 Dashboard</button>
             <button 
-              style={{ ...S.btn, flex: 1, padding: '14px 20px', background: activeTab === 'classifiche' ? 'linear-gradient(135deg,#7C4DFF,#536DFE)' : 'transparent', border: 'none', opacity: rankings ? 1 : 0.5 }} 
+              style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'classifiche' ? '#2AAA8A' : 'transparent', color: activeTab === 'classifiche' ? '#fff' : '#666666', border: 'none', opacity: rankings ? 1 : 0.5 }} 
               onClick={() => rankings && setActiveTab('classifiche')}
               disabled={!rankings}
             >🏆 Classifiche</button>
             <button 
-              style={{ ...S.btn, flex: 1, padding: '14px 20px', background: activeTab === 'report' ? 'linear-gradient(135deg,#FF6B35,#FF8F00)' : 'transparent', border: 'none' }} 
+              style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'report' ? '#FF9800' : 'transparent', color: activeTab === 'report' ? '#fff' : '#666666', border: 'none' }} 
               onClick={() => setActiveTab('report')}
             >📈 Report</button>
           </div>
@@ -1971,12 +1840,12 @@ export default function Home() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
               <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.15), rgba(255,107,53,0.05))', borderRadius: 20, padding: 20, border: '1px solid rgba(255,107,53,0.3)' }}>
                 <h2 style={{ color: '#FF6B35', fontSize: 18, marginBottom: 5 }}>📈 REPORT AGGREGATO</h2>
-                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginBottom: 15 }}>Carica più CSV per generare classifiche mensili/trimestrali/annuali</p>
+                <p style={{ color: '#666666', fontSize: 12, marginBottom: 15 }}>Carica più CSV per generare classifiche mensili/trimestrali/annuali</p>
                 
                 {/* 4 UPLOAD CSV */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 20 }}>
                   {/* IVD */}
-                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 15, border: reportCSVs.ivd ? '2px solid #4CAF50' : '1px solid rgba(255,255,255,0.1)' }}>
+                  <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, border: reportCSVs.ivd ? '2px solid #4CAF50' : '1px solid #E0E0E0' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                       <span style={{ fontSize: 20 }}>🟠</span>
                       <span style={{ color: '#FF6B35', fontWeight: 600 }}>IVD Attivati</span>
@@ -1985,11 +1854,11 @@ export default function Home() {
                     <label htmlFor="csv-ivd" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(255,107,53,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.ivd ? '#4CAF50' : 'rgba(255,255,255,0.6)', fontSize: 12 }}>
                       {reportCSVs.ivd ? `✅ ${reportCSVs.ivd.rows} righe` : '📤 Carica CSV'}
                     </label>
-                    <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, marginTop: 5, textAlign: 'center' }}>Solo Attivazione START&GO</p>
+                    <p style={{ color: '#999999', fontSize: 10, marginTop: 5, textAlign: 'center' }}>Solo Attivazione START&GO</p>
                   </div>
                   
                   {/* Energy */}
-                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 15, border: reportCSVs.energy ? '2px solid #4CAF50' : '1px solid rgba(255,255,255,0.1)' }}>
+                  <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, border: reportCSVs.energy ? '2px solid #4CAF50' : '1px solid #E0E0E0' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                       <span style={{ fontSize: 20 }}>⚡</span>
                       <span style={{ color: '#FFC107', fontWeight: 600 }}>Luce Amica</span>
@@ -2001,7 +1870,7 @@ export default function Home() {
                   </div>
                   
                   {/* FV */}
-                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 15, border: reportCSVs.fv ? '2px solid #4CAF50' : '1px solid rgba(255,255,255,0.1)' }}>
+                  <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, border: reportCSVs.fv ? '2px solid #4CAF50' : '1px solid #E0E0E0' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                       <span style={{ fontSize: 20 }}>☀️</span>
                       <span style={{ color: '#FF9800', fontWeight: 600 }}>Fotovoltaico</span>
@@ -2013,7 +1882,7 @@ export default function Home() {
                   </div>
                   
                   {/* Consultings */}
-                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 15, border: reportCSVs.consultings ? '2px solid #4CAF50' : '1px solid rgba(255,255,255,0.1)' }}>
+                  <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, border: reportCSVs.consultings ? '2px solid #4CAF50' : '1px solid #E0E0E0' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                       <span style={{ fontSize: 20 }}>🎓</span>
                       <span style={{ color: '#9C27B0', fontWeight: 600 }}>Seminari</span>
@@ -2043,26 +1912,18 @@ export default function Home() {
               {reportData && reportData.pilastri && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
                   
-                  {/* PILLAR SELECTOR */}
-                  <div style={{ display: 'flex', gap: 8, background: 'rgba(255,255,255,0.05)', padding: 8, borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <button style={{ ...S.btn, flex: 1, padding: '12px', background: reportPillar === 'fv' ? '#FF9800' : 'transparent', color: reportPillar === 'fv' ? '#fff' : 'rgba(255,255,255,0.6)', opacity: reportData.pilastri.fv ? 1 : 0.4 }} onClick={() => reportData.pilastri.fv && setReportPillar('fv')} disabled={!reportData.pilastri.fv}>☀️ FV</button>
-                    <button style={{ ...S.btn, flex: 1, padding: '12px', background: reportPillar === 'la' ? '#FFC107' : 'transparent', color: reportPillar === 'la' ? '#333' : 'rgba(255,255,255,0.6)', opacity: reportData.pilastri.energy ? 1 : 0.4 }} onClick={() => reportData.pilastri.energy && setReportPillar('la')} disabled={!reportData.pilastri.energy}>⚡ Luce Amica</button>
-                    <button style={{ ...S.btn, flex: 1, padding: '12px', background: reportPillar === 'collab' ? '#9C27B0' : 'transparent', color: reportPillar === 'collab' ? '#fff' : 'rgba(255,255,255,0.6)', opacity: reportData.pilastri.collaboratori ? 1 : 0.4 }} onClick={() => reportData.pilastri.collaboratori && setReportPillar('collab')} disabled={!reportData.pilastri.collaboratori}>🎓 Collaboratori</button>
-                    {reportData.ivdTimeline && <button style={{ ...S.btn, flex: 1, padding: '12px', background: reportPillar === 'timeline' ? '#2196F3' : 'transparent', color: reportPillar === 'timeline' ? '#fff' : 'rgba(255,255,255,0.6)' }} onClick={() => setReportPillar('timeline')}>📅 Timeline</button>}
-                  </div>
-                  
                   {/* 🗓️ HEATMAP MESI - Con drill-down */}
                   {Object.keys(reportData.heatmapMesi).length > 0 && (
                     <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.1), rgba(255,107,53,0.02))', borderRadius: 20, padding: 20, border: '1px solid rgba(255,107,53,0.2)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
                         <div>
                           <h3 style={{ color: '#FF6B35', fontSize: 16, margin: 0 }}>🗓️ CALENDARIO CALDO</h3>
-                          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, margin: '5px 0 0' }}>
+                          <p style={{ color: '#666666', fontSize: 11, margin: '5px 0 0' }}>
                             {heatmapDrilldown ? `Giorni di ${['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'][heatmapDrilldown.mese]} - Click per tornare ai mesi` : 'Click su un mese per vedere i giorni'}
                           </p>
                         </div>
                         {heatmapDrilldown && (
-                          <button style={{ ...S.btn, padding: '8px 15px', fontSize: 12, background: 'rgba(255,255,255,0.1)' }} onClick={() => setHeatmapDrilldown(null)}>← Torna ai mesi</button>
+                          <button style={{ ...S.btn, padding: '8px 15px', fontSize: 12, background: '#E0E0E0' }} onClick={() => setHeatmapDrilldown(null)}>← Torna ai mesi</button>
                         )}
                       </div>
                       
@@ -2085,12 +1946,12 @@ export default function Home() {
                               <div key={type} style={{ background: `${info.color}15`, borderRadius: 16, padding: 15, border: `2px solid ${info.color}` }}>
                                 <div style={{ fontSize: 13, color: info.color, fontWeight: 600, marginBottom: 10 }}>{info.emoji} {info.label} - {mesiNomi[heatmapDrilldown.mese]}</div>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3, marginBottom: 6 }}>
-                                  {dayLabels.map((d, i) => <div key={i} style={{ textAlign: 'center', fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>{d}</div>)}
+                                  {dayLabels.map((d, i) => <div key={i} style={{ textAlign: 'center', fontSize: 9, color: '#999999' }}>{d}</div>)}
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
                                   {giorni.slice(0, 31).map((val, i) => {
                                     const intensity = val / maxGiorno;
-                                    const bgColor = val === 0 ? 'rgba(255,255,255,0.05)' : intensity > 0.7 ? '#4CAF50' : intensity > 0.4 ? '#FFC107' : info.color;
+                                    const bgColor = val === 0 ? '#F5F5F5' : intensity > 0.7 ? '#4CAF50' : intensity > 0.4 ? '#FFC107' : info.color;
                                     return (
                                       <div key={i} style={{ height: 28, borderRadius: 4, background: bgColor, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: val === 0 ? 'rgba(255,255,255,0.2)' : '#fff', position: 'relative' }}>
                                         <span>{i + 1}</span>
@@ -2111,18 +1972,18 @@ export default function Home() {
                               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
                                 {heatData.mesi.map((val, i) => {
                                   const intensity = val / maxMese;
-                                  const bgColor = val === 0 ? 'rgba(255,255,255,0.05)' : intensity > 0.7 ? '#4CAF50' : intensity > 0.4 ? '#FFC107' : info.color;
+                                  const bgColor = val === 0 ? '#F5F5F5' : intensity > 0.7 ? '#4CAF50' : intensity > 0.4 ? '#FFC107' : info.color;
                                   const isHot = intensity > 0.7 && val > 0;
                                   return (
                                     <div key={i} onClick={() => val > 0 && setHeatmapDrilldown({ pilastro: type, mese: i })} style={{ height: 40, borderRadius: 6, background: bgColor, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: val > 0 ? 'pointer' : 'default', position: 'relative', boxShadow: isHot ? `0 0 10px ${info.color}50` : 'none', transition: 'transform 0.2s' }}>
-                                      <span style={{ fontSize: 9, color: val === 0 ? 'rgba(255,255,255,0.3)' : '#fff' }}>{mesiNomi[i]}</span>
-                                      {val > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: '#fff' }}>{val}</span>}
+                                      <span style={{ fontSize: 9, color: val === 0 ? '#AAAAAA' : '#fff' }}>{mesiNomi[i]}</span>
+                                      {val > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: '#333333' }}>{val}</span>}
                                       {isHot && <span style={{ position: 'absolute', top: -4, right: -2, fontSize: 10 }}>🔥</span>}
                                     </div>
                                   );
                                 })}
                               </div>
-                              <div style={{ textAlign: 'right', marginTop: 8, fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>Totale: <strong style={{ color: info.color }}>{heatData.mesi.reduce((a,b) => a+b, 0)}</strong></div>
+                              <div style={{ textAlign: 'right', marginTop: 8, fontSize: 11, color: '#666666' }}>Totale: <strong style={{ color: info.color }}>{heatData.mesi.reduce((a,b) => a+b, 0)}</strong></div>
                             </div>
                           );
                         })}
@@ -2137,7 +1998,7 @@ export default function Home() {
                         <span style={{ fontSize: 28 }}>☀️</span>
                         <div>
                           <h3 style={{ color: '#FF9800', fontSize: 18, margin: 0 }}>PILASTRO FOTOVOLTAICO</h3>
-                          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, margin: 0 }}>Totale inseriti: <strong style={{ color: '#FF9800' }}>{reportData.pilastri.fv.totale}</strong></p>
+                          <p style={{ color: '#666666', fontSize: 12, margin: 0 }}>Totale inseriti: <strong style={{ color: '#FF9800' }}>{reportData.pilastri.fv.totale}</strong></p>
                         </div>
                       </div>
                       
@@ -2148,7 +2009,7 @@ export default function Home() {
                             <div style={{ fontSize: 28, fontWeight: 800, color: '#FF9800' }}>{reportData.pilastri.fv.funnel.inseriti}</div>
                             <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>📋 Inseriti</div>
                           </div>
-                          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 20 }}>→</div>
+                          <div style={{ color: '#AAAAAA', fontSize: 20 }}>→</div>
                           <div style={{ textAlign: 'center', minWidth: 90 }}>
                             <div style={{ fontSize: 28, fontWeight: 800, color: '#4CAF50' }}>{reportData.pilastri.fv.funnel.positivi}</div>
                             <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>🟢 Positivi</div>
@@ -2191,19 +2052,19 @@ export default function Home() {
                         {/* K Manager FV */}
                         <div style={{ background: 'rgba(255,215,0,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(255,215,0,0.2)' }}>
                           <div style={{ fontSize: 12, color: '#FFD700', fontWeight: 600, marginBottom: 8 }}>👑 K MANAGER</div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '30px 1fr 45px 45px 45px', gap: 4, fontSize: 9, color: 'rgba(255,255,255,0.5)', marginBottom: 6 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '30px 1fr 45px 45px 45px', gap: 4, fontSize: 9, color: '#666666', marginBottom: 6 }}>
                             <span>#</span><span>Nome</span><span style={{ textAlign: 'center' }}>🟢</span><span style={{ textAlign: 'center' }}>🟡</span><span style={{ textAlign: 'center' }}>🔴</span>
                           </div>
                           {reportData.pilastri.fv.classifiche.k.map(([name, stats], i) => (
-                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 45px 45px 45px', gap: 4, alignItems: 'center', marginBottom: 4, padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                              <span style={{ fontSize: 10, color: i < 3 ? '#FFD700' : 'rgba(255,255,255,0.5)' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
-                              <span style={{ fontSize: 11, color: '#fff', fontWeight: i < 3 ? 600 : 400 }}>{name}</span>
+                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 45px 45px 45px', gap: 4, alignItems: 'center', marginBottom: 4, padding: '4px 0', borderBottom: '1px solid #F5F5F5' }}>
+                              <span style={{ fontSize: 10, color: i < 3 ? '#FFD700' : '#666666' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
+                              <span style={{ fontSize: 11, color: '#333333', fontWeight: i < 3 ? 600 : 400 }}>{name}</span>
                               <span style={{ fontSize: 11, fontWeight: 600, color: '#4CAF50', textAlign: 'center' }}>{stats.positivo || 0}</span>
                               <span style={{ fontSize: 11, fontWeight: 600, color: '#FFC107', textAlign: 'center' }}>{(stats.lavorazione || 0) + (stats.altro || 0)}</span>
                               <span style={{ fontSize: 11, fontWeight: 600, color: '#f44336', textAlign: 'center' }}>{stats.negativo || 0}</span>
                             </div>
                           ))}
-                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 8, paddingTop: 8, textAlign: 'right', fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
+                          <div style={{ borderTop: '1px solid #E0E0E0', marginTop: 8, paddingTop: 8, textAlign: 'right', fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
                             Totale K: <strong style={{ color: '#FFD700' }}>{reportData.pilastri.fv.totaleK}</strong>
                           </div>
                         </div>
@@ -2211,12 +2072,12 @@ export default function Home() {
                         {/* NW FV */}
                         <div style={{ background: 'rgba(156,39,176,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(156,39,176,0.2)', maxHeight: 280, overflowY: 'auto' }}>
                           <div style={{ fontSize: 12, color: '#9C27B0', fontWeight: 600, marginBottom: 8 }}>⭐ NETWORKER ({reportData.pilastri.fv.classifiche.nw.length})</div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, fontSize: 8, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, fontSize: 8, color: '#999999', marginBottom: 4 }}>
                             <span>#</span><span>Nome</span><span style={{ textAlign: 'center' }}>🟢</span><span style={{ textAlign: 'center' }}>🟡</span><span style={{ textAlign: 'center' }}>🔴</span>
                           </div>
                           {reportData.pilastri.fv.classifiche.nw.slice(0, 20).map(([name, stats], i) => (
                             <div key={i} style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, alignItems: 'center', marginBottom: 2, fontSize: 10 }}>
-                              <span style={{ color: i < 3 ? '#9C27B0' : 'rgba(255,255,255,0.4)' }}>{i+1}°</span>
+                              <span style={{ color: i < 3 ? '#9C27B0' : '#999999' }}>{i+1}°</span>
                               <span style={{ color: 'rgba(255,255,255,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                               <span style={{ color: '#4CAF50', textAlign: 'center', fontWeight: 600 }}>{stats.positivo || 0}</span>
                               <span style={{ color: '#FFC107', textAlign: 'center', fontWeight: 600 }}>{(stats.lavorazione || 0) + (stats.altro || 0)}</span>
@@ -2228,12 +2089,12 @@ export default function Home() {
                         {/* SDP FV */}
                         <div style={{ background: 'rgba(33,150,243,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(33,150,243,0.2)', maxHeight: 280, overflowY: 'auto' }}>
                           <div style={{ fontSize: 12, color: '#2196F3', fontWeight: 600, marginBottom: 8 }}>🔵 SDP ({reportData.pilastri.fv.classifiche.sdp.length})</div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, fontSize: 8, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, fontSize: 8, color: '#999999', marginBottom: 4 }}>
                             <span>#</span><span>Nome</span><span style={{ textAlign: 'center' }}>🟢</span><span style={{ textAlign: 'center' }}>🟡</span><span style={{ textAlign: 'center' }}>🔴</span>
                           </div>
                           {reportData.pilastri.fv.classifiche.sdp.slice(0, 20).map(([name, stats], i) => (
                             <div key={i} style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, alignItems: 'center', marginBottom: 2, fontSize: 10 }}>
-                              <span style={{ color: i < 3 ? '#2196F3' : 'rgba(255,255,255,0.4)' }}>{i+1}°</span>
+                              <span style={{ color: i < 3 ? '#2196F3' : '#999999' }}>{i+1}°</span>
                               <span style={{ color: 'rgba(255,255,255,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                               <span style={{ color: '#4CAF50', textAlign: 'center', fontWeight: 600 }}>{stats.positivo || 0}</span>
                               <span style={{ color: '#FFC107', textAlign: 'center', fontWeight: 600 }}>{(stats.lavorazione || 0) + (stats.altro || 0)}</span>
@@ -2252,7 +2113,7 @@ export default function Home() {
                         <span style={{ fontSize: 28 }}>⚡</span>
                         <div>
                           <h3 style={{ color: '#FFC107', fontSize: 18, margin: 0 }}>PILASTRO LUCE AMICA</h3>
-                          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, margin: 0 }}>Totale inseriti: <strong style={{ color: '#FFC107' }}>{reportData.pilastri.energy.totale}</strong></p>
+                          <p style={{ color: '#666666', fontSize: 12, margin: 0 }}>Totale inseriti: <strong style={{ color: '#FFC107' }}>{reportData.pilastri.energy.totale}</strong></p>
                         </div>
                       </div>
                       
@@ -2267,9 +2128,9 @@ export default function Home() {
                             return (
                               <div key={stato} style={{ background: `${color}20`, border: `1px solid ${color}50`, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <span style={{ width: 10, height: 10, borderRadius: 3, background: color }} />
-                                <span style={{ color: '#fff', fontSize: 12 }}>{stato}</span>
+                                <span style={{ color: '#333333', fontSize: 12 }}>{stato}</span>
                                 <span style={{ color: color, fontWeight: 700, fontSize: 14 }}>{val}</span>
-                                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>({pct}%)</span>
+                                <span style={{ color: '#999999', fontSize: 10 }}>({pct}%)</span>
                               </div>
                             );
                           })}
@@ -2288,43 +2149,12 @@ export default function Home() {
                               return (
                                 <div key={stato} style={{ background: `${color}20`, border: `1px solid ${color}50`, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
                                   <span style={{ width: 10, height: 10, borderRadius: 3, background: color }} />
-                                  <span style={{ color: '#fff', fontSize: 12 }}>{stato}</span>
+                                  <span style={{ color: '#333333', fontSize: 12 }}>{stato}</span>
                                   <span style={{ color: color, fontWeight: 700, fontSize: 14 }}>{val}</span>
-                                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>({pct}%)</span>
+                                  <span style={{ color: '#999999', fontSize: 10 }}>({pct}%)</span>
                                 </div>
                               );
                             })}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* ⚠️ ALERT "DA ATTIVARE" */}
-                      {reportData.pilastri.energy.daAttivare && reportData.pilastri.energy.daAttivare.length > 0 && (
-                        <div style={{ background: 'rgba(255,152,0,0.15)', borderRadius: 12, padding: 15, marginBottom: 15, border: '1px solid rgba(255,152,0,0.4)' }}>
-                          <div style={{ fontSize: 14, color: '#FF9800', fontWeight: 600, marginBottom: 10 }}>⚠️ ALERT "DA ATTIVARE" - Intervento Richiesto</div>
-                          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-                            {[{ l: '✅ <30gg', c: '#4CAF50', k: 'ok' }, { l: '🟡 30-45gg', c: '#FFC107', k: 'warning' }, { l: '🟠 45-60gg', c: '#FF9800', k: 'orange' }, { l: '🔴 60-90gg', c: '#F44336', k: 'danger' }, { l: '⚫ >90gg', c: '#333', k: 'critical' }].map(a => (
-                              <div key={a.k} style={{ background: `${a.c}30`, borderRadius: 8, padding: '6px 12px', fontSize: 11 }}>
-                                <span style={{ color: a.c, fontWeight: 600 }}>{reportData.pilastri.energy.daAttivare.filter(x => x.alert === a.k).length}</span>
-                                <span style={{ color: 'rgba(255,255,255,0.7)', marginLeft: 5 }}>{a.l}</span>
-                              </div>
-                            ))}
-                          </div>
-                          <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                            <table style={{ width: '100%', fontSize: 10, borderCollapse: 'collapse' }}>
-                              <thead><tr style={{ borderBottom: '1px solid rgba(255,255,255,0.2)' }}><th style={{ padding: '6px', textAlign: 'left', color: 'rgba(255,255,255,0.6)' }}>Cliente</th><th style={{ padding: '6px', textAlign: 'left', color: 'rgba(255,255,255,0.6)' }}>Contratto</th><th style={{ padding: '6px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>Data Acc.</th><th style={{ padding: '6px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>Giorni</th><th style={{ padding: '6px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>Alert</th></tr></thead>
-                              <tbody>
-                                {reportData.pilastri.energy.daAttivare.filter(x => x.alert !== 'ok').slice(0, 20).map((item, i) => (
-                                  <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                                    <td style={{ padding: '6px', color: '#fff' }}>{item.cliente}</td>
-                                    <td style={{ padding: '6px', color: 'rgba(255,255,255,0.7)' }}>{item.contratto}</td>
-                                    <td style={{ padding: '6px', textAlign: 'center', color: 'rgba(255,255,255,0.6)', fontSize: 9 }}>{item.dataAccettazione}</td>
-                                    <td style={{ padding: '6px', textAlign: 'center', fontWeight: 700, color: item.alert === 'critical' ? '#333' : item.alert === 'danger' ? '#F44336' : item.alert === 'orange' ? '#FF9800' : '#FFC107' }}>{item.giorni}</td>
-                                    <td style={{ padding: '6px', textAlign: 'center' }}>{item.alert === 'warning' ? '🟡' : item.alert === 'orange' ? '🟠' : item.alert === 'danger' ? '🔴' : '⚫'}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
                           </div>
                         </div>
                       )}
@@ -2336,12 +2166,12 @@ export default function Home() {
                           <div style={{ fontSize: 12, color: '#FFD700', fontWeight: 600, marginBottom: 8 }}>👑 K MANAGER</div>
                           {reportData.pilastri.energy.classifiche.k.map(([name, val], i) => (
                             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                              <span style={{ width: 20, fontSize: 10, color: i < 3 ? '#FFD700' : 'rgba(255,255,255,0.5)' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
-                              <span style={{ flex: 1, fontSize: 11, color: '#fff' }}>{name}</span>
+                              <span style={{ width: 20, fontSize: 10, color: i < 3 ? '#FFD700' : '#666666' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
+                              <span style={{ flex: 1, fontSize: 11, color: '#333333' }}>{name}</span>
                               <span style={{ fontSize: 12, fontWeight: 700, color: '#FFD700' }}>{val}</span>
                             </div>
                           ))}
-                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 8, paddingTop: 8, textAlign: 'right', fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
+                          <div style={{ borderTop: '1px solid #E0E0E0', marginTop: 8, paddingTop: 8, textAlign: 'right', fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
                             Totale: <strong style={{ color: '#FFD700' }}>{reportData.pilastri.energy.totaleK}</strong>
                           </div>
                         </div>
@@ -2351,7 +2181,7 @@ export default function Home() {
                           <div style={{ fontSize: 12, color: '#9C27B0', fontWeight: 600, marginBottom: 8 }}>⭐ NETWORKER ({reportData.pilastri.energy.classifiche.nw.length})</div>
                           {reportData.pilastri.energy.classifiche.nw.map(([name, val], i) => (
                             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                              <span style={{ width: 20, fontSize: 9, color: i < 3 ? '#9C27B0' : 'rgba(255,255,255,0.4)' }}>{i+1}°</span>
+                              <span style={{ width: 20, fontSize: 9, color: i < 3 ? '#9C27B0' : '#999999' }}>{i+1}°</span>
                               <span style={{ flex: 1, fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>{name}</span>
                               <span style={{ fontSize: 11, fontWeight: 600, color: '#9C27B0' }}>{val}</span>
                             </div>
@@ -2363,7 +2193,7 @@ export default function Home() {
                           <div style={{ fontSize: 12, color: '#2196F3', fontWeight: 600, marginBottom: 8 }}>🔵 SDP ({reportData.pilastri.energy.classifiche.sdp.length})</div>
                           {reportData.pilastri.energy.classifiche.sdp.map(([name, val], i) => (
                             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                              <span style={{ width: 20, fontSize: 9, color: i < 3 ? '#2196F3' : 'rgba(255,255,255,0.4)' }}>{i+1}°</span>
+                              <span style={{ width: 20, fontSize: 9, color: i < 3 ? '#2196F3' : '#999999' }}>{i+1}°</span>
                               <span style={{ flex: 1, fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>{name}</span>
                               <span style={{ fontSize: 11, fontWeight: 600, color: '#2196F3' }}>{val}</span>
                             </div>
@@ -2380,7 +2210,7 @@ export default function Home() {
                         <span style={{ fontSize: 28 }}>🎓</span>
                         <div>
                           <h3 style={{ color: '#9C27B0', fontSize: 18, margin: 0 }}>PILASTRO COLLABORATORI</h3>
-                          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, margin: 0 }}>Funnel: Iscritti → Presenti → Attivati</p>
+                          <p style={{ color: '#666666', fontSize: 12, margin: 0 }}>Funnel: Iscritti → Presenti → Attivati</p>
                         </div>
                       </div>
                       
@@ -2393,7 +2223,7 @@ export default function Home() {
                             <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>📝 Iscritti</div>
                           </div>
                           
-                          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 20 }}>→</div>
+                          <div style={{ color: '#AAAAAA', fontSize: 20 }}>→</div>
                           
                           {/* Presenti */}
                           <div style={{ textAlign: 'center', minWidth: 90 }}>
@@ -2402,7 +2232,7 @@ export default function Home() {
                             <div style={{ fontSize: 9, color: '#4CAF50' }}>{reportData.pilastri.collaboratori.funnel?.pctPresenti || 0}%</div>
                           </div>
                           
-                          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 20 }}>→</div>
+                          <div style={{ color: '#AAAAAA', fontSize: 20 }}>→</div>
                           
                           {/* Attivati */}
                           <div style={{ textAlign: 'center', minWidth: 90 }}>
@@ -2419,19 +2249,19 @@ export default function Home() {
                         {/* K Manager Coll */}
                         <div style={{ background: 'rgba(255,215,0,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(255,215,0,0.2)' }}>
                           <div style={{ fontSize: 12, color: '#FFD700', fontWeight: 600, marginBottom: 8 }}>👑 K MANAGER</div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '30px 1fr 45px 45px 45px', gap: 4, fontSize: 9, color: 'rgba(255,255,255,0.5)', marginBottom: 6 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '30px 1fr 45px 45px 45px', gap: 4, fontSize: 9, color: '#666666', marginBottom: 6 }}>
                             <span>#</span><span>Nome</span><span style={{ textAlign: 'center' }}>📝</span><span style={{ textAlign: 'center' }}>✅</span><span style={{ textAlign: 'center' }}>🟠</span>
                           </div>
                           {reportData.pilastri.collaboratori.classifiche.k.map(([name, stats], i) => (
-                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 45px 45px 45px', gap: 4, alignItems: 'center', marginBottom: 4, padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                              <span style={{ fontSize: 10, color: i < 3 ? '#FFD700' : 'rgba(255,255,255,0.5)' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
-                              <span style={{ fontSize: 11, color: '#fff', fontWeight: i < 3 ? 600 : 400 }}>{name}</span>
+                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 45px 45px 45px', gap: 4, alignItems: 'center', marginBottom: 4, padding: '4px 0', borderBottom: '1px solid #F5F5F5' }}>
+                              <span style={{ fontSize: 10, color: i < 3 ? '#FFD700' : '#666666' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
+                              <span style={{ fontSize: 11, color: '#333333', fontWeight: i < 3 ? 600 : 400 }}>{name}</span>
                               <span style={{ fontSize: 11, fontWeight: 600, color: '#9C27B0', textAlign: 'center' }}>{typeof stats === 'object' ? (stats.iscritti || stats.total || 0) : stats}</span>
                               <span style={{ fontSize: 11, fontWeight: 600, color: '#4CAF50', textAlign: 'center' }}>{typeof stats === 'object' ? (stats.presenti || 0) : '-'}</span>
                               <span style={{ fontSize: 11, fontWeight: 600, color: '#FF6B35', textAlign: 'center' }}>{typeof stats === 'object' ? (stats.attivati || 0) : '-'}</span>
                             </div>
                           ))}
-                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 8, paddingTop: 8, textAlign: 'right', fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
+                          <div style={{ borderTop: '1px solid #E0E0E0', marginTop: 8, paddingTop: 8, textAlign: 'right', fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
                             Totale K: <strong style={{ color: '#FFD700' }}>{reportData.pilastri.collaboratori.totaleK}</strong>
                           </div>
                         </div>
@@ -2439,12 +2269,12 @@ export default function Home() {
                         {/* NW Coll */}
                         <div style={{ background: 'rgba(156,39,176,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(156,39,176,0.2)', maxHeight: 280, overflowY: 'auto' }}>
                           <div style={{ fontSize: 12, color: '#9C27B0', fontWeight: 600, marginBottom: 8 }}>⭐ NETWORKER ({reportData.pilastri.collaboratori.classifiche.nw.length})</div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, fontSize: 8, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, fontSize: 8, color: '#999999', marginBottom: 4 }}>
                             <span>#</span><span>Nome</span><span style={{ textAlign: 'center' }}>📝</span><span style={{ textAlign: 'center' }}>✅</span><span style={{ textAlign: 'center' }}>🟠</span>
                           </div>
                           {reportData.pilastri.collaboratori.classifiche.nw.slice(0, 20).map(([name, stats], i) => (
                             <div key={i} style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, alignItems: 'center', marginBottom: 2, fontSize: 10 }}>
-                              <span style={{ color: i < 3 ? '#9C27B0' : 'rgba(255,255,255,0.4)' }}>{i+1}°</span>
+                              <span style={{ color: i < 3 ? '#9C27B0' : '#999999' }}>{i+1}°</span>
                               <span style={{ color: 'rgba(255,255,255,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                               <span style={{ color: '#9C27B0', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.iscritti || stats.total || 0) : stats}</span>
                               <span style={{ color: '#4CAF50', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.presenti || 0) : '-'}</span>
@@ -2456,12 +2286,12 @@ export default function Home() {
                         {/* SDP Coll */}
                         <div style={{ background: 'rgba(33,150,243,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(33,150,243,0.2)', maxHeight: 280, overflowY: 'auto' }}>
                           <div style={{ fontSize: 12, color: '#2196F3', fontWeight: 600, marginBottom: 8 }}>🔵 SDP ({reportData.pilastri.collaboratori.classifiche.sdp.length})</div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, fontSize: 8, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, fontSize: 8, color: '#999999', marginBottom: 4 }}>
                             <span>#</span><span>Nome</span><span style={{ textAlign: 'center' }}>📝</span><span style={{ textAlign: 'center' }}>✅</span><span style={{ textAlign: 'center' }}>🟠</span>
                           </div>
                           {reportData.pilastri.collaboratori.classifiche.sdp.slice(0, 20).map(([name, stats], i) => (
                             <div key={i} style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, alignItems: 'center', marginBottom: 2, fontSize: 10 }}>
-                              <span style={{ color: i < 3 ? '#2196F3' : 'rgba(255,255,255,0.4)' }}>{i+1}°</span>
+                              <span style={{ color: i < 3 ? '#2196F3' : '#999999' }}>{i+1}°</span>
                               <span style={{ color: 'rgba(255,255,255,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                               <span style={{ color: '#9C27B0', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.iscritti || stats.total || 0) : stats}</span>
                               <span style={{ color: '#4CAF50', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.presenti || 0) : '-'}</span>
@@ -2474,56 +2304,12 @@ export default function Home() {
                     </div>
                   )}
                   
-                  {/* 📅 TIMELINE IVD */}
-                  {reportData.ivdTimeline && reportData.ivdTimeline.length > 0 && reportPillar === 'timeline' && (
-                    <div style={{ background: 'linear-gradient(135deg, rgba(33,150,243,0.1), rgba(33,150,243,0.02))', borderRadius: 20, padding: 20, border: '1px solid rgba(33,150,243,0.3)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
-                        <span style={{ fontSize: 28 }}>📅</span>
-                        <div>
-                          <h3 style={{ color: '#2196F3', fontSize: 18, margin: 0 }}>TIMELINE ATTIVAZIONE IVD</h3>
-                          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, margin: 0 }}>Tracciamento milestone conversione per ogni IVD attivato</p>
-                        </div>
-                      </div>
-                      
-                      <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse', minWidth: 700 }}>
-                          <thead>
-                            <tr style={{ borderBottom: '2px solid rgba(255,255,255,0.2)' }}>
-                              <th style={{ padding: '8px', textAlign: 'left', color: 'rgba(255,255,255,0.6)' }}>Nome IVD</th>
-                              <th style={{ padding: '8px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>Attiv.</th>
-                              <th style={{ padding: '8px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>1° LA Ins</th>
-                              <th style={{ padding: '8px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>1° LA Acc</th>
-                              <th style={{ padding: '8px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>1° FV Ins</th>
-                              <th style={{ padding: '8px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>1° FV Pos</th>
-                              <th style={{ padding: '8px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>1° Iscr</th>
-                              <th style={{ padding: '8px', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>1° Pres</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {reportData.ivdTimeline.slice(0, 20).map((ivd, i) => (
-                              <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                                <td style={{ padding: '8px', fontWeight: 600, color: '#fff' }}>{ivd.nome}</td>
-                                <td style={{ padding: '8px', textAlign: 'center', fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>{ivd.dataAttivazione}</td>
-                                <td style={{ padding: '8px', textAlign: 'center', color: ivd.steps.laIns !== null ? '#4CAF50' : 'rgba(255,255,255,0.3)' }}>{ivd.steps.laIns !== null ? `${ivd.steps.laIns}gg ✅` : '⏳'}</td>
-                                <td style={{ padding: '8px', textAlign: 'center', color: ivd.steps.laAcc !== null ? '#4CAF50' : 'rgba(255,255,255,0.3)' }}>{ivd.steps.laAcc !== null ? `${ivd.steps.laAcc}gg ✅` : '⏳'}</td>
-                                <td style={{ padding: '8px', textAlign: 'center', color: ivd.steps.fvIns !== null ? '#4CAF50' : 'rgba(255,255,255,0.3)' }}>{ivd.steps.fvIns !== null ? `${ivd.steps.fvIns}gg ✅` : '⏳'}</td>
-                                <td style={{ padding: '8px', textAlign: 'center', color: ivd.steps.fvPos !== null ? '#4CAF50' : 'rgba(255,255,255,0.3)' }}>{ivd.steps.fvPos !== null ? `${ivd.steps.fvPos}gg ✅` : '⏳'}</td>
-                                <td style={{ padding: '8px', textAlign: 'center', color: ivd.steps.iscr !== null ? '#4CAF50' : 'rgba(255,255,255,0.3)' }}>{ivd.steps.iscr !== null ? `${ivd.steps.iscr}gg ✅` : '⏳'}</td>
-                                <td style={{ padding: '8px', textAlign: 'center', color: ivd.steps.pres !== null ? '#4CAF50' : 'rgba(255,255,255,0.3)' }}>{ivd.steps.pres !== null ? `${ivd.steps.pres}gg ✅` : '⏳'}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-                  
                   {/* BOTTONE SCREENSHOT REPORT */}
                   <div style={{ background: 'linear-gradient(135deg, rgba(124,77,255,0.2), rgba(124,77,255,0.05))', borderRadius: 16, padding: 20, border: '1px solid rgba(124,77,255,0.3)' }}>
-                    <div style={{ fontSize: 16, color: '#7C4DFF', fontWeight: 700, marginBottom: 5 }}>📷 SCARICA REPORT</div>
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 15 }}>Scarica il report come immagine</div>
+                    <div style={{ fontSize: 16, color: '#2AAA8A', fontWeight: 700, marginBottom: 5 }}>📷 SCARICA REPORT</div>
+                    <div style={{ fontSize: 12, color: '#666666', marginBottom: 15 }}>Scarica il report come immagine</div>
                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                      <button style={{ ...S.btn, flex: 1, minWidth: 140, padding: '14px 20px', background: 'linear-gradient(135deg, #7C4DFF, #536DFE)', fontSize: 14 }} onClick={() => generateDashboardCanvas('png')}>📷 Salva PNG</button>
+                      <button style={{ ...S.btn, flex: 1, minWidth: 140, padding: '14px 20px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', fontSize: 14 }} onClick={() => generateDashboardCanvas('png')}>📷 Salva PNG</button>
                     </div>
                   </div>
                 </div>
@@ -2544,7 +2330,7 @@ export default function Home() {
                   <span style={{ fontSize: 24 }}>{config.emoji}</span>
                   <div>
                     <h2 style={{ color: config.color, fontSize: 18, margin: 0 }}>{config.label}</h2>
-                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, margin: 0 }}>{eventDate}</p>
+                    <p style={{ color: '#666666', fontSize: 12, margin: 0 }}>{eventDate}</p>
                   </div>
                 </div>
                 
@@ -2559,7 +2345,7 @@ export default function Home() {
                     <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', marginTop: 4 }}>{labels.c2}</div>
                   </div>
                   <div style={{ background: 'linear-gradient(135deg, rgba(124,77,255,0.25), rgba(124,77,255,0.08))', borderRadius: 16, padding: '18px 12px', textAlign: 'center', border: '1px solid rgba(124,77,255,0.4)' }}>
-                    <div style={{ fontSize: 36, fontWeight: 800, color: '#7C4DFF' }}>{animatedStats.part}</div>
+                    <div style={{ fontSize: 36, fontWeight: 800, color: '#2AAA8A' }}>{animatedStats.part}</div>
                     <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', marginTop: 4 }}>Partecipanti</div>
                   </div>
                   <div style={{ background: 'linear-gradient(135deg, rgba(255,215,0,0.25), rgba(255,215,0,0.08))', borderRadius: 16, padding: '18px 12px', textAlign: 'center', border: '1px solid rgba(255,215,0,0.4)' }}>
@@ -2571,12 +2357,12 @@ export default function Home() {
                 {/* PODIO + TOP 7 affiancati - PIU GRANDI */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 15 }}>
                   {/* PODIO */}
-                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ background: '#FAFAFA', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.08)' }}>
                     <h3 style={{ color: '#FFD700', fontSize: 16, marginBottom: 15, textAlign: 'center' }}>🏆 PODIO</h3>
                     <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 10, height: 170 }}>
                       {/* 2° */}
                       <div style={{ textAlign: 'center', flex: 1 }}>
-                        <div style={{ fontSize: 12, color: '#fff', fontWeight: 600, marginBottom: 8, lineHeight: 1.3 }}>{stats.top3[1]?.name || '-'}</div>
+                        <div style={{ fontSize: 12, color: '#333333', fontWeight: 600, marginBottom: 8, lineHeight: 1.3 }}>{stats.top3[1]?.name || '-'}</div>
                         <div style={{ background: 'linear-gradient(180deg, #E8E8E8, #A0A0A0)', borderRadius: '10px 10px 0 0', height: 90, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                           <span style={{ fontSize: 24, fontWeight: 800, color: '#333' }}>🥈</span>
                           <span style={{ fontSize: 18, fontWeight: 700, color: '#333' }}>{stats.top3[1]?.v1 || 0}</span>
@@ -2592,7 +2378,7 @@ export default function Home() {
                       </div>
                       {/* 3° */}
                       <div style={{ textAlign: 'center', flex: 1 }}>
-                        <div style={{ fontSize: 12, color: '#fff', fontWeight: 600, marginBottom: 8, lineHeight: 1.3 }}>{stats.top3[2]?.name || '-'}</div>
+                        <div style={{ fontSize: 12, color: '#333333', fontWeight: 600, marginBottom: 8, lineHeight: 1.3 }}>{stats.top3[2]?.name || '-'}</div>
                         <div style={{ background: 'linear-gradient(180deg, #FFAB91, #CD7F32)', borderRadius: '10px 10px 0 0', height: 65, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                           <span style={{ fontSize: 20, fontWeight: 800, color: '#333' }}>🥉</span>
                           <span style={{ fontSize: 14, fontWeight: 700, color: '#333' }}>{stats.top3[2]?.v1 || 0}</span>
@@ -2602,15 +2388,15 @@ export default function Home() {
                   </div>
 
                   {/* TOP 4-10 */}
-                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ background: '#FAFAFA', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.08)' }}>
                     <h3 style={{ color: '#FF6B35', fontSize: 16, marginBottom: 12 }}>📈 TOP 4° - 10°</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {stats.top10.slice(3, 10).map((p, i) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <span style={{ width: 28, fontSize: 13, color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{i + 4}°</span>
                           <div style={{ flex: 1, height: 28, background: 'rgba(255,255,255,0.06)', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
-                            <div style={{ width: `${(p.v1 / stats.maxV1) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #7C4DFF, #9575CD)', borderRadius: 6 }} />
-                            <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: '#fff', fontWeight: 500 }}>{p.name}</span>
+                            <div style={{ width: `${(p.v1 / stats.maxV1) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #2AAA8A, #9575CD)', borderRadius: 6 }} />
+                            <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: '#333333', fontWeight: 500 }}>{p.name}</span>
                           </div>
                           <span style={{ width: 28, fontSize: 14, fontWeight: 700, color: '#FF6B35', textAlign: 'right' }}>{p.v1}</span>
                         </div>
@@ -2622,10 +2408,10 @@ export default function Home() {
                 {/* DONUT + HEATMAP affiancati */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
                   {/* DONUT */}
-                  <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, padding: 15, border: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: 15 }}>
+                  <div style={{ background: '#FCFCFC', borderRadius: 16, padding: 15, border: '1px solid #F5F5F5', display: 'flex', alignItems: 'center', gap: 15 }}>
                     <div style={{ position: 'relative', width: 80, height: 80, flexShrink: 0 }}>
                       <svg viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
-                        <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="15" />
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="#E0E0E0" strokeWidth="15" />
                         <circle cx="50" cy="50" r="40" fill="none" stroke="#4CAF50" strokeWidth="15" strokeLinecap="round" strokeDasharray={`${stats.conv * 2.51} 251`} />
                       </svg>
                       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -2633,10 +2419,10 @@ export default function Home() {
                       </div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 5 }}>CONVERSIONE</div>
+                      <div style={{ fontSize: 12, color: '#666666', marginBottom: 5 }}>CONVERSIONE</div>
                       <div style={{ display: 'flex', gap: 15 }}>
-                        <div><span style={{ fontSize: 16, fontWeight: 700, color: '#FF6B35' }}>{stats.ins}</span><span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginLeft: 4 }}>ins</span></div>
-                        <div><span style={{ fontSize: 16, fontWeight: 700, color: '#4CAF50' }}>{stats.acc}</span><span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginLeft: 4 }}>acc</span></div>
+                        <div><span style={{ fontSize: 16, fontWeight: 700, color: '#FF6B35' }}>{stats.ins}</span><span style={{ fontSize: 10, color: '#999999', marginLeft: 4 }}>ins</span></div>
+                        <div><span style={{ fontSize: 16, fontWeight: 700, color: '#4CAF50' }}>{stats.acc}</span><span style={{ fontSize: 10, color: '#999999', marginLeft: 4 }}>acc</span></div>
                       </div>
                     </div>
                   </div>
@@ -2644,25 +2430,25 @@ export default function Home() {
                   {/* HEATMAP DINAMICO - Settimanale o Mensile */}
                   {!stats.isMonthly ? (
                     // HEATMAP SETTIMANALE
-                    <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, padding: 15, border: '1px solid rgba(255,255,255,0.05)' }}>
-                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>🗓️ ATTIVITÀ SETTIMANALE</div>
+                    <div style={{ background: '#FCFCFC', borderRadius: 16, padding: 15, border: '1px solid #F5F5F5' }}>
+                      <div style={{ fontSize: 12, color: '#666666', marginBottom: 8 }}>🗓️ ATTIVITÀ SETTIMANALE</div>
                       <div style={{ display: 'flex', gap: 6 }}>
                         {dayNames.map((day, i) => {
                           const val = stats.weeklyData[i];
                           const intensity = val / maxWeekly;
-                          const bgColor = val === 0 ? 'rgba(255,255,255,0.05)' : intensity > 0.7 ? '#4CAF50' : intensity > 0.4 ? '#FFC107' : '#FF6B35';
+                          const bgColor = val === 0 ? '#F5F5F5' : intensity > 0.7 ? '#4CAF50' : intensity > 0.4 ? '#FFC107' : '#FF6B35';
                           return (
                             <div key={day} style={{ flex: 1, textAlign: 'center' }}>
-                              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>{day}</div>
+                              <div style={{ fontSize: 9, color: '#999999', marginBottom: 4 }}>{day}</div>
                               <div style={{ height: 36, borderRadius: 6, background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: val === 0 ? 'rgba(255,255,255,0.2)' : '#fff' }}>{val}</div>
                             </div>
                           );
                         })}
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 10 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#4CAF50' }} /><span style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)' }}>Alto (&gt;70%)</span></div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#FFC107' }} /><span style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)' }}>Medio</span></div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#FF6B35' }} /><span style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)' }}>Basso</span></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#4CAF50' }} /><span style={{ fontSize: 9, color: '#666666' }}>Alto (&gt;70%)</span></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#FFC107' }} /><span style={{ fontSize: 9, color: '#666666' }}>Medio</span></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#FF6B35' }} /><span style={{ fontSize: 9, color: '#666666' }}>Basso</span></div>
                       </div>
                     </div>
                   ) : (
@@ -2670,7 +2456,7 @@ export default function Home() {
                     <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.08), rgba(255,107,53,0.02))', borderRadius: 16, padding: 15, border: '1px solid rgba(255,107,53,0.2)', gridColumn: 'span 2' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                         <div style={{ fontSize: 14, color: '#FF6B35', fontWeight: 600 }}>🔥 TEMPERATURA CONTRATTI</div>
-                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>Giorni caldi del mese</div>
+                        <div style={{ fontSize: 10, color: '#666666' }}>Giorni caldi del mese</div>
                       </div>
                       {(() => {
                         const maxM = Math.max(...stats.monthlyData, 1);
@@ -2683,7 +2469,7 @@ export default function Home() {
                             {/* Header giorni settimana */}
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3, marginBottom: 6 }}>
                               {dayLabels.map((d, i) => (
-                                <div key={i} style={{ textAlign: 'center', fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>{d}</div>
+                                <div key={i} style={{ textAlign: 'center', fontSize: 10, color: '#999999', fontWeight: 600 }}>{d}</div>
                               ))}
                             </div>
                             {/* Griglia calendario */}
@@ -2695,7 +2481,7 @@ export default function Home() {
                               {/* Giorni del mese */}
                               {stats.monthlyData.slice(0, daysInMonth).map((val, i) => {
                                 const intensity = val / maxM;
-                                const bgColor = val === 0 ? 'rgba(255,255,255,0.05)' : 
+                                const bgColor = val === 0 ? '#F5F5F5' : 
                                                intensity > 0.7 ? '#4CAF50' : 
                                                intensity > 0.4 ? '#FFC107' : '#FF6B35';
                                 const isHot = intensity > 0.7 && val > 0;
@@ -2712,8 +2498,8 @@ export default function Home() {
                                     boxShadow: isHot ? '0 0 10px rgba(76,175,80,0.5)' : 'none',
                                     transition: 'all 0.2s'
                                   }}>
-                                    <span style={{ fontSize: 10, color: val === 0 ? 'rgba(255,255,255,0.3)' : '#fff', fontWeight: val > 0 ? 600 : 400 }}>{i + 1}</span>
-                                    {val > 0 && <span style={{ fontSize: 8, color: '#fff', fontWeight: 700 }}>{val}</span>}
+                                    <span style={{ fontSize: 10, color: val === 0 ? '#AAAAAA' : '#fff', fontWeight: val > 0 ? 600 : 400 }}>{i + 1}</span>
+                                    {val > 0 && <span style={{ fontSize: 8, color: '#333333', fontWeight: 700 }}>{val}</span>}
                                     {isHot && <span style={{ position: 'absolute', top: -4, right: -2, fontSize: 8 }}>🔥</span>}
                                   </div>
                                 );
@@ -2740,7 +2526,7 @@ export default function Home() {
                   
                   // Funzione per disegnare torta mini SVG
                   const MiniPie = ({ data, total, colors, size = 70 }) => {
-                    if (!data.length || total === 0) return <div style={{ width: size, height: size, borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />;
+                    if (!data.length || total === 0) return <div style={{ width: size, height: size, borderRadius: '50%', background: '#E0E0E0' }} />;
                     let cumulative = 0;
                     const paths = data.slice(0, 6).map(([name, val], i) => {
                       const pct = val / total;
@@ -2763,7 +2549,7 @@ export default function Home() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
                       {/* TORTA K MANAGER */}
                       {pies.k.length > 0 && (
-                        <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, padding: 15, border: '1px solid rgba(255,215,0,0.2)' }}>
+                        <div style={{ background: '#FCFCFC', borderRadius: 16, padding: 15, border: '1px solid rgba(255,215,0,0.2)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             <MiniPie data={pies.k} total={totalK} colors={PIE_COLORS} size={65} />
                             <div style={{ flex: 1 }}>
@@ -2784,7 +2570,7 @@ export default function Home() {
                       
                       {/* TORTA STATI */}
                       {pies.stati.length > 0 && (
-                        <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, padding: 15, border: '1px solid rgba(76,175,80,0.2)' }}>
+                        <div style={{ background: '#FCFCFC', borderRadius: 16, padding: 15, border: '1px solid rgba(76,175,80,0.2)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             <MiniPie data={pies.stati} total={totalStati} colors={pies.stati.map(([s]) => STATO_COLORS[s] || '#607D8B')} size={65} />
                             <div style={{ flex: 1 }}>
@@ -2805,17 +2591,17 @@ export default function Home() {
                       
                       {/* BARRA NW TOP 5 */}
                       {pies.nw.length > 0 && (
-                        <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 16, padding: 15, border: '1px solid rgba(156,39,176,0.2)', gridColumn: pies.k.length > 0 && pies.stati.length > 0 ? 'span 2' : 'span 1' }}>
+                        <div style={{ background: '#FCFCFC', borderRadius: 16, padding: 15, border: '1px solid rgba(156,39,176,0.2)', gridColumn: pies.k.length > 0 && pies.stati.length > 0 ? 'span 2' : 'span 1' }}>
                           <div style={{ fontSize: 12, color: '#9C27B0', fontWeight: 600, marginBottom: 10 }}>⭐ TOP 5 NETWORKER</div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                             {pies.nw.slice(0, 5).map(([name, val], i) => {
                               const maxNw = pies.nw[0]?.[1] || 1;
                               return (
                                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  <span style={{ width: 20, fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>{i+1}°</span>
-                                  <div style={{ flex: 1, height: 18, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
+                                  <span style={{ width: 20, fontSize: 10, color: '#666666' }}>{i+1}°</span>
+                                  <div style={{ flex: 1, height: 18, background: '#F5F5F5', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
                                     <div style={{ width: `${(val/maxNw)*100}%`, height: '100%', background: `linear-gradient(90deg, ${PIE_COLORS[i]}, ${PIE_COLORS[i]}88)`, borderRadius: 4 }} />
-                                    <span style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 9, color: '#fff' }}>{name.split(' ').slice(0,2).join(' ')}</span>
+                                    <span style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 9, color: '#333333' }}>{name.split(' ').slice(0,2).join(' ')}</span>
                                   </div>
                                   <span style={{ width: 25, fontSize: 11, fontWeight: 600, color: PIE_COLORS[i], textAlign: 'right' }}>{val}</span>
                                 </div>
@@ -2831,7 +2617,7 @@ export default function Home() {
                 {/* BOTTONI DOWNLOAD SLIDE */}
                 <div style={{ background: 'linear-gradient(135deg, rgba(42,170,138,0.2), rgba(42,170,138,0.05))', borderRadius: 16, padding: 20, border: '1px solid rgba(42,170,138,0.3)' }}>
                   <div style={{ fontSize: 16, color: '#2AAA8A', fontWeight: 700, marginBottom: 5 }}>📥 SCARICA PER SLIDE</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 15 }}>PNG 1920x1080 (16:9) - Sfondo verde NWG</div>
+                  <div style={{ fontSize: 12, color: '#666666', marginBottom: 15 }}>PNG 1920x1080 (16:9) - Sfondo verde NWG</div>
                   <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                     <button style={{ ...S.btn, flex: 1, minWidth: 180, padding: '14px 20px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', fontSize: 14 }} onClick={() => downloadSlidePNG('full')}>📊 Podio + Classifica</button>
                     <button style={{ ...S.btn, flex: 1, minWidth: 180, padding: '14px 20px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', color: '#1a1a2e', fontSize: 14 }} onClick={() => downloadSlidePNG('solo')}>🏆 Solo Podio</button>
@@ -2842,21 +2628,21 @@ export default function Home() {
           })()}
 
           {/* CLASSIFICHE TAB */}
-          {rankings && activeTab === 'classifiche' ? (<div style={S.rankCard}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 15 }}><div><h2 style={{ color: config.color, fontSize: 18, margin: 0 }}>{config.emoji} {config.label}</h2><p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 4 }}>{getData().length} partecipanti • {getClassificaTotal()} contratti • {eventDate}</p></div><div style={{ display: 'flex', gap: 15 }}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: config.color }}>{getClassificaTotal()}</div><div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>{labels.c1}</div></div><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</div><div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>{labels.c2}</div></div></div></div><div style={{ overflowX: 'auto', maxHeight: '50vh', overflowY: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 300 }}><thead><tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}><th style={S.th}>#</th><th style={{ ...S.th, textAlign: 'left' }}>Nome</th><th style={S.th}>{labels.c1}</th>{isExclusive() && <><th style={S.th}>%</th><th style={S.th}>{labels.c2}</th></>}</tr></thead><tbody>{getData().map(([name, s], i) => { const p = s.v1 > 0 ? Math.round(s.v2 / s.v1 * 100) : 0; return (<tr key={name} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', ...(i < 3 ? { background: `${config.color}10` } : {}) }}><td style={{ padding: 10, textAlign: 'center' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td><td style={{ padding: 10, fontWeight: i < 3 ? 700 : 500, fontSize: 13 }}>{name}</td><td style={{ padding: 10, textAlign: 'center', color: config.color, fontWeight: 700 }}>{s.v1}</td>{isExclusive() && <><td style={{ padding: 10, textAlign: 'center', color: p >= 50 ? '#4CAF50' : '#FFC107', fontSize: 12 }}>{p}%</td><td style={{ padding: 10, textAlign: 'center', color: '#4CAF50', fontWeight: 700 }}>{s.v2}</td></>}</tr>); })}</tbody></table></div>{(user.role === 'admin' || user.role === 'assistente') && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}>📸 PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg,#00BFA5,#1DE9B6)' }} onClick={() => handleSendToBot()}>🤖 Invia a Bot</button>{sendStatus && <span style={{ fontSize: 13, color: sendStatus.includes('✅') ? '#4CAF50' : sendStatus.includes('❌') ? '#f44' : '#FFC107' }}>{sendStatus}</span>}</div>)}{user.role === 'k' && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}>📸 PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg,#666,#888)' }} onClick={() => handleSendToBot()}>🤖 Invia a Bot</button></div>)}</div>) : !rankings && (<div style={{ textAlign: 'center', padding: 60, color: 'rgba(255,255,255,0.4)' }}><div style={{ fontSize: 50 }}>📊</div><p>Carica un CSV per iniziare</p></div>)}
+          {rankings && activeTab === 'classifiche' ? (<div style={S.rankCard}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 15 }}><div><h2 style={{ color: config.color, fontSize: 18, margin: 0 }}>{config.emoji} {config.label}</h2><p style={{ color: '#666666', fontSize: 12, marginTop: 4 }}>{getData().length} partecipanti • {getClassificaTotal()} contratti • {eventDate}</p></div><div style={{ display: 'flex', gap: 15 }}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: config.color }}>{getClassificaTotal()}</div><div style={{ fontSize: 9, color: '#999999' }}>{labels.c1}</div></div><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</div><div style={{ fontSize: 9, color: '#999999' }}>{labels.c2}</div></div></div></div><div style={{ overflowX: 'auto', maxHeight: '50vh', overflowY: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 300 }}><thead><tr style={{ borderBottom: '1px solid #E0E0E0' }}><th style={S.th}>#</th><th style={{ ...S.th, textAlign: 'left' }}>Nome</th><th style={S.th}>{labels.c1}</th>{isExclusive() && <><th style={S.th}>%</th><th style={S.th}>{labels.c2}</th></>}</tr></thead><tbody>{getData().map(([name, s], i) => { const p = s.v1 > 0 ? Math.round(s.v2 / s.v1 * 100) : 0; return (<tr key={name} style={{ borderBottom: '1px solid #F5F5F5', ...(i < 3 ? { background: `${config.color}10` } : {}) }}><td style={{ padding: 10, textAlign: 'center' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td><td style={{ padding: 10, fontWeight: i < 3 ? 700 : 500, fontSize: 13 }}>{name}</td><td style={{ padding: 10, textAlign: 'center', color: config.color, fontWeight: 700 }}>{s.v1}</td>{isExclusive() && <><td style={{ padding: 10, textAlign: 'center', color: p >= 50 ? '#4CAF50' : '#FFC107', fontSize: 12 }}>{p}%</td><td style={{ padding: 10, textAlign: 'center', color: '#4CAF50', fontWeight: 700 }}>{s.v2}</td></>}</tr>); })}</tbody></table></div>{(user.role === 'admin' || user.role === 'assistente') && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}>📸 PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg,#00BFA5,#1DE9B6)' }} onClick={() => handleSendToBot()}>🤖 Invia a Bot</button>{sendStatus && <span style={{ fontSize: 13, color: sendStatus.includes('✅') ? '#4CAF50' : sendStatus.includes('❌') ? '#f44' : '#FFC107' }}>{sendStatus}</span>}</div>)}{user.role === 'k' && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}>📸 PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg,#666,#888)' }} onClick={() => handleSendToBot()}>🤖 Invia a Bot</button></div>)}</div>) : !rankings && (<div style={{ textAlign: 'center', padding: 60, color: '#999999' }}><div style={{ fontSize: 50 }}>📊</div><p>Carica un CSV per iniziare</p></div>)}
         </section>
       </main>
       {showConfirmModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
-          <div style={{ background: 'linear-gradient(135deg,#1a1a2e,#12121f)', borderRadius: 20, padding: 30, maxWidth: 450, width: '100%', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ background: 'linear-gradient(135deg,#1a1a2e,#12121f)', borderRadius: 20, padding: 30, maxWidth: 450, width: '100%', border: '1px solid #E0E0E0' }}>
             <h2 style={{ color: '#FFC107', marginBottom: 20, fontSize: 20 }}>⚠️ VERIFICA PRIMA DI INVIARE</h2>
-            <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 20, marginBottom: 20 }}>
-              <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 10, fontSize: 14 }}>📊 <strong style={{ color: '#fff' }}>Classifica:</strong> {config.label}</p>
-              <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 10, fontSize: 14 }}>📅 <strong style={{ color: '#fff' }}>Evento:</strong> {eventName} - {eventDate}</p>
-              <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 10, fontSize: 14 }}>📈 <strong style={{ color: '#fff' }}>Tipo:</strong> {periodType === 'progressiva' ? 'Progressiva' : periodType === 'settimanale' ? 'Settimanale' : 'Finale mese'}</p>
-              <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '15px 0' }} />
+            <div style={{ background: '#F5F5F5', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+              <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 10, fontSize: 14 }}>📊 <strong style={{ color: '#333333' }}>Classifica:</strong> {config.label}</p>
+              <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 10, fontSize: 14 }}>📅 <strong style={{ color: '#333333' }}>Evento:</strong> {eventName} - {eventDate}</p>
+              <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 10, fontSize: 14 }}>📈 <strong style={{ color: '#333333' }}>Tipo:</strong> {periodType === 'progressiva' ? 'Progressiva' : periodType === 'settimanale' ? 'Settimanale' : 'Finale mese'}</p>
+              <div style={{ height: 1, background: '#E0E0E0', margin: '15px 0' }} />
               <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 8, fontSize: 14 }}>📥 <strong style={{ color: config.color }}>{getClassificaTotal()}</strong> {labels.c1}</p>
               <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 8, fontSize: 14 }}>✅ <strong style={{ color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</strong> {labels.c2}</p>
-              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>👥 <strong style={{ color: '#fff' }}>{getData().length}</strong> partecipanti</p>
+              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>👥 <strong style={{ color: '#333333' }}>{getData().length}</strong> partecipanti</p>
             </div>
             <p style={{ color: '#FFC107', fontSize: 14, marginBottom: 20, textAlign: 'center' }}>✅ I numeri sono corretti?</p>
             <div style={{ display: 'flex', gap: 12 }}>
@@ -2870,51 +2656,51 @@ export default function Home() {
 }
 
 const S = {
-  loginWrap: { minHeight: '100vh', background: 'linear-gradient(135deg,#0a0a15 0%,#1a1a2e 50%,#0a0a15 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif' },
-  loginCard: { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '45px 35px', width: '100%', maxWidth: 400, textAlign: 'center', color: '#fff', backdropFilter: 'blur(10px)' },
+  loginWrap: { minHeight: '100vh', background: '#F5F5F5', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif' },
+  loginCard: { background: '#FFFFFF', border: '1px solid #E0E0E0', borderRadius: 20, padding: '45px 35px', width: '100%', maxWidth: 400, textAlign: 'center', color: '#333333', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' },
   logoContainer: { marginBottom: 25 }, logoIcon: { marginBottom: 15 },
   podium: { display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 4, height: 55 },
   podiumBar: { width: 30, borderRadius: '6px 6px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 4 },
-  podiumNum: { fontSize: 12, fontWeight: 800, color: '#000' },
-  logoText: { fontSize: 32, marginBottom: 5 }, logoTagline: { color: 'rgba(255,255,255,0.4)', fontSize: 13, fontStyle: 'italic' },
-  loginDivider: { height: 1, background: 'linear-gradient(90deg, transparent, rgba(124,77,255,0.3), transparent)', margin: '25px 0' },
-  input: { width: '100%', padding: '16px 18px', fontSize: 15, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, background: 'rgba(255,255,255,0.03)', color: '#fff', marginBottom: 14, outline: 'none', boxSizing: 'border-box' },
-  btn: { padding: '16px 28px', fontSize: 15, fontWeight: 700, border: 'none', borderRadius: 12, background: 'linear-gradient(135deg,#7C4DFF,#536DFE)', color: '#fff', cursor: 'pointer', width: '100%' },
+  podiumNum: { fontSize: 12, fontWeight: 800, color: '#333333' },
+  logoText: { fontSize: 32, marginBottom: 5, color: '#333333' }, logoTagline: { color: '#666666', fontSize: 13, fontStyle: 'italic' },
+  loginDivider: { height: 1, background: 'linear-gradient(90deg, transparent, #2AAA8A50, transparent)', margin: '25px 0' },
+  input: { width: '100%', padding: '16px 18px', fontSize: 15, border: '1px solid #E0E0E0', borderRadius: 12, background: '#FFFFFF', color: '#333333', marginBottom: 14, outline: 'none', boxSizing: 'border-box' },
+  btn: { padding: '16px 28px', fontSize: 15, fontWeight: 700, border: 'none', borderRadius: 12, background: '#2AAA8A', color: '#333333', cursor: 'pointer', width: '100%' },
   categoryIcons: { display: 'flex', justifyContent: 'center', gap: 20, marginTop: 30 }, catIcon: { fontSize: 24, opacity: 0.6 },
-  homeWrap: { minHeight: '100vh', background: 'linear-gradient(135deg,#0a0a15 0%,#12121f 50%,#0a0a15 100%)', fontFamily: '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif' },
-  homeHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 25px', borderBottom: '1px solid rgba(255,255,255,0.05)' },
-  homeLogoSmall: { fontSize: 18, color: '#fff' },
-  logoutBtn: { padding: '8px 16px', fontSize: 13, border: '1px solid rgba(255,255,255,0.2)', borderRadius: 8, background: 'transparent', color: '#fff', cursor: 'pointer' },
+  homeWrap: { minHeight: '100vh', background: '#F5F5F5', fontFamily: '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif' },
+  homeHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 25px', borderBottom: '1px solid #E0E0E0', background: '#FFFFFF' },
+  homeLogoSmall: { fontSize: 18, color: '#333333' },
+  logoutBtn: { padding: '8px 16px', fontSize: 13, border: '1px solid #E0E0E0', borderRadius: 8, background: 'transparent', color: '#333333', cursor: 'pointer' },
   homeMain: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 60px)', padding: 30 },
   homeLogo: { textAlign: 'center', marginBottom: 50 }, homeLogoIcon: { marginBottom: 20 },
   homePodium: { display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 8, height: 90 },
-  homePodiumBar: { width: 50, borderRadius: '10px 10px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 8, boxShadow: '0 4px 15px rgba(0,0,0,0.3)' },
-  homePodiumNum: { fontSize: 20, fontWeight: 800, color: 'rgba(0,0,0,0.7)' },
-  homeTitle: { fontSize: 48, fontWeight: 300, color: '#fff', marginBottom: 8 }, homeSubtitle: { fontSize: 16, color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' },
-  uploadArea: { width: '100%', maxWidth: 500, border: '3px dashed rgba(124,77,255,0.3)', borderRadius: 20, padding: '60px 40px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s', background: 'rgba(124,77,255,0.03)' },
-  uploadAreaActive: { borderColor: '#7C4DFF', background: 'rgba(124,77,255,0.1)', transform: 'scale(1.02)' },
-  uploadLabel: { cursor: 'pointer', display: 'block' }, uploadIcon: { fontSize: 70, marginBottom: 20 }, uploadText: { fontSize: 22, fontWeight: 700, color: '#7C4DFF', marginBottom: 10 }, uploadHint: { fontSize: 14, color: 'rgba(255,255,255,0.4)' },
+  homePodiumBar: { width: 50, borderRadius: '10px 10px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 8, boxShadow: '0 4px 15px rgba(0,0,0,0.1)' },
+  homePodiumNum: { fontSize: 20, fontWeight: 800, color: '#333333' },
+  homeTitle: { fontSize: 48, fontWeight: 300, color: '#333333', marginBottom: 8 }, homeSubtitle: { fontSize: 16, color: '#666666', fontStyle: 'italic' },
+  uploadArea: { width: '100%', maxWidth: 500, border: '3px dashed #2AAA8A50', borderRadius: 20, padding: '60px 40px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s', background: '#FFFFFF' },
+  uploadAreaActive: { borderColor: '#2AAA8A', background: 'rgba(42,170,138,0.05)', transform: 'scale(1.02)' },
+  uploadLabel: { cursor: 'pointer', display: 'block' }, uploadIcon: { fontSize: 70, marginBottom: 20 }, uploadText: { fontSize: 22, fontWeight: 700, color: '#2AAA8A', marginBottom: 10 }, uploadHint: { fontSize: 14, color: '#666666' },
   categoriesPreview: { display: 'flex', gap: 20, marginTop: 50, flexWrap: 'wrap', justifyContent: 'center' },
-  catPreviewItem: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '15px 25px', background: 'rgba(255,255,255,0.03)', borderRadius: 12, color: 'rgba(255,255,255,0.6)', fontSize: 13 },
-  catPreviewIcon: { fontSize: 28 }, homeFooter: { marginTop: 40, color: 'rgba(255,255,255,0.3)', fontSize: 12 },
-  previewWrap: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 15 },
-  previewModal: { background: 'linear-gradient(135deg,#1a1a2e,#12121f)', borderRadius: 20, padding: 25, width: '100%', maxWidth: 600, maxHeight: '95vh', display: 'flex', flexDirection: 'column', border: '1px solid rgba(255,255,255,0.1)' },
-  previewImg: { background: '#0a0a15', borderRadius: 12, padding: 12, overflow: 'auto', flex: 1 },
-  dash: { minHeight: '100vh', background: '#0a0a12', color: '#fff', fontFamily: '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.05)', position: 'sticky', top: 0, zIndex: 100 },
-  menuBtn: { background: 'none', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer' },
-  badge: { fontSize: 10, padding: '4px 10px', background: 'rgba(124,77,255,0.2)', color: '#7C4DFF', borderRadius: 15, fontWeight: 700 },
-  sidebar: { position: 'fixed', top: 0, left: 0, width: 280, height: '100vh', background: '#0f0f1a', padding: '60px 15px 20px', overflowY: 'auto', zIndex: 200, transform: 'translateX(-100%)', transition: 'transform 0.3s', boxSizing: 'border-box', borderRight: '1px solid rgba(255,255,255,0.05)' },
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 150 },
-  catLabel: { fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: 1, marginTop: 15, marginBottom: 6, textTransform: 'uppercase' },
-  menuItem: { display: 'block', width: '100%', padding: '10px 14px', fontSize: 13, border: 'none', borderRadius: 8, background: 'transparent', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', textAlign: 'left', marginBottom: 2 },
-  menuActive: { background: 'rgba(124,77,255,0.2)', color: '#7C4DFF' },
-  divider: { height: 1, background: 'rgba(255,255,255,0.06)', margin: '15px 0' },
-  periodBtn: { display: 'block', width: '100%', padding: '8px 12px', fontSize: 12, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, background: 'transparent', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', marginBottom: 8, textAlign: 'left' },
-  select: { width: '100%', padding: '10px', fontSize: 13, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, background: 'rgba(255,255,255,0.03)', color: '#fff', marginBottom: 8 },
-  inputSm: { width: '100%', padding: '8px 10px', fontSize: 12, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, background: 'rgba(255,255,255,0.03)', color: '#fff', marginBottom: 8, boxSizing: 'border-box' },
+  catPreviewItem: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '15px 25px', background: '#FFFFFF', borderRadius: 12, color: '#666666', fontSize: 13, border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' },
+  catPreviewIcon: { fontSize: 28 }, homeFooter: { marginTop: 40, color: '#999999', fontSize: 12 },
+  previewWrap: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 15 },
+  previewModal: { background: '#FFFFFF', borderRadius: 20, padding: 25, width: '100%', maxWidth: 600, maxHeight: '95vh', display: 'flex', flexDirection: 'column', border: '1px solid #E0E0E0', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' },
+  previewImg: { background: '#F8F9FA', borderRadius: 12, padding: 12, overflow: 'auto', flex: 1 },
+  dash: { minHeight: '100vh', background: '#F5F5F5', color: '#333333', fontFamily: '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', background: '#FFFFFF', borderBottom: '1px solid #E0E0E0', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' },
+  menuBtn: { background: 'none', border: 'none', color: '#333333', fontSize: 22, cursor: 'pointer' },
+  badge: { fontSize: 10, padding: '4px 10px', background: 'rgba(42,170,138,0.15)', color: '#2AAA8A', borderRadius: 15, fontWeight: 700 },
+  sidebar: { position: 'fixed', top: 0, left: 0, width: 280, height: '100vh', background: '#FFFFFF', padding: '60px 15px 20px', overflowY: 'auto', zIndex: 200, transform: 'translateX(-100%)', transition: 'transform 0.3s', boxSizing: 'border-box', borderRight: '1px solid #E0E0E0', boxShadow: '4px 0 20px rgba(0,0,0,0.08)' },
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 150 },
+  catLabel: { fontSize: 10, color: '#999999', letterSpacing: 1, marginTop: 15, marginBottom: 6, textTransform: 'uppercase' },
+  menuItem: { display: 'block', width: '100%', padding: '10px 14px', fontSize: 13, border: 'none', borderRadius: 8, background: 'transparent', color: '#666666', cursor: 'pointer', textAlign: 'left', marginBottom: 2 },
+  menuActive: { background: 'rgba(42,170,138,0.12)', color: '#2AAA8A' },
+  divider: { height: 1, background: '#E0E0E0', margin: '15px 0' },
+  periodBtn: { display: 'block', width: '100%', padding: '8px 12px', fontSize: 12, border: '1px solid #E0E0E0', borderRadius: 6, background: '#FFFFFF', color: '#666666', cursor: 'pointer', marginBottom: 8, textAlign: 'left' },
+  select: { width: '100%', padding: '10px', fontSize: 13, border: '1px solid #E0E0E0', borderRadius: 8, background: '#FFFFFF', color: '#333333', marginBottom: 8 },
+  inputSm: { width: '100%', padding: '8px 10px', fontSize: 12, border: '1px solid #E0E0E0', borderRadius: 6, background: '#FFFFFF', color: '#333333', marginBottom: 8, boxSizing: 'border-box' },
   content: { flex: 1, padding: 15, minHeight: 'calc(100vh - 60px)' },
-  uploadBox: { border: '2px dashed rgba(124,77,255,0.25)', borderRadius: 12, padding: '20px', textAlign: 'center', marginBottom: 15, transition: 'all 0.3s' },
-  rankCard: { background: 'rgba(255,255,255,0.02)', borderRadius: 16, padding: 18, border: '1px solid rgba(255,255,255,0.05)' },
-  th: { padding: 10, fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', textAlign: 'center' },
+  uploadBox: { border: '2px dashed #2AAA8A40', borderRadius: 12, padding: '20px', textAlign: 'center', marginBottom: 15, transition: 'all 0.3s', background: '#FFFFFF' },
+  rankCard: { background: '#FFFFFF', borderRadius: 16, padding: 18, border: '1px solid #E0E0E0', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' },
+  th: { padding: 10, fontSize: 10, fontWeight: 700, color: '#999999', textTransform: 'uppercase', textAlign: 'center' },
 };
