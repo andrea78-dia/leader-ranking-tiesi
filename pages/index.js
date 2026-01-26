@@ -746,7 +746,6 @@ export default function Home() {
       const semData = reportCSVs.consultings?.data || [];
       
       const trackerCoaching = [];
-      const oggi = new Date();
       
       // Helper per normalizzare nomi per confronto
       const normalizza = (nome) => (nome || '').toLowerCase().trim().replace(/\s+/g, ' ');
@@ -754,18 +753,23 @@ export default function Home() {
         if (!n1 || !n2) return false;
         const nome1 = normalizza(n1);
         const nome2 = normalizza(n2);
-        // Match esatto o parziale
         return nome1 === nome2 || nome1.includes(nome2) || nome2.includes(nome1);
       };
       
+      // Filtro: solo IVD attivati dal 2024 in poi (esclude dati troppo vecchi)
+      const annoMinimo = 2024;
+      
       ivdData.forEach(row => {
-        const nomeIvd = row['Nome Intermediario'] || row['Nome'] || row['Intermediario'] || '';
-        const dataAttStr = row['Inserimento'] || row['Data'] || row['Data Attivazione'] || row['Data SI'] || '';
+        const nomeIvd = row['IVD'] || row['Cliente'] || '';
+        const dataAttStr = row['Data Inserimento'] || '';
         
         if (nomeIvd && dataAttStr) {
           try {
             const dataAttivazione = new Date(dataAttStr.replace(' ', 'T'));
             if (isNaN(dataAttivazione.getTime())) return;
+            
+            // Filtro per anno - escludi IVD attivati prima del 2024
+            if (dataAttivazione.getFullYear() < annoMinimo) return;
             
             const tracker = {
               nome: nomeIvd,
@@ -777,14 +781,15 @@ export default function Home() {
               primoIscritto: null,
               giorniIscritto: null,
               primoAttivato: null,
-              giorniAttivato: null
+              giorniAttivato: null,
+              nomeAttivato: null // Chi ha attivato
             };
             
-            // Cerca prima Luce Amica - cerca in Nome Primo Networker
+            // 1° LUCE AMICA - Cerca contratti dove 'Nome Intermediario' = nome IVD
             laData.forEach(la => {
-              const nw = la['Nome Primo Networker'] || la['Nome Intermediario'] || la['Intermediario'] || '';
-              if (confrontaNomi(nw, nomeIvd)) {
-                const dataLA = la['Inserimento'] || la['Data'] || la['Data Inserimento'] || '';
+              const intermediario = la['Nome Intermediario'] || '';
+              if (confrontaNomi(intermediario, nomeIvd)) {
+                const dataLA = la['Inserimento'] || '';
                 if (dataLA) {
                   const d = new Date(dataLA.replace(' ', 'T'));
                   if (!isNaN(d.getTime()) && d >= dataAttivazione) {
@@ -797,11 +802,11 @@ export default function Home() {
               }
             });
             
-            // Cerca primo Fotovoltaico - cerca in Nome Primo Networker
+            // 1° FOTOVOLTAICO - Cerca contratti dove 'Nome Intermediario' = nome IVD
             fvData.forEach(fv => {
-              const nw = fv['Nome Primo Networker'] || fv['Nome Intermediario'] || fv['Intermediario'] || '';
-              if (confrontaNomi(nw, nomeIvd)) {
-                const dataFV = fv['Inserimento'] || fv['Data'] || fv['Data Inserimento'] || '';
+              const intermediario = fv['Nome Intermediario'] || '';
+              if (confrontaNomi(intermediario, nomeIvd)) {
+                const dataFV = fv['Data'] || fv['Data Inserimento'] || '';
                 if (dataFV) {
                   const d = new Date(dataFV.replace(' ', 'T'));
                   if (!isNaN(d.getTime()) && d >= dataAttivazione) {
@@ -814,11 +819,11 @@ export default function Home() {
               }
             });
             
-            // Cerca primo Iscritto (seminario) - cerca in Nome Primo Networker
+            // 1° ISCRITTO SEMINARIO - Cerca iscrizioni dove 'Nome Intermediario' = nome IVD
             semData.forEach(sem => {
-              const nw = sem['Nome Primo Networker'] || sem['Nome Intermediario'] || sem['Sponsor'] || '';
-              if (confrontaNomi(nw, nomeIvd)) {
-                const dataSem = sem['Inserimento'] || sem['Data'] || sem['Data SI'] || sem['Data Seminario'] || '';
+              const intermediario = sem['Nome Intermediario'] || '';
+              if (confrontaNomi(intermediario, nomeIvd)) {
+                const dataSem = sem['Inserimento'] || sem['Data SI'] || '';
                 if (dataSem) {
                   const d = new Date(dataSem.replace(' ', 'T'));
                   if (!isNaN(d.getTime()) && d >= dataAttivazione) {
@@ -831,19 +836,34 @@ export default function Home() {
               }
             });
             
-            // Cerca primo Attivato (collaboratore che ha come sponsor questo IVD)
-            ivdData.forEach(ivd => {
-              const sponsor = ivd['Nome Primo Networker'] || ivd['Sponsor'] || ivd['Nome Primo SDP FV'] || '';
-              if (confrontaNomi(sponsor, nomeIvd) && ivd !== row) {
-                const dataAtt = ivd['Inserimento'] || ivd['Data'] || ivd['Data Attivazione'] || '';
-                if (dataAtt) {
-                  const d = new Date(dataAtt.replace(' ', 'T'));
-                  if (!isNaN(d.getTime()) && d >= dataAttivazione) {
-                    if (!tracker.primoAttivato || d < new Date(tracker.primoAttivato.replace(' ', 'T'))) {
-                      tracker.primoAttivato = dataAtt.split(' ')[0];
-                      tracker.giorniAttivato = Math.floor((d - dataAttivazione) / (1000 * 60 * 60 * 24));
+            // 1° ATTIVATO - Match Seminari → IVD
+            // Cerco iscritti al seminario fatti da questo IVD, poi verifico se sono diventati IVD
+            semData.forEach(sem => {
+              const intermediario = sem['Nome Intermediario'] || '';
+              if (confrontaNomi(intermediario, nomeIvd)) {
+                // Questo IVD ha iscritto qualcuno - prendo nome iscritto
+                const cognomeIscritto = sem['Cognome'] || '';
+                const nomeIscritto = sem['Nome'] || '';
+                const nomeCompletoIscritto = `${cognomeIscritto} ${nomeIscritto}`.trim();
+                
+                if (nomeCompletoIscritto) {
+                  // Cerco se questo iscritto è diventato IVD
+                  ivdData.forEach(ivd => {
+                    const nomeNuovoIvd = ivd['IVD'] || ivd['Cliente'] || '';
+                    if (confrontaNomi(nomeNuovoIvd, nomeCompletoIscritto) && ivd !== row) {
+                      const dataAtt = ivd['Data Inserimento'] || '';
+                      if (dataAtt) {
+                        const d = new Date(dataAtt.replace(' ', 'T'));
+                        if (!isNaN(d.getTime()) && d >= dataAttivazione) {
+                          if (!tracker.primoAttivato || d < new Date(tracker.primoAttivato.replace(' ', 'T'))) {
+                            tracker.primoAttivato = dataAtt.split(' ')[0];
+                            tracker.giorniAttivato = Math.floor((d - dataAttivazione) / (1000 * 60 * 60 * 24));
+                            tracker.nomeAttivato = nomeNuovoIvd;
+                          }
+                        }
+                      }
                     }
-                  }
+                  });
                 }
               }
             });
@@ -1110,7 +1130,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v11.5 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v12.0 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -2045,7 +2065,7 @@ export default function Home() {
     ctx.fillStyle = '#999999';
     ctx.font = '14px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v11.5 • ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 40);
+    ctx.fillText(`Leader Ranking v12.0 • ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 40);
     
     // Download
     const link = document.createElement('a');
@@ -2084,52 +2104,77 @@ export default function Home() {
             
             {!heatmapDrilldown ? (
               /* VISTA MESI - Cliccabile */
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 15 }}>
-                {Object.entries(reportData.heatmapMesi).map(([type, heatData]) => {
-                  const info = { fv: { emoji: '☀️', label: 'Fotovoltaico', color: '#2AAA8A' }, energy: { emoji: '⚡', label: 'Luce Amica', color: '#FFD700' }, consultings: { emoji: '🎓', label: 'Seminari', color: '#9C27B0' }, ivd: { emoji: '🟠', label: 'Attivati', color: '#FF9800' } }[type];
-                  if (!info) return null;
-                  const mesiNomi = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-                  const maxMese = Math.max(...heatData.mesi, 1);
-                  return (
-                    <div key={type} style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, border: '1px solid #E8E8E8' }}>
-                      <div style={{ fontSize: 13, color: info.color, fontWeight: 600, marginBottom: 10 }}>{info.emoji} {info.label}</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
-                        {heatData.mesi.map((val, i) => {
-                          const intensity = val / maxMese;
-                          const bgColor = val === 0 ? '#F0F0F0' : intensity > 0.7 ? '#4CAF50' : intensity > 0.3 ? '#FFD700' : '#FF8F00';
-                          return (
-                            <div 
-                              key={i} 
-                              onClick={() => val > 0 && setHeatmapDrilldown({ type, mese: i, label: mesiNomi[i], data: heatData })}
-                              style={{ 
-                                height: 42, 
-                                borderRadius: 6, 
-                                background: bgColor, 
-                                display: 'flex', 
-                                flexDirection: 'column', 
-                                alignItems: 'center', 
-                                justifyContent: 'center',
-                                cursor: val > 0 ? 'pointer' : 'default',
-                                transition: 'all 0.2s ease',
-                                border: val > 0 ? '2px solid transparent' : 'none'
-                              }}
-                              onMouseOver={e => { if (val > 0) e.currentTarget.style.transform = 'scale(1.05)'; }}
-                              onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
-                            >
-                              <span style={{ fontSize: 9, color: val === 0 ? '#AAA' : '#FFF', fontWeight: 600 }}>{mesiNomi[i]}</span>
-                              {val > 0 && <span style={{ fontSize: 12, fontWeight: 700, color: '#FFF' }}>{val}</span>}
-                            </div>
-                          );
-                        })}
+              <>
+                {/* LEGENDA COLORI */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 15, marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><div style={{ width: 14, height: 14, borderRadius: 3, background: '#4CAF50' }} /><span style={{ fontSize: 11, color: '#666' }}>Caldo (&gt;70%)</span></div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><div style={{ width: 14, height: 14, borderRadius: 3, background: '#FFD700' }} /><span style={{ fontSize: 11, color: '#666' }}>Tiepido (30-70%)</span></div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><div style={{ width: 14, height: 14, borderRadius: 3, background: '#FF8F00' }} /><span style={{ fontSize: 11, color: '#666' }}>Freddo (&lt;30%)</span></div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 15 }}>
+                  {Object.entries(reportData.heatmapMesi).map(([type, heatData]) => {
+                    const info = { fv: { emoji: '☀️', label: 'Fotovoltaico', color: '#2AAA8A' }, energy: { emoji: '⚡', label: 'Luce Amica', color: '#FFD700' }, consultings: { emoji: '🎓', label: 'Seminari', color: '#9C27B0' }, ivd: { emoji: '🟠', label: 'Attivati', color: '#FF9800' } }[type];
+                    if (!info) return null;
+                    const mesiNomi = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+                    const maxMese = Math.max(...heatData.mesi, 1);
+                    
+                    // Calcola best hour per ogni mese con dati
+                    const bestHourPerMonth = {};
+                    const orariLabels = ['00-06', '06-09', '09-12', '12-15', '15-18', '18-21', '21-24'];
+                    const orariKeys = ['notte', 'mattinaPrima', 'mattina', 'pranzo', 'pomeriggio', 'sera', 'notturno'];
+                    mesiNomi.forEach((_, i) => {
+                      const orari = heatData.orariPerMese?.[i];
+                      if (orari) {
+                        let maxVal = 0, bestIdx = 2; // default mattina
+                        orariKeys.forEach((key, idx) => {
+                          if (orari[key] > maxVal) { maxVal = orari[key]; bestIdx = idx; }
+                        });
+                        if (maxVal > 0) bestHourPerMonth[i] = orariLabels[bestIdx];
+                      }
+                    });
+                    
+                    return (
+                      <div key={type} style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, border: '1px solid #E8E8E8' }}>
+                        <div style={{ fontSize: 13, color: info.color, fontWeight: 600, marginBottom: 10 }}>{info.emoji} {info.label}</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
+                          {heatData.mesi.map((val, i) => {
+                            const intensity = val / maxMese;
+                            const bgColor = val === 0 ? '#F0F0F0' : intensity > 0.7 ? '#4CAF50' : intensity > 0.3 ? '#FFD700' : '#FF8F00';
+                            return (
+                              <div 
+                                key={i} 
+                                onClick={() => val > 0 && setHeatmapDrilldown({ type, mese: i, label: mesiNomi[i], data: heatData })}
+                                style={{ 
+                                  height: 46, 
+                                  borderRadius: 6, 
+                                  background: bgColor, 
+                                  display: 'flex', 
+                                  flexDirection: 'column', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'center',
+                                  cursor: val > 0 ? 'pointer' : 'default',
+                                  transition: 'all 0.2s ease',
+                                  border: val > 0 ? '2px solid transparent' : 'none'
+                                }}
+                                onMouseOver={e => { if (val > 0) e.currentTarget.style.transform = 'scale(1.05)'; }}
+                                onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                              >
+                                <span style={{ fontSize: 9, color: val === 0 ? '#AAA' : '#FFF', fontWeight: 600 }}>{mesiNomi[i]}</span>
+                                {val > 0 && <span style={{ fontSize: 13, fontWeight: 700, color: '#FFF' }}>{val}</span>}
+                                {bestHourPerMonth[i] && <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.8)' }}>{bestHourPerMonth[i]}</span>}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                          <span style={{ fontSize: 10, color: '#999' }}>Clicca un mese per dettagli</span>
+                          <span style={{ fontSize: 12, color: '#666' }}>Totale: <strong style={{ color: info.color }}>{heatData.mesi.reduce((a,b) => a+b, 0)}</strong></span>
+                        </div>
                       </div>
-                      <div style={{ textAlign: 'right', marginTop: 8, fontSize: 12, color: '#666' }}>
-                        Totale: <strong style={{ color: info.color }}>{heatData.mesi.reduce((a,b) => a+b, 0)}</strong>
-                        <span style={{ marginLeft: 10, fontSize: 10, color: '#999' }}>Clicca un mese per dettagli</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              </>
             ) : (
               /* DRILL-DOWN: Giorni + Settimane + Orari del mese selezionato */
               (() => {
@@ -2154,10 +2199,20 @@ export default function Home() {
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
                     <div style={{ background: `linear-gradient(135deg, ${info.color}15, ${info.color}05)`, borderRadius: 12, padding: 15, border: `1px solid ${info.color}30` }}>
-                      <div style={{ fontSize: 14, color: info.color, fontWeight: 700, marginBottom: 5 }}>
-                        {info.emoji} {info.label} - {label.toUpperCase()} 2026
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontSize: 14, color: info.color, fontWeight: 700, marginBottom: 5 }}>
+                            {info.emoji} {info.label} - {label.toUpperCase()} 2026
+                          </div>
+                          <div style={{ fontSize: 24, fontWeight: 800, color: '#333' }}>{heatData.mesi[mese]} contratti</div>
+                        </div>
+                        {/* Legenda */}
+                        <div style={{ display: 'flex', gap: 10, fontSize: 10 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#4CAF50' }} /><span style={{ color: '#666' }}>Caldo</span></div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FFD700' }} /><span style={{ color: '#666' }}>Tiepido</span></div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FF8F00' }} /><span style={{ color: '#666' }}>Freddo</span></div>
+                        </div>
                       </div>
-                      <div style={{ fontSize: 24, fontWeight: 800, color: '#333' }}>{heatData.mesi[mese]} contratti</div>
                     </div>
                     
                     {/* SETTIMANE */}
@@ -2229,24 +2284,24 @@ export default function Home() {
               </div>
             </div>
             
-            {/* FUNNEL GRANDE */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, marginBottom: 25, flexWrap: 'wrap' }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 42, fontWeight: 800, color: '#2AAA8A' }}>{reportData.pilastri.fv.funnel.inseriti}</div>
-                <div style={{ fontSize: 12, color: '#666' }}>📋 Inseriti</div>
+            {/* FUNNEL GRANDE - CON TUTTE LE % */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 30, marginBottom: 25, flexWrap: 'wrap', padding: '15px 0' }}>
+              <div style={{ textAlign: 'center', minWidth: 100 }}>
+                <div style={{ fontSize: 48, fontWeight: 800, color: '#2AAA8A' }}>{reportData.pilastri.fv.funnel.inseriti}</div>
+                <div style={{ fontSize: 13, color: '#666', marginTop: 4 }}>Inseriti</div>
               </div>
-              <div style={{ fontSize: 24, color: '#E0E0E0' }}>→</div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 42, fontWeight: 800, color: '#4CAF50' }}>{reportData.pilastri.fv.funnel.positivi}</div>
-                <div style={{ fontSize: 12, color: '#333' }}>🟢 Positivi <span style={{ fontSize: 10, color: '#4CAF50' }}>({reportData.pilastri.fv.funnel.pctPositivi}%)</span></div>
+              <div style={{ fontSize: 28, color: '#D0D0D0' }}>→</div>
+              <div style={{ textAlign: 'center', minWidth: 100 }}>
+                <div style={{ fontSize: 48, fontWeight: 800, color: '#4CAF50' }}>{reportData.pilastri.fv.funnel.positivi}</div>
+                <div style={{ fontSize: 13, color: '#333', marginTop: 4 }}>Positivi <span style={{ fontSize: 11, color: '#4CAF50', fontWeight: 600 }}>({reportData.pilastri.fv.funnel.pctPositivi}%)</span></div>
               </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 42, fontWeight: 800, color: '#FFD700' }}>{reportData.pilastri.fv.funnel.lavorazione}</div>
-                <div style={{ fontSize: 12, color: '#333' }}>🟡 Lavoraz.</div>
+              <div style={{ textAlign: 'center', minWidth: 100 }}>
+                <div style={{ fontSize: 48, fontWeight: 800, color: '#FFD700' }}>{reportData.pilastri.fv.funnel.lavorazione}</div>
+                <div style={{ fontSize: 13, color: '#333', marginTop: 4 }}>Lavoraz. <span style={{ fontSize: 11, color: '#FF8F00', fontWeight: 600 }}>({reportData.pilastri.fv.funnel.inseriti > 0 ? Math.round(reportData.pilastri.fv.funnel.lavorazione / reportData.pilastri.fv.funnel.inseriti * 100) : 0}%)</span></div>
               </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 42, fontWeight: 800, color: '#E53935' }}>{reportData.pilastri.fv.funnel.negativi}</div>
-                <div style={{ fontSize: 12, color: '#333' }}>🔴 Persi <span style={{ fontSize: 10, color: '#E53935' }}>({reportData.pilastri.fv.funnel.pctNegativi}%)</span></div>
+              <div style={{ textAlign: 'center', minWidth: 100 }}>
+                <div style={{ fontSize: 48, fontWeight: 800, color: '#E53935' }}>{reportData.pilastri.fv.funnel.negativi}</div>
+                <div style={{ fontSize: 13, color: '#333', marginTop: 4 }}>Persi <span style={{ fontSize: 11, color: '#E53935', fontWeight: 600 }}>({reportData.pilastri.fv.funnel.pctNegativi}%)</span></div>
               </div>
             </div>
             
@@ -2313,7 +2368,7 @@ export default function Home() {
             </div>
             
             {/* CLASSIFICHE */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
               {[
                 { title: 'K MANAGER', emoji: '👑', data: reportData.pilastri.fv.classifiche.k, color: '#FFD700' },
                 { title: 'NETWORKER', emoji: '⭐', data: reportData.pilastri.fv.classifiche.nw, color: '#2AAA8A' },
@@ -2321,11 +2376,11 @@ export default function Home() {
               ].map(({ title, emoji, data, color }) => (
                 <div key={title} style={{ background: '#FAFAFA', borderRadius: 12, padding: 12, border: '1px solid #E8E8E8' }}>
                   <div style={{ fontSize: 12, color: color, fontWeight: 600, marginBottom: 8 }}>{emoji} {title}</div>
-                  <div style={{ maxHeight: 180, overflowY: 'auto' }}>
+                  <div style={{ maxHeight: 180, overflowY: 'auto', paddingRight: 10 }}>
                     {data.slice(0, 10).map(([name, stats], i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #F0F0F0', fontSize: 11 }}>
                         <span style={{ color: '#333', fontWeight: i < 3 ? 600 : 400 }}>{i+1}° {name}</span>
-                        <div style={{ display: 'flex', gap: 8 }}>
+                        <div style={{ display: 'flex', gap: 10, minWidth: 70, justifyContent: 'flex-end' }}>
                           <span style={{ color: '#4CAF50', fontWeight: 600 }}>{stats.positivo || 0}</span>
                           <span style={{ color: '#FFD700' }}>{stats.lavorazione || 0}</span>
                           <span style={{ color: '#E53935' }}>{stats.negativo || 0}</span>
@@ -2371,44 +2426,116 @@ export default function Home() {
               </div>
             </div>
             
-            {/* STATI NWG SPA */}
-            <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, marginBottom: 15 }}>
-              <div style={{ fontSize: 12, color: '#666', marginBottom: 10, fontWeight: 600 }}>📋 STATI NWG SPA</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {reportData.pilastri.energy.statiNwgSpa.map(([stato, count], i) => {
-                  const cat = STATO_MAP_LA_SPA[stato] || 'altro';
-                  const color = STATO_COLORS_DISPLAY[cat] || '#999';
-                  return (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#FFF', padding: '6px 12px', borderRadius: 20, border: '1px solid #E8E8E8' }}>
-                      <span style={{ width: 10, height: 10, borderRadius: '50%', background: color }}></span>
-                      <span style={{ fontSize: 11, color: '#333' }}>{stato}</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: color }}>{count}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            
-            {/* STATI NWG ENERGIA */}
+            {/* DETTAGLIO STATI - STESSO STILE DI FV */}
             <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, marginBottom: 20 }}>
-              <div style={{ fontSize: 12, color: '#666', marginBottom: 10, fontWeight: 600 }}>⚡ STATI NWG ENERGIA</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {reportData.pilastri.energy.statiNwgEnergia.map(([stato, count], i) => {
-                  const cat = STATO_MAP_LA_ENERGIA[stato] || STATO_MAP_LA_ENERGIA[stato.toUpperCase()] || 'altro';
-                  const color = STATO_COLORS_DISPLAY[cat] || '#999';
-                  return (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#FFF', padding: '6px 12px', borderRadius: 20, border: '1px solid #E8E8E8' }}>
-                      <span style={{ width: 10, height: 10, borderRadius: '50%', background: color }}></span>
-                      <span style={{ fontSize: 11, color: '#333' }}>{stato}</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: color }}>{count}</span>
-                    </div>
-                  );
-                })}
+              <div style={{ fontSize: 12, color: '#666', marginBottom: 10, fontWeight: 600 }}>📋 DETTAGLIO STATI</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {/* NWG SPA - Raggruppati per colore */}
+                {(() => {
+                  const positivi = reportData.pilastri.energy.statiNwgSpa.filter(([s]) => STATO_MAP_LA_SPA[s] === 'positivo');
+                  const lavorabili = reportData.pilastri.energy.statiNwgSpa.filter(([s]) => STATO_MAP_LA_SPA[s] === 'lavorabile');
+                  const negativi = reportData.pilastri.energy.statiNwgSpa.filter(([s]) => STATO_MAP_LA_SPA[s] === 'meno' || !STATO_MAP_LA_SPA[s] || STATO_MAP_LA_SPA[s] === 'altro');
+                  return (<>
+                    {/* POSITIVI */}
+                    {positivi.length > 0 && (
+                      <div style={{ background: 'rgba(76,175,80,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(76,175,80,0.3)' }}>
+                        <div style={{ fontSize: 11, color: '#4CAF50', fontWeight: 600, marginBottom: 8 }}>🟢 NWG SPA - POSITIVI ({positivi.reduce((s,[,c]) => s+c, 0)})</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {positivi.map(([stato, count], i) => (
+                            <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #4CAF50' }}>
+                              {stato} <strong style={{ color: '#4CAF50' }}>{count}</strong>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* LAVORABILI */}
+                    {lavorabili.length > 0 && (
+                      <div style={{ background: 'rgba(255,215,0,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(255,215,0,0.3)' }}>
+                        <div style={{ fontSize: 11, color: '#FF8F00', fontWeight: 600, marginBottom: 8 }}>🟡 NWG SPA - LAVORABILI ({lavorabili.reduce((s,[,c]) => s+c, 0)})</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {lavorabili.map(([stato, count], i) => (
+                            <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #FFD700' }}>
+                              {stato} <strong style={{ color: '#FF8F00' }}>{count}</strong>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* NEGATIVI */}
+                    {negativi.length > 0 && (
+                      <div style={{ background: 'rgba(229,57,53,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(229,57,53,0.3)' }}>
+                        <div style={{ fontSize: 11, color: '#E53935', fontWeight: 600, marginBottom: 8 }}>🔴 NWG SPA - NEGATIVI ({negativi.reduce((s,[,c]) => s+c, 0)})</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {negativi.map(([stato, count], i) => (
+                            <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #E53935' }}>
+                              {stato} <strong style={{ color: '#E53935' }}>{count}</strong>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>);
+                })()}
+                
+                {/* NWG ENERGIA - Raggruppati per colore */}
+                {(() => {
+                  const attivi = reportData.pilastri.energy.statiNwgEnergia.filter(([s]) => {
+                    const cat = STATO_MAP_LA_ENERGIA[s] || STATO_MAP_LA_ENERGIA[s?.toUpperCase()];
+                    return cat === 'positivo';
+                  });
+                  const daAttivare = reportData.pilastri.energy.statiNwgEnergia.filter(([s]) => {
+                    const cat = STATO_MAP_LA_ENERGIA[s] || STATO_MAP_LA_ENERGIA[s?.toUpperCase()];
+                    return cat === 'lavorabile';
+                  });
+                  const cessati = reportData.pilastri.energy.statiNwgEnergia.filter(([s]) => {
+                    const cat = STATO_MAP_LA_ENERGIA[s] || STATO_MAP_LA_ENERGIA[s?.toUpperCase()];
+                    return cat === 'meno' || !cat;
+                  });
+                  return (<>
+                    {attivi.length > 0 && (
+                      <div style={{ background: 'rgba(76,175,80,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(76,175,80,0.3)' }}>
+                        <div style={{ fontSize: 11, color: '#4CAF50', fontWeight: 600, marginBottom: 8 }}>🟢 NWG ENERGIA - ATTIVI ({attivi.reduce((s,[,c]) => s+c, 0)})</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {attivi.map(([stato, count], i) => (
+                            <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #4CAF50' }}>
+                              {stato} <strong style={{ color: '#4CAF50' }}>{count}</strong>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {daAttivare.length > 0 && (
+                      <div style={{ background: 'rgba(255,215,0,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(255,215,0,0.3)' }}>
+                        <div style={{ fontSize: 11, color: '#FF8F00', fontWeight: 600, marginBottom: 8 }}>🟡 NWG ENERGIA - DA ATTIVARE ({daAttivare.reduce((s,[,c]) => s+c, 0)})</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {daAttivare.map(([stato, count], i) => (
+                            <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #FFD700' }}>
+                              {stato} <strong style={{ color: '#FF8F00' }}>{count}</strong>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {cessati.length > 0 && (
+                      <div style={{ background: 'rgba(229,57,53,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(229,57,53,0.3)' }}>
+                        <div style={{ fontSize: 11, color: '#E53935', fontWeight: 600, marginBottom: 8 }}>🔴 NWG ENERGIA - CESSATI ({cessati.reduce((s,[,c]) => s+c, 0)})</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {cessati.map(([stato, count], i) => (
+                            <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #E53935' }}>
+                              {stato} <strong style={{ color: '#E53935' }}>{count}</strong>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>);
+                })()}
               </div>
             </div>
             
             {/* CLASSIFICHE LA */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
               {[
                 { title: 'K MANAGER', emoji: '👑', data: reportData.pilastri.energy.classifiche.k, color: '#FFD700' },
                 { title: 'NETWORKER', emoji: '⭐', data: reportData.pilastri.energy.classifiche.nw, color: '#2AAA8A' },
@@ -2416,7 +2543,7 @@ export default function Home() {
               ].map(({ title, emoji, data, color }) => (
                 <div key={title} style={{ background: '#FAFAFA', borderRadius: 12, padding: 12, border: '1px solid #E8E8E8' }}>
                   <div style={{ fontSize: 12, color: color, fontWeight: 600, marginBottom: 8 }}>{emoji} {title}</div>
-                  <div style={{ maxHeight: 180, overflowY: 'auto' }}>
+                  <div style={{ maxHeight: 180, overflowY: 'auto', paddingRight: 10 }}>
                     {data.slice(0, 10).map(([name, stats], i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #F0F0F0', fontSize: 11 }}>
                         <span style={{ color: '#333', fontWeight: i < 3 ? 600 : 400 }}>{i+1}° {name}</span>
@@ -2459,8 +2586,77 @@ export default function Home() {
               </div>
             </div>
             
+            {/* DETTAGLIO STATI COLLABORATORI */}
+            {reportData.pilastri.collaboratori.statiDettaglio && reportData.pilastri.collaboratori.statiDettaglio.length > 0 && (
+              <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, marginBottom: 20 }}>
+                <div style={{ fontSize: 12, color: '#666', marginBottom: 10, fontWeight: 600 }}>📋 DETTAGLIO STATI</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {(() => {
+                    const iscritti = reportData.pilastri.collaboratori.statiDettaglio.filter(([s]) => s.toLowerCase().includes('iscritt'));
+                    const presenti = reportData.pilastri.collaboratori.statiDettaglio.filter(([s]) => s.toLowerCase().includes('present'));
+                    const attivati = reportData.pilastri.collaboratori.statiDettaglio.filter(([s]) => s.toLowerCase().includes('attiv'));
+                    const altri = reportData.pilastri.collaboratori.statiDettaglio.filter(([s]) => 
+                      !s.toLowerCase().includes('iscritt') && 
+                      !s.toLowerCase().includes('present') && 
+                      !s.toLowerCase().includes('attiv')
+                    );
+                    return (<>
+                      {iscritti.length > 0 && (
+                        <div style={{ background: 'rgba(42,170,138,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(42,170,138,0.3)' }}>
+                          <div style={{ fontSize: 11, color: '#2AAA8A', fontWeight: 600, marginBottom: 8 }}>📝 ISCRITTI ({iscritti.reduce((s,[,c]) => s+c, 0)})</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {iscritti.map(([stato, count], i) => (
+                              <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #2AAA8A' }}>
+                                {stato} <strong style={{ color: '#2AAA8A' }}>{count}</strong>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {presenti.length > 0 && (
+                        <div style={{ background: 'rgba(76,175,80,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(76,175,80,0.3)' }}>
+                          <div style={{ fontSize: 11, color: '#4CAF50', fontWeight: 600, marginBottom: 8 }}>✅ PRESENTI ({presenti.reduce((s,[,c]) => s+c, 0)})</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {presenti.map(([stato, count], i) => (
+                              <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #4CAF50' }}>
+                                {stato} <strong style={{ color: '#4CAF50' }}>{count}</strong>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {attivati.length > 0 && (
+                        <div style={{ background: 'rgba(255,152,0,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(255,152,0,0.3)' }}>
+                          <div style={{ fontSize: 11, color: '#FF9800', fontWeight: 600, marginBottom: 8 }}>🟠 ATTIVATI ({attivati.reduce((s,[,c]) => s+c, 0)})</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {attivati.map(([stato, count], i) => (
+                              <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #FF9800' }}>
+                                {stato} <strong style={{ color: '#FF9800' }}>{count}</strong>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {altri.length > 0 && (
+                        <div style={{ background: 'rgba(158,158,158,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(158,158,158,0.3)' }}>
+                          <div style={{ fontSize: 11, color: '#666', fontWeight: 600, marginBottom: 8 }}>📋 ALTRI ({altri.reduce((s,[,c]) => s+c, 0)})</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {altri.map(([stato, count], i) => (
+                              <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #9E9E9E' }}>
+                                {stato} <strong style={{ color: '#666' }}>{count}</strong>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>);
+                  })()}
+                </div>
+              </div>
+            )}
+            
             {/* CLASSIFICHE COLLAB */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
               {[
                 { title: 'K MANAGER', emoji: '👑', data: reportData.pilastri.collaboratori.classifiche.k, color: '#FFD700' },
                 { title: 'NETWORKER', emoji: '⭐', data: reportData.pilastri.collaboratori.classifiche.nw, color: '#2AAA8A' },
@@ -2468,11 +2664,11 @@ export default function Home() {
               ].map(({ title, emoji, data, color }) => (
                 <div key={title} style={{ background: '#FAFAFA', borderRadius: 12, padding: 12, border: '1px solid #E8E8E8' }}>
                   <div style={{ fontSize: 12, color: color, fontWeight: 600, marginBottom: 8 }}>{emoji} {title}</div>
-                  <div style={{ maxHeight: 180, overflowY: 'auto' }}>
+                  <div style={{ maxHeight: 180, overflowY: 'auto', paddingRight: 10 }}>
                     {data.slice(0, 10).map(([name, stats], i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #F0F0F0', fontSize: 11 }}>
                         <span style={{ color: '#333', fontWeight: i < 3 ? 600 : 400 }}>{i+1}° {name}</span>
-                        <div style={{ display: 'flex', gap: 6 }}>
+                        <div style={{ display: 'flex', gap: 10, minWidth: 70, justifyContent: 'flex-end' }}>
                           <span style={{ color: '#2AAA8A' }}>{stats.iscritti || stats.total || 0}</span>
                           <span style={{ color: '#4CAF50' }}>{stats.presenti || 0}</span>
                           <span style={{ color: '#FF9800' }}>{stats.attivati || 0}</span>
@@ -2622,53 +2818,68 @@ export default function Home() {
           )}
           
           {/* TRACKER COACHING */}
-          {reportData.trackerCoaching && reportData.trackerCoaching.totale > 0 && (
+          {reportData.trackerCoaching && reportData.trackerCoaching.totale > 0 ? (
             <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
                 <span style={{ fontSize: 24 }}>🎯</span>
                 <div>
                   <h3 style={{ color: '#2AAA8A', fontSize: 16, margin: 0, fontWeight: 700 }}>TRACKER COACHING</h3>
-                  <p style={{ color: '#666', fontSize: 11, margin: 0 }}>Milestone nuovi IVD attivati</p>
+                  <p style={{ color: '#666', fontSize: 11, margin: 0 }}>Milestone nuovi IVD attivati ({reportData.trackerCoaching.totale} IVD)</p>
                 </div>
               </div>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 15 }}>
-                <div style={{ background: '#F5F5F5', borderRadius: 8, padding: 10, textAlign: 'center' }}>
+                <div style={{ background: 'linear-gradient(135deg, rgba(42,170,138,0.1), rgba(42,170,138,0.02))', borderRadius: 8, padding: 10, textAlign: 'center', border: '1px solid rgba(42,170,138,0.2)' }}>
                   <div style={{ fontSize: 9, color: '#666' }}>⚡ 1° LA</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#2AAA8A' }}>{reportData.trackerCoaching.medie.la !== null ? `${reportData.trackerCoaching.medie.la}g` : '-'}</div>
-                  <div style={{ fontSize: 9, color: '#4CAF50' }}>{reportData.trackerCoaching.completamento.la}%</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#2AAA8A' }}>{reportData.trackerCoaching.medie.la !== null ? `${reportData.trackerCoaching.medie.la}g` : '-'}</div>
+                  <div style={{ fontSize: 10, color: '#4CAF50', fontWeight: 600 }}>{reportData.trackerCoaching.completamento.la}% fatto</div>
                 </div>
-                <div style={{ background: '#F5F5F5', borderRadius: 8, padding: 10, textAlign: 'center' }}>
+                <div style={{ background: 'linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,215,0,0.02))', borderRadius: 8, padding: 10, textAlign: 'center', border: '1px solid rgba(255,215,0,0.2)' }}>
                   <div style={{ fontSize: 9, color: '#666' }}>☀️ 1° FV</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#FFD700' }}>{reportData.trackerCoaching.medie.fv !== null ? `${reportData.trackerCoaching.medie.fv}g` : '-'}</div>
-                  <div style={{ fontSize: 9, color: '#4CAF50' }}>{reportData.trackerCoaching.completamento.fv}%</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#FFD700' }}>{reportData.trackerCoaching.medie.fv !== null ? `${reportData.trackerCoaching.medie.fv}g` : '-'}</div>
+                  <div style={{ fontSize: 10, color: '#4CAF50', fontWeight: 600 }}>{reportData.trackerCoaching.completamento.fv}% fatto</div>
                 </div>
-                <div style={{ background: '#F5F5F5', borderRadius: 8, padding: 10, textAlign: 'center' }}>
+                <div style={{ background: 'linear-gradient(135deg, rgba(156,39,176,0.1), rgba(156,39,176,0.02))', borderRadius: 8, padding: 10, textAlign: 'center', border: '1px solid rgba(156,39,176,0.2)' }}>
                   <div style={{ fontSize: 9, color: '#666' }}>📝 1° Iscr</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#2AAA8A' }}>{reportData.trackerCoaching.medie.iscritto !== null ? `${reportData.trackerCoaching.medie.iscritto}g` : '-'}</div>
-                  <div style={{ fontSize: 9, color: '#4CAF50' }}>{reportData.trackerCoaching.completamento.iscritto}%</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#9C27B0' }}>{reportData.trackerCoaching.medie.iscritto !== null ? `${reportData.trackerCoaching.medie.iscritto}g` : '-'}</div>
+                  <div style={{ fontSize: 10, color: '#4CAF50', fontWeight: 600 }}>{reportData.trackerCoaching.completamento.iscritto}% fatto</div>
                 </div>
-                <div style={{ background: '#F5F5F5', borderRadius: 8, padding: 10, textAlign: 'center' }}>
+                <div style={{ background: 'linear-gradient(135deg, rgba(255,152,0,0.1), rgba(255,152,0,0.02))', borderRadius: 8, padding: 10, textAlign: 'center', border: '1px solid rgba(255,152,0,0.2)' }}>
                   <div style={{ fontSize: 9, color: '#666' }}>🟠 1° Att</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#FF9800' }}>{reportData.trackerCoaching.medie.attivato !== null ? `${reportData.trackerCoaching.medie.attivato}g` : '-'}</div>
-                  <div style={{ fontSize: 9, color: '#4CAF50' }}>{reportData.trackerCoaching.completamento.attivato}%</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#FF9800' }}>{reportData.trackerCoaching.medie.attivato !== null ? `${reportData.trackerCoaching.medie.attivato}g` : '-'}</div>
+                  <div style={{ fontSize: 10, color: '#4CAF50', fontWeight: 600 }}>{reportData.trackerCoaching.completamento.attivato}% fatto</div>
                 </div>
               </div>
               
+              {/* Header lista */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 45px)', gap: 4, padding: '8px 12px', background: '#F0F0F0', borderRadius: '8px 8px 0 0', fontSize: 9, color: '#666', fontWeight: 600 }}>
+                <span>Nome IVD</span>
+                <span style={{ textAlign: 'center' }}>LA</span>
+                <span style={{ textAlign: 'center' }}>FV</span>
+                <span style={{ textAlign: 'center' }}>Iscr</span>
+                <span style={{ textAlign: 'center' }}>Att</span>
+              </div>
+              
               {/* Lista */}
-              <div style={{ background: '#FAFAFA', borderRadius: 10, padding: 12, maxHeight: 250, overflowY: 'auto' }}>
+              <div style={{ background: '#FAFAFA', borderRadius: '0 0 10px 10px', padding: '0 12px', maxHeight: 220, overflowY: 'auto' }}>
                 {reportData.trackerCoaching.lista.slice(0, 15).map((t, i) => (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 40px)', gap: 4, padding: '6px 0', borderBottom: '1px solid #E8E8E8', fontSize: 10, alignItems: 'center' }}>
+                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 45px)', gap: 4, padding: '8px 0', borderBottom: '1px solid #E8E8E8', fontSize: 10, alignItems: 'center' }}>
                     <span style={{ color: '#333', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.nome}</span>
-                    <span style={{ textAlign: 'center', color: t.giorniLA !== null ? '#4CAF50' : '#E53935' }}>{t.giorniLA !== null ? `${t.giorniLA}g` : '❌'}</span>
-                    <span style={{ textAlign: 'center', color: t.giorniFV !== null ? '#4CAF50' : '#E53935' }}>{t.giorniFV !== null ? `${t.giorniFV}g` : '❌'}</span>
-                    <span style={{ textAlign: 'center', color: t.giorniIscritto !== null ? '#4CAF50' : '#E53935' }}>{t.giorniIscritto !== null ? `${t.giorniIscritto}g` : '❌'}</span>
-                    <span style={{ textAlign: 'center', color: t.giorniAttivato !== null ? '#4CAF50' : '#E53935' }}>{t.giorniAttivato !== null ? `${t.giorniAttivato}g` : '❌'}</span>
+                    <span style={{ textAlign: 'center', color: t.giorniLA !== null ? '#4CAF50' : '#CCC', fontWeight: t.giorniLA !== null ? 600 : 400 }}>{t.giorniLA !== null ? `${t.giorniLA}g` : '-'}</span>
+                    <span style={{ textAlign: 'center', color: t.giorniFV !== null ? '#4CAF50' : '#CCC', fontWeight: t.giorniFV !== null ? 600 : 400 }}>{t.giorniFV !== null ? `${t.giorniFV}g` : '-'}</span>
+                    <span style={{ textAlign: 'center', color: t.giorniIscritto !== null ? '#4CAF50' : '#CCC', fontWeight: t.giorniIscritto !== null ? 600 : 400 }}>{t.giorniIscritto !== null ? `${t.giorniIscritto}g` : '-'}</span>
+                    <span style={{ textAlign: 'center', color: t.giorniAttivato !== null ? '#4CAF50' : '#CCC', fontWeight: t.giorniAttivato !== null ? 600 : 400 }}>{t.giorniAttivato !== null ? `${t.giorniAttivato}g` : '-'}</span>
                   </div>
                 ))}
               </div>
             </div>
-          )}
+          ) : reportCSVs.ivd ? (
+            <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0', textAlign: 'center' }}>
+              <span style={{ fontSize: 40 }}>🎯</span>
+              <h3 style={{ color: '#999', fontSize: 14, margin: '10px 0 5px', fontWeight: 600 }}>TRACKER COACHING</h3>
+              <p style={{ color: '#AAA', fontSize: 11 }}>Nessun match trovato tra IVD e altri CSV.<br/>Verifica che i nomi corrispondano.</p>
+            </div>
+          ) : null}
         </div>
         
         {/* BOTTONE DOWNLOAD */}
@@ -2772,7 +2983,7 @@ export default function Home() {
         </div>
         
         {/* Footer versione */}
-        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v11.5</p>
+        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v12.0</p>
       </div>
     </div></>);
 
@@ -2966,7 +3177,7 @@ export default function Home() {
           </div>
         )}
       </main>
-      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v11.5 • Leader Ranking</footer>
+      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v12.0 • Leader Ranking</footer>
     </div></>);
 
   // PREVIEW
