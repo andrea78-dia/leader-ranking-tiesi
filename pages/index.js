@@ -1138,30 +1138,26 @@ export default function Home() {
     }
     
     // ═══════════════════════════════════════════════════════════════════════════════
-    // 💰 ANALISI FATTURATO - Calcolo da listini (INSERITI + EFFETTIVI)
+    // 💰 ANALISI FATTURATO - Calcolo da listini (COERENTE CON PILASTRI!)
+    // IMPORTANTE: I contratti DEVONO corrispondere ai numeri dei pilastri
     // ═══════════════════════════════════════════════════════════════════════════════
     const fatturato = {
       fv: { 
-        // INSERITI (potenziale)
-        inseriti: { totale: 0, punti: 0, kw: 0, kwh: 0, contratti: 0 },
-        // EFFETTIVI (solo positivi)
+        // I numeri contratti DEVONO corrispondere a quelli del pilastro
+        inseriti: { totale: 0, punti: 0, kw: 0, kwh: 0, contratti: 0, noMatch: 0 },
         effettivi: { totale: 0, punti: 0, kw: 0, kwh: 0, contratti: 0 },
-        // IN LAVORAZIONE (da sbloccare)
-        lavorazione: { totale: 0, punti: 0, contratti: 0 },
-        // PERSI
-        persi: { totale: 0, punti: 0, contratti: 0 },
+        lavorazione: { totale: 0, punti: 0, kw: 0, kwh: 0, contratti: 0 },
+        persi: { totale: 0, punti: 0, kw: 0, kwh: 0, contratti: 0 },
         perK: {}, perNW: {} 
       },
       la: { 
-        // INSERITI
         inseriti: { totale: 0, punti: 0, kwh: 0, contratti: 0 },
-        // ACCETTATI
         accettati: { totale: 0, punti: 0, kwh: 0, contratti: 0 },
         perK: {}, perNW: {} 
       }
     };
     
-    // 💰 FATTURATO FV - Tutti i contratti con breakdown per stato
+    // 💰 FATTURATO FV - TUTTI i contratti (stessa logica del pilastro!)
     if (reportCSVs.fv?.data?.length > 0) {
       const fvData = reportCSVs.fv.data;
       
@@ -1171,58 +1167,66 @@ export default function Home() {
         const k = row['Nome Primo K'] || '';
         const nw = row['Nome Primo Networker'] || '';
         
-        const match = matchProdottoFV(prodotto);
-        if (!match) return;
-        
+        // Categorizza stato ESATTAMENTE come il pilastro
         const cat = categorizeStato(stato, STATO_MAP_FV);
         
-        // TUTTI gli inseriti (potenziale)
+        // Prova match listino, se fallisce usa stima default
+        let match = matchProdottoFV(prodotto);
+        if (!match) {
+          // Stima default: prezzo medio e punti medi per non perdere contratti
+          match = { prezzo: 18000, punti: 300, kw: 6, kwh: 10 };
+          fatturato.fv.inseriti.noMatch++;
+        }
+        
+        // SEMPRE conta come inserito (come fa il pilastro)
         fatturato.fv.inseriti.totale += match.prezzo;
         fatturato.fv.inseriti.punti += match.punti;
         fatturato.fv.inseriti.kw += match.kw;
         fatturato.fv.inseriti.kwh += match.kwh;
         fatturato.fv.inseriti.contratti++;
         
-        // Breakdown per stato
+        // Breakdown per stato (DEVE corrispondere al pilastro!)
         if (cat === 'positivo') {
           fatturato.fv.effettivi.totale += match.prezzo;
           fatturato.fv.effettivi.punti += match.punti;
           fatturato.fv.effettivi.kw += match.kw;
           fatturato.fv.effettivi.kwh += match.kwh;
           fatturato.fv.effettivi.contratti++;
-        } else if (cat === 'lavorazione') {
+          
+          // Classifiche K e NW
+          if (k && !k.includes('Nome Primo')) {
+            if (!fatturato.fv.perK[k]) fatturato.fv.perK[k] = { fatturato: 0, punti: 0, kw: 0, kwh: 0, contratti: 0 };
+            fatturato.fv.perK[k].fatturato += match.prezzo;
+            fatturato.fv.perK[k].punti += match.punti;
+            fatturato.fv.perK[k].kw += match.kw;
+            fatturato.fv.perK[k].kwh += match.kwh;
+            fatturato.fv.perK[k].contratti++;
+          }
+          if (nw && !nw.includes('Nome Primo')) {
+            if (!fatturato.fv.perNW[nw]) fatturato.fv.perNW[nw] = { fatturato: 0, punti: 0, kw: 0, kwh: 0, contratti: 0 };
+            fatturato.fv.perNW[nw].fatturato += match.prezzo;
+            fatturato.fv.perNW[nw].punti += match.punti;
+            fatturato.fv.perNW[nw].kw += match.kw;
+            fatturato.fv.perNW[nw].kwh += match.kwh;
+            fatturato.fv.perNW[nw].contratti++;
+          }
+        } else if (cat === 'lavorazione' || cat === 'altro') {
           fatturato.fv.lavorazione.totale += match.prezzo;
           fatturato.fv.lavorazione.punti += match.punti;
+          fatturato.fv.lavorazione.kw += match.kw;
+          fatturato.fv.lavorazione.kwh += match.kwh;
           fatturato.fv.lavorazione.contratti++;
         } else if (cat === 'negativo') {
           fatturato.fv.persi.totale += match.prezzo;
           fatturato.fv.persi.punti += match.punti;
+          fatturato.fv.persi.kw += match.kw;
+          fatturato.fv.persi.kwh += match.kwh;
           fatturato.fv.persi.contratti++;
-        }
-        
-        // Classifiche per K (solo effettivi)
-        if (cat === 'positivo' && k && !k.includes('Nome Primo')) {
-          if (!fatturato.fv.perK[k]) fatturato.fv.perK[k] = { fatturato: 0, punti: 0, kw: 0, kwh: 0, contratti: 0 };
-          fatturato.fv.perK[k].fatturato += match.prezzo;
-          fatturato.fv.perK[k].punti += match.punti;
-          fatturato.fv.perK[k].kw += match.kw;
-          fatturato.fv.perK[k].kwh += match.kwh;
-          fatturato.fv.perK[k].contratti++;
-        }
-        
-        // Classifiche per NW (solo effettivi)
-        if (cat === 'positivo' && nw && !nw.includes('Nome Primo')) {
-          if (!fatturato.fv.perNW[nw]) fatturato.fv.perNW[nw] = { fatturato: 0, punti: 0, kw: 0, kwh: 0, contratti: 0 };
-          fatturato.fv.perNW[nw].fatturato += match.prezzo;
-          fatturato.fv.perNW[nw].punti += match.punti;
-          fatturato.fv.perNW[nw].kw += match.kw;
-          fatturato.fv.perNW[nw].kwh += match.kwh;
-          fatturato.fv.perNW[nw].contratti++;
         }
       });
     }
     
-    // 🌱 FATTURATO LA - Tutti i contratti con PUNTI (15 o 20)
+    // 🌱 FATTURATO LA - TUTTI i contratti (coerente con pilastro!)
     if (reportCSVs.energy?.data?.length > 0) {
       const laData = reportCSVs.energy.data;
       
@@ -1233,19 +1237,19 @@ export default function Home() {
         const k = row['Nome Primo K'] || '';
         const nw = row['Nome Primo Networker'] || '';
         
+        // Calcola fatturato e punti
         const fascia = getFasciaConsumoLA(prodotto);
-        if (!fascia) return;
+        const fatturatoAnnuo = fascia ? fascia.kwhMedi * fascia.prezzoKwh : 559; // €559 = default 2150kWh × €0.26
+        const punti = fascia?.punti || 15;
+        const kwh = fascia?.kwhMedi || 2150;
         
-        const fatturatoAnnuo = fascia.kwhMedi * fascia.prezzoKwh;
-        const punti = fascia.punti || 15;
-        
-        // TUTTI gli inseriti
+        // SEMPRE conta come inserito
         fatturato.la.inseriti.totale += fatturatoAnnuo;
         fatturato.la.inseriti.punti += punti;
-        fatturato.la.inseriti.kwh += fascia.kwhMedi;
+        fatturato.la.inseriti.kwh += kwh;
         fatturato.la.inseriti.contratti++;
         
-        // Solo accettati/in fornitura
+        // Verifica se accettato (stessa logica del pilastro!)
         const catSpa = categorizeStato(statoSpa, STATO_MAP_LA_SPA);
         const catEnergia = categorizeStato(statoEnergia, STATO_MAP_LA_ENERGIA);
         const isAccettato = catSpa === 'positivo' || catEnergia === 'positivo';
@@ -1253,24 +1257,22 @@ export default function Home() {
         if (isAccettato) {
           fatturato.la.accettati.totale += fatturatoAnnuo;
           fatturato.la.accettati.punti += punti;
-          fatturato.la.accettati.kwh += fascia.kwhMedi;
+          fatturato.la.accettati.kwh += kwh;
           fatturato.la.accettati.contratti++;
           
-          // Classifiche per K
+          // Classifiche K e NW
           if (k && !k.includes('Nome Primo')) {
             if (!fatturato.la.perK[k]) fatturato.la.perK[k] = { fatturato: 0, punti: 0, kwh: 0, contratti: 0 };
             fatturato.la.perK[k].fatturato += fatturatoAnnuo;
             fatturato.la.perK[k].punti += punti;
-            fatturato.la.perK[k].kwh += fascia.kwhMedi;
+            fatturato.la.perK[k].kwh += kwh;
             fatturato.la.perK[k].contratti++;
           }
-          
-          // Classifiche per NW
           if (nw && !nw.includes('Nome Primo')) {
             if (!fatturato.la.perNW[nw]) fatturato.la.perNW[nw] = { fatturato: 0, punti: 0, kwh: 0, contratti: 0 };
             fatturato.la.perNW[nw].fatturato += fatturatoAnnuo;
             fatturato.la.perNW[nw].punti += punti;
-            fatturato.la.perNW[nw].kwh += fascia.kwhMedi;
+            fatturato.la.perNW[nw].kwh += kwh;
             fatturato.la.perNW[nw].contratti++;
           }
         }
@@ -1282,6 +1284,38 @@ export default function Home() {
     fatturato.fv.classificaNW = Object.entries(fatturato.fv.perNW).sort((a, b) => b[1].fatturato - a[1].fatturato);
     fatturato.la.classificaK = Object.entries(fatturato.la.perK).sort((a, b) => b[1].fatturato - a[1].fatturato);
     fatturato.la.classificaNW = Object.entries(fatturato.la.perNW).sort((a, b) => b[1].fatturato - a[1].fatturato);
+    
+    // ✅ CHECK COERENZA - Verifica che i numeri battano con i pilastri
+    fatturato.coerenza = {
+      fv: {
+        pilastroInseriti: result.pilastri.fv?.funnel?.inseriti || 0,
+        fatturatoInseriti: fatturato.fv.inseriti.contratti,
+        pilastroPositivi: result.pilastri.fv?.funnel?.positivi || 0,
+        fatturatoEffettivi: fatturato.fv.effettivi.contratti,
+        pilastroLavorazione: result.pilastri.fv?.funnel?.lavorazione || 0,
+        fatturatoLavorazione: fatturato.fv.lavorazione.contratti,
+        pilastroPersi: result.pilastri.fv?.funnel?.negativi || 0,
+        fatturatoPersi: fatturato.fv.persi.contratti,
+        ok: false
+      },
+      la: {
+        pilastroInseriti: result.pilastri.energy?.funnel?.inseriti || 0,
+        fatturatoInseriti: fatturato.la.inseriti.contratti,
+        pilastroAccettati: result.pilastri.energy?.funnel?.accettati || 0,
+        fatturatoAccettati: fatturato.la.accettati.contratti,
+        ok: false
+      }
+    };
+    
+    // Verifica coerenza FV
+    fatturato.coerenza.fv.ok = 
+      fatturato.coerenza.fv.pilastroInseriti === fatturato.coerenza.fv.fatturatoInseriti &&
+      fatturato.coerenza.fv.pilastroPositivi === fatturato.coerenza.fv.fatturatoEffettivi;
+    
+    // Verifica coerenza LA
+    fatturato.coerenza.la.ok = 
+      fatturato.coerenza.la.pilastroInseriti === fatturato.coerenza.la.fatturatoInseriti &&
+      fatturato.coerenza.la.pilastroAccettati === fatturato.coerenza.la.fatturatoAccettati;
     
     result.fatturato = fatturato;
     
@@ -1515,7 +1549,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v13.1 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v13.2 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -2450,7 +2484,7 @@ export default function Home() {
     ctx.fillStyle = '#999999';
     ctx.font = '14px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v13.1 • ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 40);
+    ctx.fillText(`Leader Ranking v13.2 • ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 40);
     
     // Download
     const link = document.createElement('a');
@@ -3357,11 +3391,50 @@ export default function Home() {
                 <h3 style={{ color: '#2AAA8A', fontSize: 18, margin: 0, fontWeight: 700 }}>💰 ANALISI FATTURATO LEADER</h3>
                 <p style={{ color: '#666', fontSize: 11, margin: '5px 0 0' }}>Fatturato e punti generati (Inseriti vs Effettivi)</p>
               </div>
+              {/* Badge coerenza */}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <span style={{ 
+                  padding: '4px 10px', 
+                  borderRadius: 20, 
+                  fontSize: 10, 
+                  fontWeight: 600,
+                  background: reportData.fatturato.coerenza?.fv?.ok ? '#E8F5E9' : '#FFEBEE',
+                  color: reportData.fatturato.coerenza?.fv?.ok ? '#2E7D32' : '#C62828',
+                  border: `1px solid ${reportData.fatturato.coerenza?.fv?.ok ? '#A5D6A7' : '#EF9A9A'}`
+                }}>
+                  {reportData.fatturato.coerenza?.fv?.ok ? '✅' : '⚠️'} FV: {reportData.fatturato.coerenza?.fv?.fatturatoInseriti || 0}/{reportData.fatturato.coerenza?.fv?.pilastroInseriti || 0}
+                </span>
+                <span style={{ 
+                  padding: '4px 10px', 
+                  borderRadius: 20, 
+                  fontSize: 10, 
+                  fontWeight: 600,
+                  background: reportData.fatturato.coerenza?.la?.ok ? '#E8F5E9' : '#FFEBEE',
+                  color: reportData.fatturato.coerenza?.la?.ok ? '#2E7D32' : '#C62828',
+                  border: `1px solid ${reportData.fatturato.coerenza?.la?.ok ? '#A5D6A7' : '#EF9A9A'}`
+                }}>
+                  {reportData.fatturato.coerenza?.la?.ok ? '✅' : '⚠️'} LA: {reportData.fatturato.coerenza?.la?.fatturatoInseriti || 0}/{reportData.fatturato.coerenza?.la?.pilastroInseriti || 0}
+                </span>
+              </div>
             </div>
+            
+            {/* Alert se non coerente */}
+            {(!reportData.fatturato.coerenza?.fv?.ok || !reportData.fatturato.coerenza?.la?.ok) && (
+              <div style={{ background: '#FFF3E0', border: '1px solid #FFB74D', borderRadius: 8, padding: 10, marginBottom: 15, fontSize: 11, color: '#E65100' }}>
+                ⚠️ <strong>Attenzione:</strong> I numeri potrebbero non corrispondere esattamente ai pilastri. 
+                FV: Positivi {reportData.fatturato.coerenza?.fv?.fatturatoEffettivi}/{reportData.fatturato.coerenza?.fv?.pilastroPositivi} | 
+                LA: Accettati {reportData.fatturato.coerenza?.la?.fatturatoAccettati}/{reportData.fatturato.coerenza?.la?.pilastroAccettati}
+              </div>
+            )}
             
             {/* RIEPILOGO FV - INSERITI vs EFFETTIVI */}
             <div style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', borderRadius: 16, padding: 20, marginBottom: 15, color: '#FFF' }}>
-              <div style={{ fontSize: 13, color: '#FFD700', fontWeight: 700, marginBottom: 15 }}>☀️ FOTOVOLTAICO</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+                <span style={{ fontSize: 13, color: '#FFD700', fontWeight: 700 }}>☀️ FOTOVOLTAICO</span>
+                <span style={{ fontSize: 9, color: '#666' }}>
+                  Pilastro: {reportData.fatturato.coerenza?.fv?.pilastroInseriti} ins / {reportData.fatturato.coerenza?.fv?.pilastroPositivi} pos / {reportData.fatturato.coerenza?.fv?.pilastroLavorazione} lav / {reportData.fatturato.coerenza?.fv?.pilastroPersi} persi
+                </span>
+              </div>
               
               {/* Riga 1: Confronto INSERITI vs EFFETTIVI */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 15 }}>
@@ -3369,21 +3442,21 @@ export default function Home() {
                 <div style={{ textAlign: 'center', padding: 12, background: 'rgba(255,255,255,0.08)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)' }}>
                   <div style={{ fontSize: 9, color: '#888', marginBottom: 3 }}>📋 INSERITI (Potenziale)</div>
                   <div style={{ fontSize: 24, fontWeight: 800, color: '#FFF' }}>€{reportData.fatturato.fv.inseriti.totale.toLocaleString('it-IT')}</div>
-                  <div style={{ fontSize: 10, color: '#666' }}>{reportData.fatturato.fv.inseriti.contratti} contratti</div>
+                  <div style={{ fontSize: 10, color: reportData.fatturato.coerenza?.fv?.pilastroInseriti === reportData.fatturato.fv.inseriti.contratti ? '#4CAF50' : '#FF5722', fontWeight: 600 }}>{reportData.fatturato.fv.inseriti.contratti} contratti</div>
                 </div>
                 
                 {/* Effettivi (Positivi) */}
                 <div style={{ textAlign: 'center', padding: 12, background: 'rgba(76,175,80,0.15)', borderRadius: 10, border: '1px solid rgba(76,175,80,0.3)' }}>
                   <div style={{ fontSize: 9, color: '#4CAF50', marginBottom: 3 }}>✅ EFFETTIVI (Positivi)</div>
                   <div style={{ fontSize: 24, fontWeight: 800, color: '#4CAF50' }}>€{reportData.fatturato.fv.effettivi.totale.toLocaleString('it-IT')}</div>
-                  <div style={{ fontSize: 10, color: '#666' }}>{reportData.fatturato.fv.effettivi.contratti} contratti</div>
+                  <div style={{ fontSize: 10, color: reportData.fatturato.coerenza?.fv?.pilastroPositivi === reportData.fatturato.fv.effettivi.contratti ? '#4CAF50' : '#FF5722', fontWeight: 600 }}>{reportData.fatturato.fv.effettivi.contratti} contratti</div>
                 </div>
                 
                 {/* In Lavorazione */}
                 <div style={{ textAlign: 'center', padding: 12, background: 'rgba(255,215,0,0.15)', borderRadius: 10, border: '1px solid rgba(255,215,0,0.3)' }}>
                   <div style={{ fontSize: 9, color: '#FFD700', marginBottom: 3 }}>⏳ DA SBLOCCARE</div>
                   <div style={{ fontSize: 24, fontWeight: 800, color: '#FFD700' }}>€{reportData.fatturato.fv.lavorazione.totale.toLocaleString('it-IT')}</div>
-                  <div style={{ fontSize: 10, color: '#666' }}>{reportData.fatturato.fv.lavorazione.contratti} contratti</div>
+                  <div style={{ fontSize: 10, color: reportData.fatturato.coerenza?.fv?.pilastroLavorazione === reportData.fatturato.fv.lavorazione.contratti ? '#4CAF50' : '#FF5722', fontWeight: 600 }}>{reportData.fatturato.fv.lavorazione.contratti} contratti</div>
                 </div>
                 
                 {/* Persi */}
@@ -3653,7 +3726,7 @@ export default function Home() {
         </div>
         
         {/* Footer versione */}
-        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v13.1</p>
+        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v13.2</p>
       </div>
     </div></>);
 
@@ -3847,7 +3920,7 @@ export default function Home() {
           </div>
         )}
       </main>
-      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v13.1 • Leader Ranking</footer>
+      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v13.2 • Leader Ranking</footer>
     </div></>);
 
   // PREVIEW
