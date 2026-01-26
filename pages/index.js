@@ -890,7 +890,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v9.6 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v10.1 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -1390,7 +1390,7 @@ export default function Home() {
     // Header
     ctx.fillStyle = config.color; ctx.font = 'bold 16px Arial'; ctx.fillText('LEADER RANKING', 45, 65);
     ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 42px Arial'; ctx.fillText(`${config.emoji} CLASSIFICA ${config.label}`, 45, 115);
-    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '18px Arial'; ctx.fillText(`${eventName} • ${eventDate}`, 45, 148);
+    ctx.fillStyle = '#666666'; ctx.font = '18px Arial'; ctx.fillText(`${eventName} • ${eventDate}`, 45, 148);
     
     // Partecipanti e contratti inline
     const totIns = getClassificaTotal();
@@ -1468,7 +1468,7 @@ export default function Home() {
         ctx.font = `${Math.min(28, fontSize + 8)}px Arial`;
         ctx.fillText(medal, 55, textStartY + (lines.length > 1 ? 0 : 4));
       } else {
-        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.fillStyle = '#666666';
         ctx.font = `bold ${Math.min(18, fontSize)}px Arial`;
         ctx.fillText(`${position}°`, 58, textStartY + (lines.length > 1 ? 0 : 4));
       }
@@ -1522,7 +1522,7 @@ export default function Home() {
     // Title
     ctx.fillStyle = config.color; ctx.font = 'bold 40px Arial'; ctx.textAlign = 'center';
     ctx.fillText(`${config.emoji} CLASSIFICA ${config.label} ${config.emoji}`, W/2, 105);
-    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '18px Arial';
+    ctx.fillStyle = '#666666'; ctx.font = '18px Arial';
     ctx.fillText(`${eventName} • ${eventDate}`, W/2, 138);
     
     // Stats - INLINE format (fix richiesto)
@@ -1762,7 +1762,7 @@ export default function Home() {
       {loginError && <p style={{ color: '#f44', fontSize: 13, marginBottom: 10 }}>{loginError}</p>}
       <button style={S.btn} onClick={handleLogin}>ACCEDI</button>
       <div style={S.categoryIcons}><span style={S.catIcon}>🟠</span><span style={S.catIcon}>🔵</span><span style={S.catIcon}>⭐</span><span style={S.catIcon}>👑</span></div>
-      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v9.8.1</p>
+      <p style={{ color: '#AAAAAA', fontSize: 11, marginTop: 25 }}>v10.1</p>
     </div></div></>);
 
   // HOMEPAGE CSV
@@ -1811,7 +1811,7 @@ export default function Home() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}><span style={{ fontSize: 12, color: '#999999', letterSpacing: 1 }}>📊 CLASSIFICHE</span><button style={{ background: 'none', border: 'none', color: '#333333', fontSize: 18, cursor: 'pointer' }} onClick={() => setMobileMenuOpen(false)}>✕</button></div>
           {rankings ? (<><p style={S.catLabel}>IVD</p><button style={{ ...S.menuItem, ...(selectedRanking === 'ivd_inseriti' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('ivd_inseriti'); setMobileMenuOpen(false); }}>🟠 {labels.c1} ({rankings.ivd_inseriti.length})</button><button style={{ ...S.menuItem, ...(selectedRanking === 'ivd_accettati' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('ivd_accettati'); setMobileMenuOpen(false); }}>🟢 {labels.c2} ({rankings.ivd_accettati.length})</button><p style={S.catLabel}>SDP</p><button style={{ ...S.menuItem, ...(selectedRanking === 'sdp_inseriti' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('sdp_inseriti'); setMobileMenuOpen(false); }}>🔵 {labels.c1} ({rankings.sdp_inseriti.length})</button><button style={{ ...S.menuItem, ...(selectedRanking === 'sdp_accettati' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('sdp_accettati'); setMobileMenuOpen(false); }}>🟢 {labels.c2} ({rankings.sdp_accettati.length})</button><p style={S.catLabel}>MANAGER</p><button style={{ ...S.menuItem, ...(selectedRanking === 'nw' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('nw'); setMobileMenuOpen(false); }}>⭐ Networker ({rankings.nw.length})</button><button style={{ ...S.menuItem, ...(selectedRanking === 'k' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('k'); setMobileMenuOpen(false); }}>👑 K Manager ({rankings.k.length})</button></>) : <p style={{ color: '#999999', fontSize: 12 }}>Carica CSV</p>}
           <div style={S.divider} />
-          {(user.role === 'admin' || user.role === 'assistente') && (<><p style={S.catLabel}>⚙️ FILTRI</p><label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', color: 'rgba(255,255,255,0.8)' }}><input type="checkbox" checked={excludeK} onChange={toggleExcludeK} style={{ accentColor: '#2AAA8A' }} /> Escludi K</label><div style={S.divider} /><p style={S.catLabel}>📅 PERIODO</p><button style={{ ...S.periodBtn, ...(!selectedMonth ? { background: 'rgba(124,77,255,0.2)', color: '#2AAA8A' } : {}) }} onClick={handleShowAll}>📋 Tutti ({csvData?.length || 0})</button>{availableMonths.length > 0 && (<select style={S.select} value={selectedMonth} onChange={e => handleMonthChange(e.target.value)}><option value="">-- Mese --</option>{availableMonths.map(m => <option key={m} value={m}>{m}</option>)}</select>)}{weeks.length > 0 && (<select style={S.select} value={selectedWeek?.num || ''} onChange={e => handleWeekChange(e.target.value)}><option value="">-- Settimana --</option>{weeks.map(w => <option key={w.num} value={w.num}>{w.label}</option>)}</select>)}<div style={S.divider} /><p style={S.catLabel}>📊 TIPO CLASSIFICA</p><select style={S.select} value={periodType} onChange={e => setPeriodType(e.target.value)}><option value="progressiva">📈 Progressiva (mese in corso)</option><option value="settimanale">📅 Settimanale</option><option value="finale">🏆 Finale mese</option></select><div style={S.divider} /><p style={S.catLabel}>🏷️ ETICHETTE</p><select style={S.select} value={eventName} onChange={e => setEventName(e.target.value)}>{EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select><input style={S.inputSm} value={eventDate} onChange={e => setEventDate(e.target.value)} placeholder="Periodo" /></>)}
+          {(user.role === 'admin' || user.role === 'assistente') && (<><p style={S.catLabel}>⚙️ FILTRI</p><label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', color: '#333333' }}><input type="checkbox" checked={excludeK} onChange={toggleExcludeK} style={{ accentColor: '#2AAA8A' }} /> Escludi K</label><div style={S.divider} /><p style={S.catLabel}>📅 PERIODO</p><button style={{ ...S.periodBtn, ...(!selectedMonth ? { background: 'rgba(124,77,255,0.2)', color: '#2AAA8A' } : {}) }} onClick={handleShowAll}>📋 Tutti ({csvData?.length || 0})</button>{availableMonths.length > 0 && (<select style={S.select} value={selectedMonth} onChange={e => handleMonthChange(e.target.value)}><option value="">-- Mese --</option>{availableMonths.map(m => <option key={m} value={m}>{m}</option>)}</select>)}{weeks.length > 0 && (<select style={S.select} value={selectedWeek?.num || ''} onChange={e => handleWeekChange(e.target.value)}><option value="">-- Settimana --</option>{weeks.map(w => <option key={w.num} value={w.num}>{w.label}</option>)}</select>)}<div style={S.divider} /><p style={S.catLabel}>📊 TIPO CLASSIFICA</p><select style={S.select} value={periodType} onChange={e => setPeriodType(e.target.value)}><option value="progressiva">📈 Progressiva (mese in corso)</option><option value="settimanale">📅 Settimanale</option><option value="finale">🏆 Finale mese</option></select><div style={S.divider} /><p style={S.catLabel}>🏷️ ETICHETTE</p><select style={S.select} value={eventName} onChange={e => setEventName(e.target.value)}>{EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select><input style={S.inputSm} value={eventDate} onChange={e => setEventDate(e.target.value)} placeholder="Periodo" /></>)}
         </aside>
         {mobileMenuOpen && <div style={S.overlay} onClick={() => setMobileMenuOpen(false)} />}
         <section style={S.content}>
@@ -1851,7 +1851,7 @@ export default function Home() {
                       <span style={{ color: '#FF6B35', fontWeight: 600 }}>IVD Attivati</span>
                     </div>
                     <input type="file" accept=".csv" id="csv-ivd" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('ivd', e.target.files[0]); }} />
-                    <label htmlFor="csv-ivd" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(255,107,53,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.ivd ? '#4CAF50' : 'rgba(255,255,255,0.6)', fontSize: 12 }}>
+                    <label htmlFor="csv-ivd" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(255,107,53,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.ivd ? '#4CAF50' : '#666666', fontSize: 12 }}>
                       {reportCSVs.ivd ? `✅ ${reportCSVs.ivd.rows} righe` : '📤 Carica CSV'}
                     </label>
                     <p style={{ color: '#999999', fontSize: 10, marginTop: 5, textAlign: 'center' }}>Solo Attivazione START&GO</p>
@@ -1864,7 +1864,7 @@ export default function Home() {
                       <span style={{ color: '#FFC107', fontWeight: 600 }}>Luce Amica</span>
                     </div>
                     <input type="file" accept=".csv" id="csv-energy" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('energy', e.target.files[0]); }} />
-                    <label htmlFor="csv-energy" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(255,193,7,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.energy ? '#4CAF50' : 'rgba(255,255,255,0.6)', fontSize: 12 }}>
+                    <label htmlFor="csv-energy" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(255,193,7,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.energy ? '#4CAF50' : '#666666', fontSize: 12 }}>
                       {reportCSVs.energy ? `✅ ${reportCSVs.energy.rows} righe` : '📤 Carica CSV'}
                     </label>
                   </div>
@@ -1876,7 +1876,7 @@ export default function Home() {
                       <span style={{ color: '#FF9800', fontWeight: 600 }}>Fotovoltaico</span>
                     </div>
                     <input type="file" accept=".csv" id="csv-fv" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('fv', e.target.files[0]); }} />
-                    <label htmlFor="csv-fv" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(255,152,0,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.fv ? '#4CAF50' : 'rgba(255,255,255,0.6)', fontSize: 12 }}>
+                    <label htmlFor="csv-fv" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(255,152,0,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.fv ? '#4CAF50' : '#666666', fontSize: 12 }}>
                       {reportCSVs.fv ? `✅ ${reportCSVs.fv.rows} righe` : '📤 Carica CSV'}
                     </label>
                   </div>
@@ -1888,7 +1888,7 @@ export default function Home() {
                       <span style={{ color: '#9C27B0', fontWeight: 600 }}>Seminari</span>
                     </div>
                     <input type="file" accept=".csv" id="csv-consultings" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('consultings', e.target.files[0]); }} />
-                    <label htmlFor="csv-consultings" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(156,39,176,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.consultings ? '#4CAF50' : 'rgba(255,255,255,0.6)', fontSize: 12 }}>
+                    <label htmlFor="csv-consultings" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(156,39,176,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.consultings ? '#4CAF50' : '#666666', fontSize: 12 }}>
                       {reportCSVs.consultings ? `✅ ${reportCSVs.consultings.rows} righe` : '📤 Carica CSV'}
                     </label>
                   </div>
@@ -2007,21 +2007,21 @@ export default function Home() {
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, flexWrap: 'wrap' }}>
                           <div style={{ textAlign: 'center', minWidth: 90 }}>
                             <div style={{ fontSize: 28, fontWeight: 800, color: '#FF9800' }}>{reportData.pilastri.fv.funnel.inseriti}</div>
-                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>📋 Inseriti</div>
+                            <div style={{ fontSize: 10, color: '#666666' }}>📋 Inseriti</div>
                           </div>
                           <div style={{ color: '#AAAAAA', fontSize: 20 }}>→</div>
                           <div style={{ textAlign: 'center', minWidth: 90 }}>
                             <div style={{ fontSize: 28, fontWeight: 800, color: '#4CAF50' }}>{reportData.pilastri.fv.funnel.positivi}</div>
-                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>🟢 Positivi</div>
+                            <div style={{ fontSize: 10, color: '#666666' }}>🟢 Positivi</div>
                             <div style={{ fontSize: 9, color: '#4CAF50' }}>{reportData.pilastri.fv.funnel.pctPositivi}%</div>
                           </div>
                           <div style={{ textAlign: 'center', minWidth: 90 }}>
                             <div style={{ fontSize: 28, fontWeight: 800, color: '#FFC107' }}>{reportData.pilastri.fv.funnel.lavorazione}</div>
-                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>🟡 Lavoraz.</div>
+                            <div style={{ fontSize: 10, color: '#666666' }}>🟡 Lavoraz.</div>
                           </div>
                           <div style={{ textAlign: 'center', minWidth: 90 }}>
                             <div style={{ fontSize: 28, fontWeight: 800, color: '#f44336' }}>{reportData.pilastri.fv.funnel.negativi}</div>
-                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>🔴 Persi</div>
+                            <div style={{ fontSize: 10, color: '#666666' }}>🔴 Persi</div>
                             <div style={{ fontSize: 9, color: '#f44336' }}>{reportData.pilastri.fv.funnel.pctNegativi}%</div>
                           </div>
                         </div>
@@ -2030,7 +2030,7 @@ export default function Home() {
                       {/* Stati FV Dettaglio */}
                       {reportData.pilastri.fv.statiDettaglio && reportData.pilastri.fv.statiDettaglio.length > 0 && (
                       <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 15, marginBottom: 15 }}>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 10 }}>📋 DETTAGLIO STATI</div>
+                        <div style={{ fontSize: 12, color: '#666666', marginBottom: 10 }}>📋 DETTAGLIO STATI</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {reportData.pilastri.fv.statiDettaglio.map(([stato, val], i) => {
                             const cat = Object.entries(STATO_MAP_FV).find(([k]) => stato.toLowerCase().includes(k.toLowerCase()))?.[1] || 'altro';
@@ -2038,7 +2038,7 @@ export default function Home() {
                             return (
                               <div key={stato} style={{ background: `${color}20`, border: `1px solid ${color}40`, borderRadius: 6, padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
                                 <span style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
-                                <span style={{ color: 'rgba(255,255,255,0.8)' }}>{stato}</span>
+                                <span style={{ color: '#333333' }}>{stato}</span>
                                 <span style={{ color: color, fontWeight: 600 }}>{val}</span>
                               </div>
                             );
@@ -2064,7 +2064,7 @@ export default function Home() {
                               <span style={{ fontSize: 11, fontWeight: 600, color: '#f44336', textAlign: 'center' }}>{stats.negativo || 0}</span>
                             </div>
                           ))}
-                          <div style={{ borderTop: '1px solid #E0E0E0', marginTop: 8, paddingTop: 8, textAlign: 'right', fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
+                          <div style={{ borderTop: '1px solid #E0E0E0', marginTop: 8, paddingTop: 8, textAlign: 'right', fontSize: 11, color: '#666666' }}>
                             Totale K: <strong style={{ color: '#FFD700' }}>{reportData.pilastri.fv.totaleK}</strong>
                           </div>
                         </div>
@@ -2078,7 +2078,7 @@ export default function Home() {
                           {reportData.pilastri.fv.classifiche.nw.slice(0, 20).map(([name, stats], i) => (
                             <div key={i} style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, alignItems: 'center', marginBottom: 2, fontSize: 10 }}>
                               <span style={{ color: i < 3 ? '#9C27B0' : '#999999' }}>{i+1}°</span>
-                              <span style={{ color: 'rgba(255,255,255,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                              <span style={{ color: '#333333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                               <span style={{ color: '#4CAF50', textAlign: 'center', fontWeight: 600 }}>{stats.positivo || 0}</span>
                               <span style={{ color: '#FFC107', textAlign: 'center', fontWeight: 600 }}>{(stats.lavorazione || 0) + (stats.altro || 0)}</span>
                               <span style={{ color: '#f44336', textAlign: 'center', fontWeight: 600 }}>{stats.negativo || 0}</span>
@@ -2095,7 +2095,7 @@ export default function Home() {
                           {reportData.pilastri.fv.classifiche.sdp.slice(0, 20).map(([name, stats], i) => (
                             <div key={i} style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, alignItems: 'center', marginBottom: 2, fontSize: 10 }}>
                               <span style={{ color: i < 3 ? '#2196F3' : '#999999' }}>{i+1}°</span>
-                              <span style={{ color: 'rgba(255,255,255,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                              <span style={{ color: '#333333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                               <span style={{ color: '#4CAF50', textAlign: 'center', fontWeight: 600 }}>{stats.positivo || 0}</span>
                               <span style={{ color: '#FFC107', textAlign: 'center', fontWeight: 600 }}>{(stats.lavorazione || 0) + (stats.altro || 0)}</span>
                               <span style={{ color: '#f44336', textAlign: 'center', fontWeight: 600 }}>{stats.negativo || 0}</span>
@@ -2120,7 +2120,7 @@ export default function Home() {
                       {/* Stati NWG Spa */}
                       {reportData.pilastri.energy.statiNwgSpa && reportData.pilastri.energy.statiNwgSpa.length > 0 && (
                       <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 15, marginBottom: 10 }}>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 10 }}>📋 STATI NWG SPA</div>
+                        <div style={{ fontSize: 12, color: '#666666', marginBottom: 10 }}>📋 STATI NWG SPA</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                           {reportData.pilastri.energy.statiNwgSpa.map(([stato, val], i) => {
                             const color = STATO_COLORS[stato] || PIE_COLORS[i % PIE_COLORS.length];
@@ -2141,7 +2141,7 @@ export default function Home() {
                       {/* Stati NWG Energia (se presenti) */}
                       {reportData.pilastri.energy.statiNwgEnergia && reportData.pilastri.energy.statiNwgEnergia.length > 0 && (
                         <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 15, marginBottom: 15 }}>
-                          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 10 }}>⚡ STATI NWG ENERGIA</div>
+                          <div style={{ fontSize: 12, color: '#666666', marginBottom: 10 }}>⚡ STATI NWG ENERGIA</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                             {reportData.pilastri.energy.statiNwgEnergia.map(([stato, val], i) => {
                               const color = STATO_COLORS[stato] || PIE_COLORS[(i + 5) % PIE_COLORS.length];
@@ -2164,14 +2164,14 @@ export default function Home() {
                         {/* K Manager LA */}
                         <div style={{ background: 'rgba(255,215,0,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(255,215,0,0.2)' }}>
                           <div style={{ fontSize: 12, color: '#FFD700', fontWeight: 600, marginBottom: 8 }}>👑 K MANAGER</div>
-                          {reportData.pilastri.energy.classifiche.k.map(([name, val], i) => (
+                          {reportData.pilastri.energy.classifiche.k.map(([name, stats], i) => (
                             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                               <span style={{ width: 20, fontSize: 10, color: i < 3 ? '#FFD700' : '#666666' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
                               <span style={{ flex: 1, fontSize: 11, color: '#333333' }}>{name}</span>
-                              <span style={{ fontSize: 12, fontWeight: 700, color: '#FFD700' }}>{val}</span>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: '#FFD700' }}>{typeof stats === 'object' ? stats.total : stats}</span>
                             </div>
                           ))}
-                          <div style={{ borderTop: '1px solid #E0E0E0', marginTop: 8, paddingTop: 8, textAlign: 'right', fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
+                          <div style={{ borderTop: '1px solid #E0E0E0', marginTop: 8, paddingTop: 8, textAlign: 'right', fontSize: 11, color: '#666666' }}>
                             Totale: <strong style={{ color: '#FFD700' }}>{reportData.pilastri.energy.totaleK}</strong>
                           </div>
                         </div>
@@ -2179,11 +2179,11 @@ export default function Home() {
                         {/* NW LA */}
                         <div style={{ background: 'rgba(156,39,176,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(156,39,176,0.2)', maxHeight: 250, overflowY: 'auto' }}>
                           <div style={{ fontSize: 12, color: '#9C27B0', fontWeight: 600, marginBottom: 8 }}>⭐ NETWORKER ({reportData.pilastri.energy.classifiche.nw.length})</div>
-                          {reportData.pilastri.energy.classifiche.nw.map(([name, val], i) => (
+                          {reportData.pilastri.energy.classifiche.nw.map(([name, stats], i) => (
                             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
                               <span style={{ width: 20, fontSize: 9, color: i < 3 ? '#9C27B0' : '#999999' }}>{i+1}°</span>
-                              <span style={{ flex: 1, fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>{name}</span>
-                              <span style={{ fontSize: 11, fontWeight: 600, color: '#9C27B0' }}>{val}</span>
+                              <span style={{ flex: 1, fontSize: 10, color: '#333333' }}>{name}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#9C27B0' }}>{typeof stats === 'object' ? stats.total : stats}</span>
                             </div>
                           ))}
                         </div>
@@ -2191,11 +2191,11 @@ export default function Home() {
                         {/* SDP LA */}
                         <div style={{ background: 'rgba(33,150,243,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(33,150,243,0.2)', maxHeight: 250, overflowY: 'auto' }}>
                           <div style={{ fontSize: 12, color: '#2196F3', fontWeight: 600, marginBottom: 8 }}>🔵 SDP ({reportData.pilastri.energy.classifiche.sdp.length})</div>
-                          {reportData.pilastri.energy.classifiche.sdp.map(([name, val], i) => (
+                          {reportData.pilastri.energy.classifiche.sdp.map(([name, stats], i) => (
                             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
                               <span style={{ width: 20, fontSize: 9, color: i < 3 ? '#2196F3' : '#999999' }}>{i+1}°</span>
-                              <span style={{ flex: 1, fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>{name}</span>
-                              <span style={{ fontSize: 11, fontWeight: 600, color: '#2196F3' }}>{val}</span>
+                              <span style={{ flex: 1, fontSize: 10, color: '#333333' }}>{name}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#2196F3' }}>{typeof stats === 'object' ? stats.total : stats}</span>
                             </div>
                           ))}
                         </div>
@@ -2220,7 +2220,7 @@ export default function Home() {
                           {/* Iscritti */}
                           <div style={{ textAlign: 'center', minWidth: 90 }}>
                             <div style={{ fontSize: 28, fontWeight: 800, color: '#9C27B0' }}>{reportData.pilastri.collaboratori.funnel?.iscritti || 0}</div>
-                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>📝 Iscritti</div>
+                            <div style={{ fontSize: 10, color: '#666666' }}>📝 Iscritti</div>
                           </div>
                           
                           <div style={{ color: '#AAAAAA', fontSize: 20 }}>→</div>
@@ -2228,7 +2228,7 @@ export default function Home() {
                           {/* Presenti */}
                           <div style={{ textAlign: 'center', minWidth: 90 }}>
                             <div style={{ fontSize: 28, fontWeight: 800, color: '#4CAF50' }}>{reportData.pilastri.collaboratori.funnel?.presenti || 0}</div>
-                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>✅ Presenti</div>
+                            <div style={{ fontSize: 10, color: '#666666' }}>✅ Presenti</div>
                             <div style={{ fontSize: 9, color: '#4CAF50' }}>{reportData.pilastri.collaboratori.funnel?.pctPresenti || 0}%</div>
                           </div>
                           
@@ -2237,7 +2237,7 @@ export default function Home() {
                           {/* Attivati */}
                           <div style={{ textAlign: 'center', minWidth: 90 }}>
                             <div style={{ fontSize: 28, fontWeight: 800, color: '#FF6B35' }}>{reportData.pilastri.collaboratori.funnel?.attivati || 0}</div>
-                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>🟠 Attivati</div>
+                            <div style={{ fontSize: 10, color: '#666666' }}>🟠 Attivati</div>
                             <div style={{ fontSize: 9, color: '#FF6B35' }}>{reportData.pilastri.collaboratori.funnel?.pctAttivati || 0}%</div>
                           </div>
                         </div>
@@ -2261,7 +2261,7 @@ export default function Home() {
                               <span style={{ fontSize: 11, fontWeight: 600, color: '#FF6B35', textAlign: 'center' }}>{typeof stats === 'object' ? (stats.attivati || 0) : '-'}</span>
                             </div>
                           ))}
-                          <div style={{ borderTop: '1px solid #E0E0E0', marginTop: 8, paddingTop: 8, textAlign: 'right', fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
+                          <div style={{ borderTop: '1px solid #E0E0E0', marginTop: 8, paddingTop: 8, textAlign: 'right', fontSize: 11, color: '#666666' }}>
                             Totale K: <strong style={{ color: '#FFD700' }}>{reportData.pilastri.collaboratori.totaleK}</strong>
                           </div>
                         </div>
@@ -2275,7 +2275,7 @@ export default function Home() {
                           {reportData.pilastri.collaboratori.classifiche.nw.slice(0, 20).map(([name, stats], i) => (
                             <div key={i} style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, alignItems: 'center', marginBottom: 2, fontSize: 10 }}>
                               <span style={{ color: i < 3 ? '#9C27B0' : '#999999' }}>{i+1}°</span>
-                              <span style={{ color: 'rgba(255,255,255,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                              <span style={{ color: '#333333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                               <span style={{ color: '#9C27B0', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.iscritti || stats.total || 0) : stats}</span>
                               <span style={{ color: '#4CAF50', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.presenti || 0) : '-'}</span>
                               <span style={{ color: '#FF6B35', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.attivati || 0) : '-'}</span>
@@ -2292,7 +2292,7 @@ export default function Home() {
                           {reportData.pilastri.collaboratori.classifiche.sdp.slice(0, 20).map(([name, stats], i) => (
                             <div key={i} style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, alignItems: 'center', marginBottom: 2, fontSize: 10 }}>
                               <span style={{ color: i < 3 ? '#2196F3' : '#999999' }}>{i+1}°</span>
-                              <span style={{ color: 'rgba(255,255,255,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                              <span style={{ color: '#333333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                               <span style={{ color: '#9C27B0', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.iscritti || stats.total || 0) : stats}</span>
                               <span style={{ color: '#4CAF50', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.presenti || 0) : '-'}</span>
                               <span style={{ color: '#FF6B35', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.attivati || 0) : '-'}</span>
@@ -2338,19 +2338,19 @@ export default function Home() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
                   <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.25), rgba(255,107,53,0.08))', borderRadius: 16, padding: '18px 12px', textAlign: 'center', border: '1px solid rgba(255,107,53,0.4)' }}>
                     <div style={{ fontSize: 36, fontWeight: 800, color: '#FF6B35' }}>{animatedStats.ins}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', marginTop: 4 }}>{labels.c1}</div>
+                    <div style={{ fontSize: 11, color: '#444444', textTransform: 'uppercase', marginTop: 4 }}>{labels.c1}</div>
                   </div>
                   <div style={{ background: 'linear-gradient(135deg, rgba(76,175,80,0.25), rgba(76,175,80,0.08))', borderRadius: 16, padding: '18px 12px', textAlign: 'center', border: '1px solid rgba(76,175,80,0.4)' }}>
                     <div style={{ fontSize: 36, fontWeight: 800, color: '#4CAF50' }}>{animatedStats.acc}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', marginTop: 4 }}>{labels.c2}</div>
+                    <div style={{ fontSize: 11, color: '#444444', textTransform: 'uppercase', marginTop: 4 }}>{labels.c2}</div>
                   </div>
                   <div style={{ background: 'linear-gradient(135deg, rgba(124,77,255,0.25), rgba(124,77,255,0.08))', borderRadius: 16, padding: '18px 12px', textAlign: 'center', border: '1px solid rgba(124,77,255,0.4)' }}>
                     <div style={{ fontSize: 36, fontWeight: 800, color: '#2AAA8A' }}>{animatedStats.part}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', marginTop: 4 }}>Partecipanti</div>
+                    <div style={{ fontSize: 11, color: '#444444', textTransform: 'uppercase', marginTop: 4 }}>Partecipanti</div>
                   </div>
                   <div style={{ background: 'linear-gradient(135deg, rgba(255,215,0,0.25), rgba(255,215,0,0.08))', borderRadius: 16, padding: '18px 12px', textAlign: 'center', border: '1px solid rgba(255,215,0,0.4)' }}>
                     <div style={{ fontSize: 36, fontWeight: 800, color: '#FFD700' }}>{animatedStats.conv}%</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', marginTop: 4 }}>Conversione</div>
+                    <div style={{ fontSize: 11, color: '#444444', textTransform: 'uppercase', marginTop: 4 }}>Conversione</div>
                   </div>
                 </div>
 
@@ -2393,7 +2393,7 @@ export default function Home() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {stats.top10.slice(3, 10).map((p, i) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{ width: 28, fontSize: 13, color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{i + 4}°</span>
+                          <span style={{ width: 28, fontSize: 13, color: '#666666', fontWeight: 600 }}>{i + 4}°</span>
                           <div style={{ flex: 1, height: 28, background: 'rgba(255,255,255,0.06)', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
                             <div style={{ width: `${(p.v1 / stats.maxV1) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #2AAA8A, #9575CD)', borderRadius: 6 }} />
                             <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: '#333333', fontWeight: 500 }}>{p.name}</span>
@@ -2507,9 +2507,9 @@ export default function Home() {
                             </div>
                             {/* Legenda */}
                             <div style={{ display: 'flex', justifyContent: 'center', gap: 15, marginTop: 12 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#4CAF50', boxShadow: '0 0 6px rgba(76,175,80,0.5)' }} /><span style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>🔥 Caldo</span></div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FFC107' }} /><span style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>Tiepido</span></div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FF6B35' }} /><span style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>Freddo</span></div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#4CAF50', boxShadow: '0 0 6px rgba(76,175,80,0.5)' }} /><span style={{ fontSize: 10, color: '#666666' }}>🔥 Caldo</span></div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FFC107' }} /><span style={{ fontSize: 10, color: '#666666' }}>Tiepido</span></div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FF6B35' }} /><span style={{ fontSize: 10, color: '#666666' }}>Freddo</span></div>
                             </div>
                           </div>
                         );
@@ -2555,7 +2555,7 @@ export default function Home() {
                             <div style={{ flex: 1 }}>
                               <div style={{ fontSize: 12, color: '#FFD700', fontWeight: 600, marginBottom: 6 }}>👑 K MANAGER</div>
                               {pies.k.slice(0, 4).map(([name, val], i) => (
-                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'rgba(255,255,255,0.7)', marginBottom: 2 }}>
+                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#444444', marginBottom: 2 }}>
                                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                     <span style={{ width: 8, height: 8, borderRadius: 2, background: PIE_COLORS[i] }} />
                                     {name.split(' ')[0]}
@@ -2576,7 +2576,7 @@ export default function Home() {
                             <div style={{ flex: 1 }}>
                               <div style={{ fontSize: 12, color: '#4CAF50', fontWeight: 600, marginBottom: 6 }}>📋 STATI</div>
                               {pies.stati.slice(0, 4).map(([name, val], i) => (
-                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'rgba(255,255,255,0.7)', marginBottom: 2 }}>
+                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#444444', marginBottom: 2 }}>
                                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                     <span style={{ width: 8, height: 8, borderRadius: 2, background: STATO_COLORS[name] || '#607D8B' }} />
                                     {name}
@@ -2636,13 +2636,13 @@ export default function Home() {
           <div style={{ background: 'linear-gradient(135deg,#1a1a2e,#12121f)', borderRadius: 20, padding: 30, maxWidth: 450, width: '100%', border: '1px solid #E0E0E0' }}>
             <h2 style={{ color: '#FFC107', marginBottom: 20, fontSize: 20 }}>⚠️ VERIFICA PRIMA DI INVIARE</h2>
             <div style={{ background: '#F5F5F5', borderRadius: 12, padding: 20, marginBottom: 20 }}>
-              <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 10, fontSize: 14 }}>📊 <strong style={{ color: '#333333' }}>Classifica:</strong> {config.label}</p>
-              <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 10, fontSize: 14 }}>📅 <strong style={{ color: '#333333' }}>Evento:</strong> {eventName} - {eventDate}</p>
-              <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 10, fontSize: 14 }}>📈 <strong style={{ color: '#333333' }}>Tipo:</strong> {periodType === 'progressiva' ? 'Progressiva' : periodType === 'settimanale' ? 'Settimanale' : 'Finale mese'}</p>
+              <p style={{ color: '#444444', marginBottom: 10, fontSize: 14 }}>📊 <strong style={{ color: '#333333' }}>Classifica:</strong> {config.label}</p>
+              <p style={{ color: '#444444', marginBottom: 10, fontSize: 14 }}>📅 <strong style={{ color: '#333333' }}>Evento:</strong> {eventName} - {eventDate}</p>
+              <p style={{ color: '#444444', marginBottom: 10, fontSize: 14 }}>📈 <strong style={{ color: '#333333' }}>Tipo:</strong> {periodType === 'progressiva' ? 'Progressiva' : periodType === 'settimanale' ? 'Settimanale' : 'Finale mese'}</p>
               <div style={{ height: 1, background: '#E0E0E0', margin: '15px 0' }} />
-              <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 8, fontSize: 14 }}>📥 <strong style={{ color: config.color }}>{getClassificaTotal()}</strong> {labels.c1}</p>
-              <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 8, fontSize: 14 }}>✅ <strong style={{ color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</strong> {labels.c2}</p>
-              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>👥 <strong style={{ color: '#333333' }}>{getData().length}</strong> partecipanti</p>
+              <p style={{ color: '#444444', marginBottom: 8, fontSize: 14 }}>📥 <strong style={{ color: config.color }}>{getClassificaTotal()}</strong> {labels.c1}</p>
+              <p style={{ color: '#444444', marginBottom: 8, fontSize: 14 }}>✅ <strong style={{ color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</strong> {labels.c2}</p>
+              <p style={{ color: '#444444', fontSize: 14 }}>👥 <strong style={{ color: '#333333' }}>{getData().length}</strong> partecipanti</p>
             </div>
             <p style={{ color: '#FFC107', fontSize: 14, marginBottom: 20, textAlign: 'center' }}>✅ I numeri sono corretti?</p>
             <div style={{ display: 'flex', gap: 12 }}>
