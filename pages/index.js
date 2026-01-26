@@ -296,11 +296,71 @@ export default function Home() {
     };
   };
 
-  // Colori per torte
+  // Colori per torte e stati
   const PIE_COLORS = ['#FFD700', '#7C4DFF', '#FF6B35', '#4CAF50', '#2196F3', '#E91E63', '#00BCD4', '#9C27B0', '#FF9800', '#607D8B'];
-  const STATO_COLORS = { 'Accettato': '#4CAF50', 'Sospeso': '#FFC107', 'Presente': '#4CAF50', 'Assente': '#FF6B35', 'In lavorazione': '#2196F3', 'Installato': '#00BCD4', 'Recesso': '#f44336', 'Annullato': '#9E9E9E', 'In fornitura': '#4CAF50', 'Cessato': '#607D8B' };
+  
+  // Colori heatmap
+  const HEATMAP_COLORS = {
+    hot: '#4CAF50',      // >70% 🟢
+    warm: '#FFC107',     // 40-70% 🟡
+    cool: '#FF9800',     // 10-40% 🟠
+    cold: '#FF5722',     // <10% 🔴
+    zero: 'rgba(255,255,255,0.05)' // 0 ⬜
+  };
+  
+  const getHeatmapColor = (val, max) => {
+    if (val === 0) return HEATMAP_COLORS.zero;
+    const pct = val / max;
+    if (pct > 0.7) return HEATMAP_COLORS.hot;
+    if (pct > 0.4) return HEATMAP_COLORS.warm;
+    if (pct > 0.1) return HEATMAP_COLORS.cool;
+    return HEATMAP_COLORS.cold;
+  };
 
-  // === REPORT AGGREGATO v2 - 3 PILASTRI SEPARATI ===
+  // === MAPPATURA STATI ===
+  const STATO_MAP_FV = {
+    // 🟢 POSITIVO
+    'Impianto installato': 'positivo', 'AAC contratto accettato': 'positivo', 'AAC – Contratto accettato in attesa sblocco': 'positivo',
+    'Impianto pronto per spedizione': 'positivo', 'Cantiere aperto': 'positivo', 'Impianto in consegna': 'positivo',
+    'Ok finanziario ma non tecnico': 'positivo', 'Ok finanziario': 'positivo',
+    // 🟡 IN LAVORAZIONE
+    'Rep.Amm – Contratto appena inserito': 'lavorazione', 'Rep.Amm appena inserito': 'lavorazione', 'Appena inserito': 'lavorazione',
+    'Rep.Fin – In lavorazione': 'lavorazione', 'Rep.Fin in lavorazione': 'lavorazione', 'In lavorazione': 'lavorazione',
+    'Rep.Amm – Sospeso': 'lavorazione', 'Rep.Amm sospeso': 'lavorazione', 'Sospeso': 'lavorazione',
+    // 🔴 NEGATIVO
+    'Recesso': 'negativo', 'Rep.Fin – Negativo': 'negativo', 'Rep.Fin negativo': 'negativo', 'Negativo': 'negativo',
+    'Annullato': 'negativo', 'Rep.Amm – Non perfezionato': 'negativo', 'Rep.Amm non perfezionato': 'negativo',
+    'Non perfezionato': 'negativo', 'No': 'negativo', 'Respinto': 'negativo'
+  };
+  
+  const STATO_MAP_LA_SPA = {
+    // 🟢 POSITIVO
+    'Accettato': 'positivo',
+    // 🟡 LAVORABILE
+    'In sospeso': 'lavorabile', 'Sospeso': 'lavorabile',
+    // 🔴 MENO
+    'Risoluzione': 'meno', 'Non perfezionato': 'meno', 'Recesso': 'meno', 'Respinto': 'meno', 'Annullato': 'meno'
+  };
+  
+  const STATO_MAP_LA_ENERGIA = {
+    // 🟢 POSITIVO
+    'Attivo': 'positivo', 'In fornitura': 'positivo',
+    // 🟡 LAVORABILE
+    'Da attivare': 'lavorabile', 'In attivazione': 'lavorabile',
+    // 🔴 MENO
+    'Cessato': 'meno', 'Disdetta': 'meno'
+  };
+  
+  const STATO_MAP_IVD = {
+    // 🟢 ATTIVO
+    'Attivo': 'attivo', 'In regola': 'attivo', 'Operativo': 'attivo',
+    // 🟡 LAVORABILE
+    'In attesa': 'lavorabile', 'Da completare': 'lavorabile', 'In formazione': 'lavorabile',
+    // 🔴 PERSO
+    'Cessato': 'perso', 'Dimesso': 'perso', 'Annullato': 'perso', 'Recesso': 'perso'
+  };
+
+  // === REPORT AGGREGATO v3 - 3 PILASTRI CON CONVERSIONE ===
   const processReportCSV = (type, file) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -324,42 +384,77 @@ export default function Home() {
   const generateReportData = () => {
     const result = {
       pilastri: {},
-      heatmapMesi: {}, // Per ogni pilastro, dati per mese
-      selectedMonth: null // Per drill-down
+      heatmapMesi: {},
+      selectedMonth: null
     };
     
-    // Helper per estrarre classifiche da un dataset
-    const extractClassifiche = (data) => {
-      const kCount = {}, nwCount = {}, sdpCount = {};
+    // Helper per categorizzare uno stato
+    const categorizeStato = (stato, map) => {
+      const statoLower = (stato || '').trim();
+      for (const [key, cat] of Object.entries(map)) {
+        if (statoLower.toLowerCase().includes(key.toLowerCase()) || key.toLowerCase().includes(statoLower.toLowerCase())) {
+          return cat;
+        }
+      }
+      return 'altro';
+    };
+    
+    // Helper per estrarre classifiche CON 3 COLONNE di conversione
+    const extractClassificheConConversione = (data, statoField, statoMap, cats = ['positivo', 'lavorazione', 'negativo']) => {
+      const kStats = {}, nwStats = {}, sdpStats = {};
+      
       data.forEach(row => {
         const k = row['Nome Primo K'] || '';
         const nw = row['Nome Primo Networker'] || '';
         const sdp = row['Nome Primo SDP FV'] || row['Nome Primo SDP Fv'] || row['Nome Primo SDP LA'] || row['Nome Primo SDP La'] || '';
+        const stato = row[statoField] || row['Stato'] || '';
+        const cat = categorizeStato(stato, statoMap);
         
-        if (k && !k.includes('Nome Primo')) kCount[k] = (kCount[k] || 0) + 1;
-        if (nw && !nw.includes('Nome Primo')) nwCount[nw] = (nwCount[nw] || 0) + 1;
-        if (sdp && !sdp.includes('Nome Primo')) sdpCount[sdp] = (sdpCount[sdp] || 0) + 1;
+        // K Manager
+        if (k && !k.includes('Nome Primo')) {
+          if (!kStats[k]) kStats[k] = { positivo: 0, lavorazione: 0, lavorabile: 0, negativo: 0, meno: 0, attivo: 0, perso: 0, altro: 0, total: 0 };
+          kStats[k][cat]++;
+          kStats[k].total++;
+        }
+        // Networker
+        if (nw && !nw.includes('Nome Primo')) {
+          if (!nwStats[nw]) nwStats[nw] = { positivo: 0, lavorazione: 0, lavorabile: 0, negativo: 0, meno: 0, attivo: 0, perso: 0, altro: 0, total: 0 };
+          nwStats[nw][cat]++;
+          nwStats[nw].total++;
+        }
+        // SDP
+        if (sdp && !sdp.includes('Nome Primo')) {
+          if (!sdpStats[sdp]) sdpStats[sdp] = { positivo: 0, lavorazione: 0, lavorabile: 0, negativo: 0, meno: 0, attivo: 0, perso: 0, altro: 0, total: 0 };
+          sdpStats[sdp][cat]++;
+          sdpStats[sdp].total++;
+        }
       });
-      const toSorted = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1]);
-      return { k: toSorted(kCount), nw: toSorted(nwCount), sdp: toSorted(sdpCount) };
+      
+      const toSorted = (obj) => Object.entries(obj).sort((a, b) => b[1].total - a[1].total);
+      return { k: toSorted(kStats), nw: toSorted(nwStats), sdp: toSorted(sdpStats) };
     };
     
-    // Helper per contare stati
-    const countStati = (data, field) => {
-      const counts = {};
+    // Helper per contare stati raggruppati
+    const countStatiRaggruppati = (data, field, map) => {
+      const groups = { positivo: 0, lavorazione: 0, lavorabile: 0, negativo: 0, meno: 0, attivo: 0, perso: 0, altro: 0 };
+      const dettaglio = {};
+      
       data.forEach(row => {
         const stato = row[field] || '';
         if (stato && !stato.includes('Stato')) {
-          counts[stato] = (counts[stato] || 0) + 1;
+          const cat = categorizeStato(stato, map);
+          groups[cat]++;
+          dettaglio[stato] = (dettaglio[stato] || 0) + 1;
         }
       });
-      return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      
+      return { groups, dettaglio: Object.entries(dettaglio).sort((a, b) => b[1] - a[1]) };
     };
     
     // Helper per heatmap mesi (12 mesi)
     const calcHeatmapMesi = (data) => {
       const mesi = Array(12).fill(0);
-      const giorniPerMese = {}; // { 0: [31 giorni], 1: [28 giorni], ... }
+      const giorniPerMese = {};
       
       data.forEach(row => {
         const dateStr = row['Inserimento'] || row['Data'] || row['Data Inserimento'] || row['Data SI'] || '';
@@ -370,7 +465,6 @@ export default function Home() {
               const month = d.getMonth();
               const day = d.getDate();
               mesi[month]++;
-              
               if (!giorniPerMese[month]) giorniPerMese[month] = Array(31).fill(0);
               if (day >= 1 && day <= 31) giorniPerMese[month][day - 1]++;
             }
@@ -386,18 +480,33 @@ export default function Home() {
     // ═══════════════════════════════════════════════════════════
     if (reportCSVs.fv?.data?.length > 0) {
       const fvData = reportCSVs.fv.data;
-      const stati = countStati(fvData, 'Stato');
-      const classifiche = extractClassifiche(fvData);
+      const statiRagg = countStatiRaggruppati(fvData, 'Stato', STATO_MAP_FV);
+      const classifiche = extractClassificheConConversione(fvData, 'Stato', STATO_MAP_FV);
       const heatmap = calcHeatmapMesi(fvData);
+      
+      const positivi = statiRagg.groups.positivo;
+      const lavorazione = statiRagg.groups.lavorazione + statiRagg.groups.altro;
+      const negativi = statiRagg.groups.negativo;
       
       result.pilastri.fv = {
         nome: 'FOTOVOLTAICO',
         emoji: '☀️',
         color: '#FF9800',
         totale: fvData.length,
-        stati: stati,
+        funnel: {
+          inseriti: fvData.length,
+          positivi: positivi,
+          lavorazione: lavorazione,
+          negativi: negativi,
+          pctPositivi: fvData.length > 0 ? Math.round(positivi / fvData.length * 100) : 0,
+          pctNegativi: fvData.length > 0 ? Math.round(negativi / fvData.length * 100) : 0
+        },
+        statiDettaglio: statiRagg.dettaglio,
+        statiGroups: statiRagg.groups,
         classifiche: classifiche,
-        totaleK: classifiche.k.reduce((s, [,v]) => s + v, 0)
+        totaleK: classifiche.k.reduce((s, [,v]) => s + v.total, 0),
+        catLabels: { c1: '🟢 Positivi', c2: '🟡 Lavoraz.', c3: '🔴 Persi' },
+        catKeys: ['positivo', 'lavorazione', 'negativo']
       };
       result.heatmapMesi.fv = heatmap;
     }
@@ -407,21 +516,43 @@ export default function Home() {
     // ═══════════════════════════════════════════════════════════
     if (reportCSVs.energy?.data?.length > 0) {
       const laData = reportCSVs.energy.data;
-      const statiNwgSpa = countStati(laData, 'Stato NWG Spa');
-      const statiNwgEnergia = countStati(laData, 'Stato NWG Energia');
-      const statiGenerico = countStati(laData, 'Stato');
-      const classifiche = extractClassifiche(laData);
+      const statiSpa = countStatiRaggruppati(laData, 'Stato NWG Spa', STATO_MAP_LA_SPA);
+      const statiEnergia = countStatiRaggruppati(laData, 'Stato NWG Energia', STATO_MAP_LA_ENERGIA);
+      const statiGenerico = countStatiRaggruppati(laData, 'Stato', STATO_MAP_LA_SPA);
+      const classifiche = extractClassificheConConversione(laData, 'Stato NWG Spa', STATO_MAP_LA_SPA, ['positivo', 'lavorabile', 'meno']);
       const heatmap = calcHeatmapMesi(laData);
+      
+      // Usa statiSpa se disponibile, altrimenti generico
+      const useSpa = statiSpa.dettaglio.length > 0;
+      const mainStati = useSpa ? statiSpa : statiGenerico;
+      
+      const accettati = mainStati.groups.positivo;
+      const lavorabili = mainStati.groups.lavorabile + mainStati.groups.altro;
+      const persi = mainStati.groups.meno + mainStati.groups.negativo;
+      const inFornitura = statiEnergia.groups.positivo;
       
       result.pilastri.energy = {
         nome: 'LUCE AMICA',
         emoji: '⚡',
         color: '#FFC107',
         totale: laData.length,
-        statiNwgSpa: statiNwgSpa.length > 0 ? statiNwgSpa : statiGenerico,
-        statiNwgEnergia: statiNwgEnergia,
+        funnel: {
+          inseriti: laData.length,
+          accettati: accettati,
+          lavorabili: lavorabili,
+          persi: persi,
+          inFornitura: inFornitura,
+          pctAccettati: laData.length > 0 ? Math.round(accettati / laData.length * 100) : 0,
+          pctFornitura: accettati > 0 ? Math.round(inFornitura / accettati * 100) : 0
+        },
+        statiNwgSpa: mainStati.dettaglio,
+        statiNwgEnergia: statiEnergia.dettaglio,
+        statiGroupsSpa: mainStati.groups,
+        statiGroupsEnergia: statiEnergia.groups,
         classifiche: classifiche,
-        totaleK: classifiche.k.reduce((s, [,v]) => s + v, 0)
+        totaleK: classifiche.k.reduce((s, [,v]) => s + v.total, 0),
+        catLabels: { c1: '🟢 Accettati', c2: '🟡 Lavorab.', c3: '🔴 Persi' },
+        catKeys: ['positivo', 'lavorabile', 'meno']
       };
       result.heatmapMesi.energy = heatmap;
     }
@@ -429,7 +560,7 @@ export default function Home() {
     // ═══════════════════════════════════════════════════════════
     // 🎓 PILASTRO COLLABORATORI (Seminari + Attivati)
     // ═══════════════════════════════════════════════════════════
-    const collabData = { iscritti: 0, presenti: 0, attivati: 0, classifiche: null };
+    const collabData = { iscritti: 0, presenti: 0, attivati: 0, statiAttivati: null, classifiche: null };
     
     // Seminari: Iscritti e Presenti
     if (reportCSVs.consultings?.data?.length > 0) {
@@ -440,26 +571,67 @@ export default function Home() {
         return presente === 'si' || presente === 'sì' || presente === 'yes' || presente === '1';
       }).length;
       
-      // Classifiche basate sui presenti (chi ha portato gente che si è presentata)
-      const presentiData = semData.filter(row => {
+      // Classifiche basate su tutti i dati seminario con conteggio presenti
+      const kStats = {}, nwStats = {}, sdpStats = {};
+      semData.forEach(row => {
+        const k = row['Nome Primo K'] || '';
+        const nw = row['Nome Primo Networker'] || '';
+        const sdp = row['Nome Primo SDP FV'] || row['Nome Primo SDP Fv'] || row['Nome Primo SDP LA'] || row['Nome Primo SDP La'] || '';
         const presente = (row['Presente SI'] || row['Presente'] || '').toLowerCase();
-        return presente === 'si' || presente === 'sì' || presente === 'yes' || presente === '1';
+        const isPresente = presente === 'si' || presente === 'sì' || presente === 'yes' || presente === '1';
+        
+        if (k && !k.includes('Nome Primo')) {
+          if (!kStats[k]) kStats[k] = { iscritti: 0, presenti: 0, attivati: 0, total: 0 };
+          kStats[k].iscritti++;
+          kStats[k].total++;
+          if (isPresente) kStats[k].presenti++;
+        }
+        if (nw && !nw.includes('Nome Primo')) {
+          if (!nwStats[nw]) nwStats[nw] = { iscritti: 0, presenti: 0, attivati: 0, total: 0 };
+          nwStats[nw].iscritti++;
+          nwStats[nw].total++;
+          if (isPresente) nwStats[nw].presenti++;
+        }
+        if (sdp && !sdp.includes('Nome Primo')) {
+          if (!sdpStats[sdp]) sdpStats[sdp] = { iscritti: 0, presenti: 0, attivati: 0, total: 0 };
+          sdpStats[sdp].iscritti++;
+          sdpStats[sdp].total++;
+          if (isPresente) sdpStats[sdp].presenti++;
+        }
       });
-      collabData.classifiche = extractClassifiche(presentiData.length > 0 ? presentiData : semData);
+      
+      const toSorted = (obj) => Object.entries(obj).sort((a, b) => b[1].total - a[1].total);
+      collabData.classifiche = { k: toSorted(kStats), nw: toSorted(nwStats), sdp: toSorted(sdpStats) };
       
       result.heatmapMesi.consultings = calcHeatmapMesi(semData);
     }
     
-    // Attivati (IVD Contracts - solo Attivazione START&GO)
+    // Attivati (IVD Contracts)
     if (reportCSVs.ivd?.data?.length > 0) {
-      collabData.attivati = reportCSVs.ivd.data.length;
+      const ivdData = reportCSVs.ivd.data;
+      collabData.attivati = ivdData.length;
+      collabData.statiAttivati = countStatiRaggruppati(ivdData, 'Stato', STATO_MAP_IVD);
       
-      // Se non ci sono seminari, usa classifiche da attivati
-      if (!collabData.classifiche) {
-        collabData.classifiche = extractClassifiche(reportCSVs.ivd.data);
+      // Aggiungi attivati alle classifiche esistenti o crea nuove
+      if (collabData.classifiche) {
+        ivdData.forEach(row => {
+          const k = row['Nome Primo K'] || '';
+          const nw = row['Nome Primo Networker'] || '';
+          
+          if (k && !k.includes('Nome Primo')) {
+            const found = collabData.classifiche.k.find(([name]) => name === k);
+            if (found) found[1].attivati = (found[1].attivati || 0) + 1;
+          }
+          if (nw && !nw.includes('Nome Primo')) {
+            const found = collabData.classifiche.nw.find(([name]) => name === nw);
+            if (found) found[1].attivati = (found[1].attivati || 0) + 1;
+          }
+        });
+      } else {
+        collabData.classifiche = extractClassificheConConversione(ivdData, 'Stato', STATO_MAP_IVD, ['attivo', 'lavorabile', 'perso']);
       }
       
-      result.heatmapMesi.ivd = calcHeatmapMesi(reportCSVs.ivd.data);
+      result.heatmapMesi.ivd = calcHeatmapMesi(ivdData);
     }
     
     if (collabData.iscritti > 0 || collabData.attivati > 0) {
@@ -467,17 +639,21 @@ export default function Home() {
         nome: 'COLLABORATORI',
         emoji: '🎓',
         color: '#9C27B0',
-        iscritti: collabData.iscritti,
-        presenti: collabData.presenti,
-        attivati: collabData.attivati,
-        convPresenti: collabData.iscritti > 0 ? Math.round(collabData.presenti / collabData.iscritti * 100) : 0,
-        convAttivati: collabData.presenti > 0 ? Math.round(collabData.attivati / collabData.presenti * 100) : 0,
+        funnel: {
+          iscritti: collabData.iscritti,
+          presenti: collabData.presenti,
+          attivati: collabData.attivati,
+          pctPresenti: collabData.iscritti > 0 ? Math.round(collabData.presenti / collabData.iscritti * 100) : 0,
+          pctAttivati: collabData.presenti > 0 ? Math.round(collabData.attivati / collabData.presenti * 100) : 0
+        },
+        statiAttivati: collabData.statiAttivati,
         classifiche: collabData.classifiche || { k: [], nw: [], sdp: [] },
-        totaleK: collabData.classifiche ? collabData.classifiche.k.reduce((s, [,v]) => s + v, 0) : 0
+        totaleK: collabData.classifiche ? collabData.classifiche.k.reduce((s, [,v]) => s + v.total, 0) : 0,
+        catLabels: { c1: '📝 Iscritti', c2: '✅ Presenti', c3: '🟠 Attivati' },
+        catKeys: ['iscritti', 'presenti', 'attivati']
       };
     }
     
-    // Se nessun pilastro ha dati, ritorna null
     if (Object.keys(result.pilastri).length === 0) return null;
     
     return result;
@@ -489,7 +665,7 @@ export default function Home() {
   };
   
   // Stato per drill-down heatmap mesi
-  const [heatmapDrilldown, setHeatmapDrilldown] = useState(null); // { pilastro: 'fv', mese: 0 }
+  const [heatmapDrilldown, setHeatmapDrilldown] = useState(null);
 
   // === SCREENSHOT DASHBOARD (solo canvas nativo, no dipendenze esterne) ===
   const generateDashboardCanvas = (format = 'png') => {
@@ -1580,7 +1756,7 @@ export default function Home() {
       {loginError && <p style={{ color: '#f44', fontSize: 13, marginBottom: 10 }}>{loginError}</p>}
       <button style={S.btn} onClick={handleLogin}>ACCEDI</button>
       <div style={S.categoryIcons}><span style={S.catIcon}>🟠</span><span style={S.catIcon}>🔵</span><span style={S.catIcon}>⭐</span><span style={S.catIcon}>👑</span></div>
-      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v9.7</p>
+      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v9.8</p>
     </div></div></>);
 
   // HOMEPAGE CSV
@@ -1648,17 +1824,15 @@ export default function Home() {
                 onClick={() => rankings && setActiveTab('classifiche')}
                 disabled={!rankings}
               >🏆 Classifiche</button>
-              {(user.role === 'admin' || user.role === 'assistente') && (
-                <button 
-                  style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'report' ? 'linear-gradient(135deg,#FF6B35,#FF8F00)' : 'rgba(255,255,255,0.05)', border: activeTab === 'report' ? 'none' : '1px solid rgba(255,255,255,0.1)' }} 
-                  onClick={() => setActiveTab('report')}
-                >📈 Report</button>
-              )}
+              <button 
+                style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'report' ? 'linear-gradient(135deg,#FF6B35,#FF8F00)' : 'rgba(255,255,255,0.05)', border: activeTab === 'report' ? 'none' : '1px solid rgba(255,255,255,0.1)' }} 
+                onClick={() => setActiveTab('report')}
+              >📈 Report</button>
             </div>
           )}
           
-          {/* TAB REPORT AGGREGATO - Solo per admin/assistente */}
-          {(user.role === 'admin' || user.role === 'assistente') && activeTab === 'report' && (
+          {/* TAB REPORT AGGREGATO - Accessibile a TUTTI */}
+          {activeTab === 'report' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
               <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.15), rgba(255,107,53,0.05))', borderRadius: 20, padding: 20, border: '1px solid rgba(255,107,53,0.3)' }}>
                 <h2 style={{ color: '#FF6B35', fontSize: 18, marginBottom: 5 }}>📈 REPORT AGGREGATO</h2>
@@ -1824,62 +1998,101 @@ export default function Home() {
                         </div>
                       </div>
                       
-                      {/* Stati FV */}
+                      {/* FUNNEL FV */}
+                      <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 16, padding: 20, marginBottom: 15 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, flexWrap: 'wrap' }}>
+                          <div style={{ textAlign: 'center', minWidth: 90 }}>
+                            <div style={{ fontSize: 28, fontWeight: 800, color: '#FF9800' }}>{reportData.pilastri.fv.funnel.inseriti}</div>
+                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>📋 Inseriti</div>
+                          </div>
+                          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 20 }}>→</div>
+                          <div style={{ textAlign: 'center', minWidth: 90 }}>
+                            <div style={{ fontSize: 28, fontWeight: 800, color: '#4CAF50' }}>{reportData.pilastri.fv.funnel.positivi}</div>
+                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>🟢 Positivi</div>
+                            <div style={{ fontSize: 9, color: '#4CAF50' }}>{reportData.pilastri.fv.funnel.pctPositivi}%</div>
+                          </div>
+                          <div style={{ textAlign: 'center', minWidth: 90 }}>
+                            <div style={{ fontSize: 28, fontWeight: 800, color: '#FFC107' }}>{reportData.pilastri.fv.funnel.lavorazione}</div>
+                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>🟡 Lavoraz.</div>
+                          </div>
+                          <div style={{ textAlign: 'center', minWidth: 90 }}>
+                            <div style={{ fontSize: 28, fontWeight: 800, color: '#f44336' }}>{reportData.pilastri.fv.funnel.negativi}</div>
+                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>🔴 Persi</div>
+                            <div style={{ fontSize: 9, color: '#f44336' }}>{reportData.pilastri.fv.funnel.pctNegativi}%</div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Stati FV Dettaglio */}
                       <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 15, marginBottom: 15 }}>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 10 }}>📋 STATI CONTRATTI</div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                          {reportData.pilastri.fv.stati.map(([stato, val], i) => {
-                            const color = STATO_COLORS[stato] || PIE_COLORS[i % PIE_COLORS.length];
-                            const pct = Math.round(val / reportData.pilastri.fv.totale * 100);
+                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 10 }}>📋 DETTAGLIO STATI</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {reportData.pilastri.fv.statiDettaglio.map(([stato, val], i) => {
+                            const cat = Object.entries(STATO_MAP_FV).find(([k]) => stato.toLowerCase().includes(k.toLowerCase()))?.[1] || 'altro';
+                            const color = cat === 'positivo' ? '#4CAF50' : cat === 'lavorazione' ? '#FFC107' : cat === 'negativo' ? '#f44336' : '#9E9E9E';
                             return (
-                              <div key={stato} style={{ background: `${color}20`, border: `1px solid ${color}50`, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <span style={{ width: 10, height: 10, borderRadius: 3, background: color }} />
-                                <span style={{ color: '#fff', fontSize: 12 }}>{stato}</span>
-                                <span style={{ color: color, fontWeight: 700, fontSize: 14 }}>{val}</span>
-                                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>({pct}%)</span>
+                              <div key={stato} style={{ background: `${color}20`, border: `1px solid ${color}40`, borderRadius: 6, padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
+                                <span style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
+                                <span style={{ color: 'rgba(255,255,255,0.8)' }}>{stato}</span>
+                                <span style={{ color: color, fontWeight: 600 }}>{val}</span>
                               </div>
                             );
                           })}
                         </div>
                       </div>
                       
-                      {/* Classifiche FV */}
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
+                      {/* Classifiche FV con 3 colonne */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
                         {/* K Manager FV */}
                         <div style={{ background: 'rgba(255,215,0,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(255,215,0,0.2)' }}>
                           <div style={{ fontSize: 12, color: '#FFD700', fontWeight: 600, marginBottom: 8 }}>👑 K MANAGER</div>
-                          {reportData.pilastri.fv.classifiche.k.map(([name, val], i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                              <span style={{ width: 20, fontSize: 10, color: i < 3 ? '#FFD700' : 'rgba(255,255,255,0.5)' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
-                              <span style={{ flex: 1, fontSize: 11, color: '#fff' }}>{name}</span>
-                              <span style={{ fontSize: 12, fontWeight: 700, color: '#FFD700' }}>{val}</span>
+                          <div style={{ display: 'grid', gridTemplateColumns: '30px 1fr 45px 45px 45px', gap: 4, fontSize: 9, color: 'rgba(255,255,255,0.5)', marginBottom: 6 }}>
+                            <span>#</span><span>Nome</span><span style={{ textAlign: 'center' }}>🟢</span><span style={{ textAlign: 'center' }}>🟡</span><span style={{ textAlign: 'center' }}>🔴</span>
+                          </div>
+                          {reportData.pilastri.fv.classifiche.k.map(([name, stats], i) => (
+                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 45px 45px 45px', gap: 4, alignItems: 'center', marginBottom: 4, padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                              <span style={{ fontSize: 10, color: i < 3 ? '#FFD700' : 'rgba(255,255,255,0.5)' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
+                              <span style={{ fontSize: 11, color: '#fff', fontWeight: i < 3 ? 600 : 400 }}>{name}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#4CAF50', textAlign: 'center' }}>{stats.positivo || 0}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#FFC107', textAlign: 'center' }}>{(stats.lavorazione || 0) + (stats.altro || 0)}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#f44336', textAlign: 'center' }}>{stats.negativo || 0}</span>
                             </div>
                           ))}
                           <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 8, paddingTop: 8, textAlign: 'right', fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
-                            Totale: <strong style={{ color: '#FFD700' }}>{reportData.pilastri.fv.totaleK}</strong>
+                            Totale K: <strong style={{ color: '#FFD700' }}>{reportData.pilastri.fv.totaleK}</strong>
                           </div>
                         </div>
                         
                         {/* NW FV */}
-                        <div style={{ background: 'rgba(156,39,176,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(156,39,176,0.2)', maxHeight: 250, overflowY: 'auto' }}>
+                        <div style={{ background: 'rgba(156,39,176,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(156,39,176,0.2)', maxHeight: 280, overflowY: 'auto' }}>
                           <div style={{ fontSize: 12, color: '#9C27B0', fontWeight: 600, marginBottom: 8 }}>⭐ NETWORKER ({reportData.pilastri.fv.classifiche.nw.length})</div>
-                          {reportData.pilastri.fv.classifiche.nw.map(([name, val], i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                              <span style={{ width: 20, fontSize: 9, color: i < 3 ? '#9C27B0' : 'rgba(255,255,255,0.4)' }}>{i+1}°</span>
-                              <span style={{ flex: 1, fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>{name}</span>
-                              <span style={{ fontSize: 11, fontWeight: 600, color: '#9C27B0' }}>{val}</span>
+                          <div style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, fontSize: 8, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>
+                            <span>#</span><span>Nome</span><span style={{ textAlign: 'center' }}>🟢</span><span style={{ textAlign: 'center' }}>🟡</span><span style={{ textAlign: 'center' }}>🔴</span>
+                          </div>
+                          {reportData.pilastri.fv.classifiche.nw.slice(0, 20).map(([name, stats], i) => (
+                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, alignItems: 'center', marginBottom: 2, fontSize: 10 }}>
+                              <span style={{ color: i < 3 ? '#9C27B0' : 'rgba(255,255,255,0.4)' }}>{i+1}°</span>
+                              <span style={{ color: 'rgba(255,255,255,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                              <span style={{ color: '#4CAF50', textAlign: 'center', fontWeight: 600 }}>{stats.positivo || 0}</span>
+                              <span style={{ color: '#FFC107', textAlign: 'center', fontWeight: 600 }}>{(stats.lavorazione || 0) + (stats.altro || 0)}</span>
+                              <span style={{ color: '#f44336', textAlign: 'center', fontWeight: 600 }}>{stats.negativo || 0}</span>
                             </div>
                           ))}
                         </div>
                         
                         {/* SDP FV */}
-                        <div style={{ background: 'rgba(33,150,243,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(33,150,243,0.2)', maxHeight: 250, overflowY: 'auto' }}>
+                        <div style={{ background: 'rgba(33,150,243,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(33,150,243,0.2)', maxHeight: 280, overflowY: 'auto' }}>
                           <div style={{ fontSize: 12, color: '#2196F3', fontWeight: 600, marginBottom: 8 }}>🔵 SDP ({reportData.pilastri.fv.classifiche.sdp.length})</div>
-                          {reportData.pilastri.fv.classifiche.sdp.map(([name, val], i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                              <span style={{ width: 20, fontSize: 9, color: i < 3 ? '#2196F3' : 'rgba(255,255,255,0.4)' }}>{i+1}°</span>
-                              <span style={{ flex: 1, fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>{name}</span>
-                              <span style={{ fontSize: 11, fontWeight: 600, color: '#2196F3' }}>{val}</span>
+                          <div style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, fontSize: 8, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>
+                            <span>#</span><span>Nome</span><span style={{ textAlign: 'center' }}>🟢</span><span style={{ textAlign: 'center' }}>🟡</span><span style={{ textAlign: 'center' }}>🔴</span>
+                          </div>
+                          {reportData.pilastri.fv.classifiche.sdp.slice(0, 20).map(([name, stats], i) => (
+                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, alignItems: 'center', marginBottom: 2, fontSize: 10 }}>
+                              <span style={{ color: i < 3 ? '#2196F3' : 'rgba(255,255,255,0.4)' }}>{i+1}°</span>
+                              <span style={{ color: 'rgba(255,255,255,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                              <span style={{ color: '#4CAF50', textAlign: 'center', fontWeight: 600 }}>{stats.positivo || 0}</span>
+                              <span style={{ color: '#FFC107', textAlign: 'center', fontWeight: 600 }}>{(stats.lavorazione || 0) + (stats.altro || 0)}</span>
+                              <span style={{ color: '#f44336', textAlign: 'center', fontWeight: 600 }}>{stats.negativo || 0}</span>
                             </div>
                           ))}
                         </div>
@@ -2383,16 +2596,6 @@ export default function Home() {
                   <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                     <button style={{ ...S.btn, flex: 1, minWidth: 180, padding: '14px 20px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', fontSize: 14 }} onClick={() => downloadSlidePNG('full')}>📊 Podio + Classifica</button>
                     <button style={{ ...S.btn, flex: 1, minWidth: 180, padding: '14px 20px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', color: '#1a1a2e', fontSize: 14 }} onClick={() => downloadSlidePNG('solo')}>🏆 Solo Podio</button>
-                  </div>
-                </div>
-                
-                {/* BOTTONI SCREENSHOT DASHBOARD */}
-                <div style={{ background: 'linear-gradient(135deg, rgba(124,77,255,0.2), rgba(124,77,255,0.05))', borderRadius: 16, padding: 20, border: '1px solid rgba(124,77,255,0.3)' }}>
-                  <div style={{ fontSize: 16, color: '#7C4DFF', fontWeight: 700, marginBottom: 5 }}>📷 SCREENSHOT DASHBOARD</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 15 }}>Scarica tutta la dashboard come immagine o PDF</div>
-                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                    <button style={{ ...S.btn, flex: 1, minWidth: 140, padding: '14px 20px', background: 'linear-gradient(135deg, #7C4DFF, #536DFE)', fontSize: 14 }} onClick={() => generateDashboardCanvas('png')}>📷 Salva PNG</button>
-                    <button style={{ ...S.btn, flex: 1, minWidth: 140, padding: '14px 20px', background: 'linear-gradient(135deg, #E91E63, #C2185B)', fontSize: 14 }} onClick={() => generateDashboardCanvas('pdf')}>📄 Salva PDF</button>
                   </div>
                 </div>
               </div>
