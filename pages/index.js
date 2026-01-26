@@ -16,14 +16,14 @@ const EVENT_TYPES = ['LUCE AMICA', 'FOTOVOLTAICO', 'INSERITI SEMINARIO', 'ATTIVA
 const WEBHOOK_URL = 'https://hook.eu1.make.com/sm6lrhpoet204lv6xkwj10xiypwnn4qm';
 
 const RANKING_CONFIG = {
-  ivd_inseriti: { label: 'IVD INSERITI', category: 'ivd', color: '#FF6B35', emoji: '🟠', design: 'impact' },
+  ivd_inseriti: { label: 'IVD INSERITI', category: 'ivd', color: '#2AAA8A', emoji: '🟠', design: 'impact' },
   ivd_accettati: { label: 'IVD ACCETTATI', category: 'ivd', color: '#4CAF50', emoji: '🟢', design: 'impact' },
-  sdp_inseriti: { label: 'SDP INSERITI', category: 'sdp', color: '#2196F3', emoji: '🔵', design: 'impact' },
+  sdp_inseriti: { label: 'SDP INSERITI', category: 'sdp', color: '#2AAA8A', emoji: '🔵', design: 'impact' },
   sdp_accettati: { label: 'SDP ACCETTATI', category: 'sdp', color: '#4CAF50', emoji: '🟢', design: 'impact' },
-  nw: { label: 'NETWORKER', category: 'manager', color: '#9C27B0', emoji: '⭐', design: 'exclusive' },
+  nw: { label: 'NETWORKER', category: 'manager', color: '#2AAA8A', emoji: '⭐', design: 'exclusive' },
   k: { label: 'K MANAGER', category: 'manager', color: '#FFD700', emoji: '👑', design: 'exclusive' },
-  eb: { label: 'ENERGY BROKER', category: 'broker', color: '#00BCD4', emoji: '🔷', design: 'exclusive' },
-  frm: { label: 'FORMATORI', category: 'formatore', color: '#673AB7', emoji: '🎓', design: 'exclusive' },
+  eb: { label: 'ENERGY BROKER', category: 'broker', color: '#2AAA8A', emoji: '🔷', design: 'exclusive' },
+  frm: { label: 'FORMATORI', category: 'formatore', color: '#2AAA8A', emoji: '🎓', design: 'exclusive' },
 };
 
 const PRODUCTION_CALENDAR = {
@@ -297,20 +297,20 @@ export default function Home() {
   };
 
   // Colori per torte e stati
-  const PIE_COLORS = ['#FFD700', '#2AAA8A', '#FF6B35', '#4CAF50', '#2196F3', '#E91E63', '#00BCD4', '#9C27B0', '#FF9800', '#607D8B'];
+  const PIE_COLORS = ['#FFD700', '#2AAA8A', '#2AAA8A', '#4CAF50', '#2AAA8A', '#E91E63', '#2AAA8A', '#2AAA8A', '#2AAA8A', '#666666'];
   const STATO_COLORS = { 
-    'Accettato': '#4CAF50', 'Sospeso': '#FFC107', 'In sospeso': '#FFC107', 'Presente': '#4CAF50', 'Assente': '#FF6B35', 
-    'In lavorazione': '#2196F3', 'Installato': '#00BCD4', 'Impianto installato': '#00BCD4', 'Recesso': '#f44336', 
-    'Annullato': '#9E9E9E', 'In fornitura': '#4CAF50', 'Attivo': '#4CAF50', 'Cessato': '#607D8B', 'Negativo': '#f44336',
-    'Non perfezionato': '#9E9E9E', 'Respinto': '#f44336', 'Da attivare': '#FFC107', 'Risoluzione': '#FF5722'
+    'Accettato': '#4CAF50', 'Sospeso': '#FFD700', 'In sospeso': '#FFD700', 'Presente': '#4CAF50', 'Assente': '#2AAA8A', 
+    'In lavorazione': '#2AAA8A', 'Installato': '#2AAA8A', 'Impianto installato': '#2AAA8A', 'Recesso': '#f44336', 
+    'Annullato': '#999999', 'In fornitura': '#4CAF50', 'Attivo': '#4CAF50', 'Cessato': '#666666', 'Negativo': '#f44336',
+    'Non perfezionato': '#999999', 'Respinto': '#f44336', 'Da attivare': '#FFD700', 'Risoluzione': '#2AAA8A'
   };
   
   // Colori heatmap
   const HEATMAP_COLORS = {
     hot: '#4CAF50',      // >70% 🟢
-    warm: '#FFC107',     // 40-70% 🟡
-    cool: '#FF9800',     // 10-40% 🟠
-    cold: '#FF5722',     // <10% 🔴
+    warm: '#FFD700',     // 40-70% 🟡
+    cool: '#2AAA8A',     // 10-40% 🟠
+    cold: '#2AAA8A',     // <10% 🔴
     zero: '#F5F5F5' // 0 ⬜
   };
   
@@ -497,7 +497,7 @@ export default function Home() {
       result.pilastri.fv = {
         nome: 'FOTOVOLTAICO',
         emoji: '☀️',
-        color: '#FF9800',
+        color: '#2AAA8A',
         totale: fvData.length,
         funnel: {
           inseriti: fvData.length,
@@ -540,7 +540,7 @@ export default function Home() {
       result.pilastri.energy = {
         nome: 'LUCE AMICA',
         emoji: '⚡',
-        color: '#FFC107',
+        color: '#FFD700',
         totale: laData.length,
         funnel: {
           inseriti: laData.length,
@@ -644,7 +644,7 @@ export default function Home() {
       result.pilastri.collaboratori = {
         nome: 'COLLABORATORI',
         emoji: '🎓',
-        color: '#9C27B0',
+        color: '#2AAA8A',
         funnel: {
           iscritti: collabData.iscritti,
           presenti: collabData.presenti,
@@ -698,7 +698,7 @@ export default function Home() {
     // Stats cards
     const cardW = 400, cardH = 120, cardY = 150;
     const cardData = [
-      { label: labels.c1, value: stats.ins, color: '#FF6B35' },
+      { label: labels.c1, value: stats.ins, color: '#2AAA8A' },
       { label: labels.c2, value: stats.acc, color: '#4CAF50' },
       { label: 'Partecipanti', value: stats.part, color: '#2AAA8A' },
       { label: 'Conversione', value: stats.conv + '%', color: '#FFD700' }
@@ -743,7 +743,7 @@ export default function Home() {
       ctx.beginPath();
       ctx.roundRect(bx, by, 140, bh, [15, 15, 0, 0]);
       ctx.fill();
-      ctx.fillStyle = '#1a1a2e';
+      ctx.fillStyle = '#FFFFFF';
       ctx.font = 'bold 36px Arial';
       ctx.textAlign = 'center';
       ctx.fillText(p.v1.toString(), bx + 70, by + bh - 20);
@@ -759,7 +759,7 @@ export default function Home() {
     ctx.beginPath();
     ctx.roundRect(heatX, heatY, 1170, podioH, 20);
     ctx.fill();
-    ctx.fillStyle = '#FF6B35';
+    ctx.fillStyle = '#2AAA8A';
     ctx.font = 'bold 28px Arial';
     ctx.fillText('🔥 TEMPERATURA CONTRATTI', heatX + 30, heatY + 40);
     
@@ -786,7 +786,7 @@ export default function Home() {
       const intensity = val / maxMonthly;
       const bgColor = val === 0 ? '#F5F5F5' : 
                       intensity > 0.7 ? '#4CAF50' : 
-                      intensity > 0.4 ? '#FFC107' : '#FF6B35';
+                      intensity > 0.4 ? '#FFD700' : '#2AAA8A';
       ctx.fillStyle = bgColor;
       ctx.beginPath();
       ctx.roundRect(cx, cy, cellW - 4, cellH - 4, 6);
@@ -807,11 +807,11 @@ export default function Home() {
     ctx.beginPath(); ctx.roundRect(heatX + 800, legY, 20, 20, 4); ctx.fill();
     ctx.fillStyle = '#fff'; ctx.font = '12px Arial';
     ctx.fillText('Alto', heatX + 830, legY + 15);
-    ctx.fillStyle = '#FFC107';
+    ctx.fillStyle = '#FFD700';
     ctx.beginPath(); ctx.roundRect(heatX + 900, legY, 20, 20, 4); ctx.fill();
     ctx.fillStyle = '#fff';
     ctx.fillText('Medio', heatX + 930, legY + 15);
-    ctx.fillStyle = '#FF6B35';
+    ctx.fillStyle = '#2AAA8A';
     ctx.beginPath(); ctx.roundRect(heatX + 1010, legY, 20, 20, 4); ctx.fill();
     ctx.fillStyle = '#fff';
     ctx.fillText('Basso', heatX + 1040, legY + 15);
@@ -822,7 +822,7 @@ export default function Home() {
     ctx.beginPath();
     ctx.roundRect(50, topY, 900, 320, 20);
     ctx.fill();
-    ctx.fillStyle = '#FF6B35';
+    ctx.fillStyle = '#2AAA8A';
     ctx.font = 'bold 28px Arial';
     ctx.fillText('📈 TOP 4° - 10°', 80, topY + 40);
     
@@ -839,7 +839,7 @@ export default function Home() {
       ctx.fillStyle = '#fff';
       ctx.font = '16px Arial';
       ctx.fillText(p.name, 160, ry + 20);
-      ctx.fillStyle = '#FF6B35';
+      ctx.fillStyle = '#2AAA8A';
       ctx.font = 'bold 20px Arial';
       ctx.textAlign = 'right';
       ctx.fillText(p.v1.toString(), 900, ry + 22);
@@ -866,11 +866,11 @@ export default function Home() {
       ctx.fill();
       ctx.fillStyle = '#fff';
       ctx.font = '14px Arial';
-      ctx.fillText(`${name.split(' ')[0]}: ${val} (${Math.round(val/totalK*100)}%)`, pieX + 55, py + 12);
+      ctx.fillText(`${name}: ${val} (${Math.round(val/totalK*100)}%)`, pieX + 55, py + 12);
     });
     
     // NW pie
-    ctx.fillStyle = '#9C27B0';
+    ctx.fillStyle = '#2AAA8A';
     ctx.font = 'bold 20px Arial';
     ctx.fillText('⭐ NETWORKER TOP 5', pieX + 400, pieY + 40);
     pies.nw.slice(0, 5).forEach(([name, val], i) => {
@@ -881,7 +881,7 @@ export default function Home() {
       ctx.fill();
       ctx.fillStyle = '#fff';
       ctx.font = '14px Arial';
-      ctx.fillText(`${name.split(' ').slice(0,2).join(' ')}: ${val}`, pieX + 425, py + 12);
+      ctx.fillText(`${name}: ${val}`, pieX + 425, py + 12);
     });
     
     // Footer
@@ -890,7 +890,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v10.1 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v10.2 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -964,8 +964,8 @@ export default function Home() {
       
       const positions = [
         { x: centerX - barW - gap, data: stats.top3[1], medal: '🥈', pos: 2, colors: ['#F5F5F5', '#C0C0C0', '#909090'], sideColor: '#707070' },
-        { x: centerX, data: stats.top3[0], medal: '🥇', pos: 1, colors: ['#FFF8E1', '#FFD700', '#FFA000'], sideColor: '#CC9900' },
-        { x: centerX + barW + gap, data: stats.top3[2], medal: '🥉', pos: 3, colors: ['#FFE0B2', '#CD7F32', '#8B4513'], sideColor: '#6B3A0A' }
+        { x: centerX, data: stats.top3[0], medal: '🥇', pos: 1, colors: ['#FFFDE7', '#FFD700', '#20917A'], sideColor: '#CC9900' },
+        { x: centerX + barW + gap, data: stats.top3[2], medal: '🥉', pos: 3, colors: ['#E8F5F1', '#CD7F32', '#8B4513'], sideColor: '#6B3A0A' }
       ];
       
       positions.forEach(p => {
@@ -1000,7 +1000,7 @@ export default function Home() {
         }
         
         // OMBRA sotto la barra
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fillStyle = '#F0F0F0';
         ctx.beginPath();
         ctx.roundRect(barX + 8, barY + 8, barW + depth, p.h, [25, 25, 0, 0]);
         ctx.fill();
@@ -1052,7 +1052,7 @@ export default function Home() {
         medalPositions.push({ x: p.x, y: barY + 80, pos: p.pos, medal: p.medal });
         
         // Numero alla BASE della colonna
-        ctx.fillStyle = '#1a1a2e';
+        ctx.fillStyle = '#FFFFFF';
         ctx.font = `bold ${p.pos === 1 ? 120 : 90}px Arial`;
         ctx.textAlign = 'center';
         ctx.fillText(p.data.v1.toString(), p.x, podioBaseY - 30);
@@ -1066,7 +1066,7 @@ export default function Home() {
         ctx.font = `bold ${p.pos === 1 ? 48 : 40}px Arial`;
         ctx.fillText(cognome, p.x, barY - 90);
         ctx.font = `${p.pos === 1 ? 38 : 30}px Arial`;
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.fillStyle = '#333333';
         ctx.fillText(nome, p.x, barY - 45);
       });
       
@@ -1091,7 +1091,7 @@ export default function Home() {
         ctx.fill();
         
         // Sfondo circolare solido
-        const medalBg = m.pos === 1 ? '#FFF8E1' : m.pos === 2 ? '#F5F5F5' : '#FFE0B2';
+        const medalBg = m.pos === 1 ? '#FFFDE7' : m.pos === 2 ? '#F5F5F5' : '#E8F5F1';
         ctx.beginPath();
         ctx.arc(m.x, m.y, size, 0, Math.PI * 2);
         ctx.fillStyle = medalBg;
@@ -1123,8 +1123,8 @@ export default function Home() {
       
       const positions = [
         { x: centerX - barW - gap, data: stats.top3[1], medal: '🥈', pos: 2, colors: ['#F5F5F5', '#C0C0C0', '#909090'], sideColor: '#707070' },
-        { x: centerX, data: stats.top3[0], medal: '🥇', pos: 1, colors: ['#FFF8E1', '#FFD700', '#FFA000'], sideColor: '#CC9900' },
-        { x: centerX + barW + gap, data: stats.top3[2], medal: '🥉', pos: 3, colors: ['#FFE0B2', '#CD7F32', '#8B4513'], sideColor: '#6B3A0A' }
+        { x: centerX, data: stats.top3[0], medal: '🥇', pos: 1, colors: ['#FFFDE7', '#FFD700', '#20917A'], sideColor: '#CC9900' },
+        { x: centerX + barW + gap, data: stats.top3[2], medal: '🥉', pos: 3, colors: ['#E8F5F1', '#CD7F32', '#8B4513'], sideColor: '#6B3A0A' }
       ];
       
       positions.forEach(p => {
@@ -1194,7 +1194,7 @@ export default function Home() {
         medalPositions.push({ x: p.x, y: barY + 70, pos: p.pos, medal: p.medal });
         
         // Numero alla BASE della colonna
-        ctx.fillStyle = '#1a1a2e';
+        ctx.fillStyle = '#FFFFFF';
         ctx.font = `bold ${p.pos === 1 ? 100 : 75}px Arial`;
         ctx.textAlign = 'center';
         ctx.fillText(p.data.v1.toString(), p.x, podioBaseY - 25);
@@ -1208,7 +1208,7 @@ export default function Home() {
         ctx.font = `bold ${p.pos === 1 ? 40 : 32}px Arial`;
         ctx.fillText(cognome, p.x, barY - 80);
         ctx.font = `${p.pos === 1 ? 30 : 24}px Arial`;
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.fillStyle = '#333333';
         ctx.fillText(nome, p.x, barY - 42);
       });
       
@@ -1233,7 +1233,7 @@ export default function Home() {
         ctx.fill();
         
         // Sfondo circolare solido
-        const medalBg = m.pos === 1 ? '#FFF8E1' : m.pos === 2 ? '#F5F5F5' : '#FFE0B2';
+        const medalBg = m.pos === 1 ? '#FFFDE7' : m.pos === 2 ? '#F5F5F5' : '#E8F5F1';
         ctx.beginPath();
         ctx.arc(m.x, m.y, size, 0, Math.PI * 2);
         ctx.fillStyle = medalBg;
@@ -1382,7 +1382,7 @@ export default function Home() {
     canvas.width = W; canvas.height = H;
     
     // Background
-    const bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#0a0a12'); bg.addColorStop(0.5, '#12121f'); bg.addColorStop(1, '#0a0a12');
+    const bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#0a0a12'); bg.addColorStop(0.5, '#F5F5F5'); bg.addColorStop(1, '#0a0a12');
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
     ctx.strokeStyle = `${config.color}30`; ctx.lineWidth = 2; ctx.strokeRect(20, 20, W - 40, H - 40);
     ctx.fillStyle = config.color; ctx.fillRect(35, 35, W - 70, 4);
@@ -1398,7 +1398,7 @@ export default function Home() {
     ctx.fillText(`${data.length} partecipanti • ${totIns} contratti`, 45, 178);
     
     // Separator
-    ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(45, 195, W - 90, 2);
+    ctx.fillStyle = '#E0E0E0'; ctx.fillRect(45, 195, W - 90, 2);
     
     // Calcola font size proporzionale in base al numero di gruppi e membri totali
     const totalMembers = data.length;
@@ -1474,7 +1474,7 @@ export default function Home() {
       }
       
       // Nomi
-      ctx.fillStyle = isTop3 ? '#FFF' : 'rgba(255,255,255,0.9)';
+      ctx.fillStyle = isTop3 ? '#FFF' : '#333333';
       ctx.font = `bold ${fontSize}px Arial`;
       lines.forEach((line, i) => {
         ctx.fillText(line, 100, textStartY + i * lineHeight);
@@ -1493,7 +1493,7 @@ export default function Home() {
     
     // Footer - posizionato dopo l'ultimo gruppo
     const footerY = currentY + 10;
-    ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(45, footerY, W - 90, 2);
+    ctx.fillStyle = '#E0E0E0'; ctx.fillRect(45, footerY, W - 90, 2);
     ctx.fillStyle = '#666666'; ctx.font = '15px Arial';
     ctx.fillText(`📊 ${data.length} partecipanti • ${totIns} contratti`, 50, footerY + 28);
     ctx.textAlign = 'right'; ctx.fillText('LEADER RANKING', W - 50, footerY + 28);
@@ -1527,10 +1527,10 @@ export default function Home() {
     
     // Stats - INLINE format (fix richiesto)
     const totIns = getClassificaTotal(), totAcc = getData().reduce((sum, [,s]) => sum + s.v2, 0), pct = Math.round(totAcc / totIns * 100) || 0;
-    ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.roundRect(W/2 - 175, 158, 350, 42, 8); ctx.fill();
+    ctx.fillStyle = '#F5F5F5'; ctx.beginPath(); ctx.roundRect(W/2 - 175, 158, 350, 42, 8); ctx.fill();
     ctx.font = 'bold 20px Arial';
     ctx.fillStyle = config.color; ctx.fillText(`${totIns} INS.`, W/2 - 85, 186);
-    ctx.fillStyle = pct >= 50 ? '#4CAF50' : '#FFC107'; ctx.fillText(`${pct}%`, W/2, 186);
+    ctx.fillStyle = pct >= 50 ? '#4CAF50' : '#FFD700'; ctx.fillText(`${pct}%`, W/2, 186);
     ctx.fillStyle = '#4CAF50'; ctx.fillText(`${totAcc} ACC.`, W/2 + 85, 186);
     ctx.textAlign = 'left';
     
@@ -1567,13 +1567,13 @@ export default function Home() {
       ctx.fillText(`${i + 1}°`, isTop3 ? 130 : 80, centerY + 10);
       
       // Name
-      ctx.fillStyle = isTop3 ? (i === 0 ? '#FFD700' : '#FFF') : 'rgba(255,255,255,0.9)';
+      ctx.fillStyle = isTop3 ? (i === 0 ? '#FFD700' : '#FFF') : '#333333';
       ctx.font = 'bold 26px Arial';
       ctx.fillText(name.toUpperCase(), isTop3 ? 185 : 130, centerY + 10);
       
       // Stats con label INLINE (fix richiesto)
       ctx.textAlign = 'right';
-      ctx.fillStyle = isTop3 ? (i === 0 ? '#FFD700' : '#FFF') : 'rgba(255,255,255,0.9)';
+      ctx.fillStyle = isTop3 ? (i === 0 ? '#FFD700' : '#FFF') : '#333333';
       ctx.font = 'bold 30px Arial';
       ctx.fillText(`${s.v1}`, W - 300, centerY + 5);
       ctx.fillStyle = '#999999'; ctx.font = '11px Arial';
@@ -1582,7 +1582,7 @@ export default function Home() {
       // Progress bar
       const barX = W - 270, barW = 105;
       ctx.fillStyle = '#E0E0E0'; ctx.beginPath(); ctx.roundRect(barX, centerY - 10, barW, 18, 5); ctx.fill();
-      const barC = pctM >= 50 ? '#4CAF50' : pctM >= 20 ? '#FFC107' : '#FF5722';
+      const barC = pctM >= 50 ? '#4CAF50' : pctM >= 20 ? '#FFD700' : '#2AAA8A';
       ctx.fillStyle = barC; ctx.beginPath(); ctx.roundRect(barX, centerY - 10, Math.max(barW * pctM / 100, 1), 18, 5); ctx.fill();
       ctx.fillStyle = '#FFF'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center';
       ctx.fillText(`${pctM}%`, barX + barW / 2, centerY + 4);
@@ -1744,26 +1744,34 @@ export default function Home() {
   const labels = getLabels(), config = getConfig();
 
   // LOGIN
-  if (!user) return (<><Head><title>Leader Ranking</title><meta name="viewport" content="width=device-width,initial-scale=1" /></Head>
-    <div style={S.loginWrap}><div style={S.loginCard}>
-      <div style={S.logoContainer}>
-        <div style={S.logoIcon}><div style={S.podium}>
-          <div style={{ ...S.podiumBar, height: 35, background: '#C0C0C0' }}><span style={S.podiumNum}>2</span></div>
-          <div style={{ ...S.podiumBar, height: 50, background: '#FFD700' }}><span style={S.podiumNum}>1</span></div>
-          <div style={{ ...S.podiumBar, height: 25, background: '#CD7F32' }}><span style={S.podiumNum}>3</span></div>
-        </div></div>
-        <div style={S.logoText}><span style={{ color: '#2AAA8A', fontWeight: 800 }}>LEADER</span><span style={{ fontWeight: 300, marginLeft: 8 }}>RANKING</span></div>
-        <div style={S.logoTagline}>Power your team rankings</div>
+  if (!user) return (<><Head><title>Leader Ranking | Team Analytics</title><meta name="viewport" content="width=device-width,initial-scale=1" /></Head>
+    <div style={S.loginWrap}>
+      <div style={S.loginOverlay} />
+      <div style={S.loginCard}>
+        <div style={S.logoContainer}>
+          <div style={S.logoIcon}><div style={S.podium}>
+            <div style={{ ...S.podiumBar, height: 40, background: 'linear-gradient(180deg, #E8E8E8 0%, #C0C0C0 100%)' }}><span style={S.podiumNum}>2</span></div>
+            <div style={{ ...S.podiumBar, height: 58, background: 'linear-gradient(180deg, #FFE082 0%, #FFD700 100%)' }}><span style={S.podiumNum}>1</span></div>
+            <div style={{ ...S.podiumBar, height: 28, background: 'linear-gradient(180deg, #DCEDC8 0%, #CD7F32 100%)' }}><span style={S.podiumNum}>3</span></div>
+          </div></div>
+          <div style={S.logoText}><span style={{ color: '#2AAA8A', fontWeight: 800 }}>LEADER</span><span style={{ fontWeight: 300, marginLeft: 10 }}>RANKING</span></div>
+          <div style={S.logoTagline}>Team Performance Analytics</div>
+        </div>
+        <div style={S.loginDivider} />
+        <p style={{ color: '#555555', marginBottom: 28, fontSize: 15 }}>Accedi per visualizzare le classifiche del team</p>
+        <input style={S.input} placeholder="Username" value={loginForm.username} onChange={e => setLoginForm({ ...loginForm, username: e.target.value })} />
+        <input style={S.input} type="password" placeholder="Password" value={loginForm.password} onChange={e => setLoginForm({ ...loginForm, password: e.target.value })} onKeyPress={e => e.key === 'Enter' && handleLogin()} />
+        {loginError && <p style={{ color: '#E53935', fontSize: 14, marginBottom: 12, fontWeight: 500 }}>{loginError}</p>}
+        <button style={S.btn} onClick={handleLogin}>ACCEDI</button>
+        <div style={S.categoryIcons}>
+          <span style={S.catIcon} title="IVD">🟠</span>
+          <span style={S.catIcon} title="SDP">🔵</span>
+          <span style={S.catIcon} title="Networker">⭐</span>
+          <span style={S.catIcon} title="K Manager">👑</span>
+        </div>
+        <p style={{ color: '#999999', fontSize: 12, marginTop: 30 }}>v10.3</p>
       </div>
-      <div style={S.loginDivider} />
-      <p style={{ color: '#666666', marginBottom: 25, fontSize: 14 }}>Accedi per gestire le classifiche</p>
-      <input style={S.input} placeholder="Username" value={loginForm.username} onChange={e => setLoginForm({ ...loginForm, username: e.target.value })} />
-      <input style={S.input} type="password" placeholder="Password" value={loginForm.password} onChange={e => setLoginForm({ ...loginForm, password: e.target.value })} onKeyPress={e => e.key === 'Enter' && handleLogin()} />
-      {loginError && <p style={{ color: '#f44', fontSize: 13, marginBottom: 10 }}>{loginError}</p>}
-      <button style={S.btn} onClick={handleLogin}>ACCEDI</button>
-      <div style={S.categoryIcons}><span style={S.catIcon}>🟠</span><span style={S.catIcon}>🔵</span><span style={S.catIcon}>⭐</span><span style={S.catIcon}>👑</span></div>
-      <p style={{ color: '#AAAAAA', fontSize: 11, marginTop: 25 }}>v10.1</p>
-    </div></div></>);
+    </div></>);
 
   // HOMEPAGE CSV
   if (!csvData && (user.role === 'admin' || user.role === 'assistente' || user.role === 'k')) return (<><Head><title>Leader Ranking</title><meta name="viewport" content="width=device-width,initial-scale=1" /></Head>
@@ -1772,9 +1780,9 @@ export default function Home() {
       <main style={S.homeMain}>
         <div style={S.homeLogo}>
           <div style={S.homeLogoIcon}><div style={S.homePodium}>
-            <div style={{ ...S.homePodiumBar, height: 55, background: 'linear-gradient(180deg, #E0E0E0 0%, #9E9E9E 100%)' }}><span style={S.homePodiumNum}>2</span></div>
+            <div style={{ ...S.homePodiumBar, height: 55, background: 'linear-gradient(180deg, #E0E0E0 0%, #999999 100%)' }}><span style={S.homePodiumNum}>2</span></div>
             <div style={{ ...S.homePodiumBar, height: 80, background: 'linear-gradient(180deg, #FFE082 0%, #FFD700 100%)' }}><span style={S.homePodiumNum}>1</span></div>
-            <div style={{ ...S.homePodiumBar, height: 40, background: 'linear-gradient(180deg, #FFAB91 0%, #CD7F32 100%)' }}><span style={S.homePodiumNum}>3</span></div>
+            <div style={{ ...S.homePodiumBar, height: 40, background: 'linear-gradient(180deg, #B2DFDB 0%, #CD7F32 100%)' }}><span style={S.homePodiumNum}>3</span></div>
           </div></div>
           <h1 style={S.homeTitle}><span style={{ color: '#2AAA8A' }}>LEADER</span> RANKING</h1>
           <p style={S.homeSubtitle}>Power your team rankings</p>
@@ -1795,17 +1803,17 @@ export default function Home() {
       <p style={{ color: '#666666', fontSize: 13, marginBottom: 15 }}>✅ {getData().length} partecipanti • {getClassificaTotal()} contratti</p>
       <div style={S.previewImg}><img src={previewImage} style={{ maxWidth: '100%', maxHeight: '55vh' }} /></div>
       <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 15, flexWrap: 'wrap' }}>
-        <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'transparent', border: '1px solid rgba(255,255,255,0.2)' }} onClick={() => setShowPreview(false)}>Chiudi</button>
+        <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'transparent', border: '1px solid #E0E0E0' }} onClick={() => setShowPreview(false)}>Chiudi</button>
         <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'linear-gradient(135deg,#4CAF50,#81C784)' }} onClick={download}>📥 Scarica</button>
-        <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'linear-gradient(135deg,#00BFA5,#1DE9B6)' }} onClick={handleSendToBot}>🤖 Invia a Bot</button>
+        <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'linear-gradient(135deg,#2AAA8A,#4DB6AC)' }} onClick={handleSendToBot}>🤖 Invia a Bot</button>
       </div>
-      {sendStatus && <p style={{ textAlign: 'center', marginTop: 10, color: sendStatus.includes('✅') ? '#4CAF50' : sendStatus.includes('❌') ? '#f44' : '#FFC107' }}>{sendStatus}</p>}
+      {sendStatus && <p style={{ textAlign: 'center', marginTop: 10, color: sendStatus.includes('✅') ? '#4CAF50' : sendStatus.includes('❌') ? '#f44' : '#FFD700' }}>{sendStatus}</p>}
     </div></div></>);
 
   // DASHBOARD
   return (<><Head><title>Leader Ranking</title><meta name="viewport" content="width=device-width,initial-scale=1" /></Head>
     <div style={S.dash}>
-      <header style={S.header}><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><button style={S.menuBtn} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>☰</button><span style={{ fontWeight: 800, color: '#2AAA8A' }}>LEADER</span><span style={{ fontWeight: 300, color: '#333333' }}>RANKING</span></div><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={S.badge}>{user.role.toUpperCase()}</span><button style={{ ...S.btn, padding: '6px 12px', fontSize: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.2)' }} onClick={() => { setUser(null); setCsvData(null); setRankings(null); }}>Esci</button></div></header>
+      <header style={S.header}><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><button style={S.menuBtn} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>☰</button><span style={{ fontWeight: 800, color: '#2AAA8A' }}>LEADER</span><span style={{ fontWeight: 300, color: '#333333' }}>RANKING</span></div><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={S.badge}>{user.role.toUpperCase()}</span><button style={{ ...S.btn, padding: '6px 12px', fontSize: 12, background: 'transparent', border: '1px solid #E0E0E0' }} onClick={() => { setUser(null); setCsvData(null); setRankings(null); }}>Esci</button></div></header>
       <main style={{ display: 'flex' }}>
         <aside style={{ ...S.sidebar, ...(mobileMenuOpen ? { transform: 'translateX(0)' } : {}) }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}><span style={{ fontSize: 12, color: '#999999', letterSpacing: 1 }}>📊 CLASSIFICHE</span><button style={{ background: 'none', border: 'none', color: '#333333', fontSize: 18, cursor: 'pointer' }} onClick={() => setMobileMenuOpen(false)}>✕</button></div>
@@ -1830,7 +1838,7 @@ export default function Home() {
               disabled={!rankings}
             >🏆 Classifiche</button>
             <button 
-              style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'report' ? '#FF9800' : 'transparent', color: activeTab === 'report' ? '#fff' : '#666666', border: 'none' }} 
+              style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'report' ? '#2AAA8A' : 'transparent', color: activeTab === 'report' ? '#fff' : '#666666', border: 'none' }} 
               onClick={() => setActiveTab('report')}
             >📈 Report</button>
           </div>
@@ -1839,7 +1847,7 @@ export default function Home() {
           {activeTab === 'report' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
               <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.15), rgba(255,107,53,0.05))', borderRadius: 20, padding: 20, border: '1px solid rgba(255,107,53,0.3)' }}>
-                <h2 style={{ color: '#FF6B35', fontSize: 18, marginBottom: 5 }}>📈 REPORT AGGREGATO</h2>
+                <h2 style={{ color: '#2AAA8A', fontSize: 18, marginBottom: 5 }}>📈 REPORT AGGREGATO</h2>
                 <p style={{ color: '#666666', fontSize: 12, marginBottom: 15 }}>Carica più CSV per generare classifiche mensili/trimestrali/annuali</p>
                 
                 {/* 4 UPLOAD CSV */}
@@ -1848,7 +1856,7 @@ export default function Home() {
                   <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, border: reportCSVs.ivd ? '2px solid #4CAF50' : '1px solid #E0E0E0' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                       <span style={{ fontSize: 20 }}>🟠</span>
-                      <span style={{ color: '#FF6B35', fontWeight: 600 }}>IVD Attivati</span>
+                      <span style={{ color: '#2AAA8A', fontWeight: 600 }}>IVD Attivati</span>
                     </div>
                     <input type="file" accept=".csv" id="csv-ivd" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('ivd', e.target.files[0]); }} />
                     <label htmlFor="csv-ivd" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(255,107,53,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.ivd ? '#4CAF50' : '#666666', fontSize: 12 }}>
@@ -1861,7 +1869,7 @@ export default function Home() {
                   <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, border: reportCSVs.energy ? '2px solid #4CAF50' : '1px solid #E0E0E0' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                       <span style={{ fontSize: 20 }}>⚡</span>
-                      <span style={{ color: '#FFC107', fontWeight: 600 }}>Luce Amica</span>
+                      <span style={{ color: '#FFD700', fontWeight: 600 }}>Luce Amica</span>
                     </div>
                     <input type="file" accept=".csv" id="csv-energy" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('energy', e.target.files[0]); }} />
                     <label htmlFor="csv-energy" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(255,193,7,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.energy ? '#4CAF50' : '#666666', fontSize: 12 }}>
@@ -1873,7 +1881,7 @@ export default function Home() {
                   <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, border: reportCSVs.fv ? '2px solid #4CAF50' : '1px solid #E0E0E0' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                       <span style={{ fontSize: 20 }}>☀️</span>
-                      <span style={{ color: '#FF9800', fontWeight: 600 }}>Fotovoltaico</span>
+                      <span style={{ color: '#2AAA8A', fontWeight: 600 }}>Fotovoltaico</span>
                     </div>
                     <input type="file" accept=".csv" id="csv-fv" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('fv', e.target.files[0]); }} />
                     <label htmlFor="csv-fv" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(255,152,0,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.fv ? '#4CAF50' : '#666666', fontSize: 12 }}>
@@ -1885,7 +1893,7 @@ export default function Home() {
                   <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, border: reportCSVs.consultings ? '2px solid #4CAF50' : '1px solid #E0E0E0' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                       <span style={{ fontSize: 20 }}>🎓</span>
-                      <span style={{ color: '#9C27B0', fontWeight: 600 }}>Seminari</span>
+                      <span style={{ color: '#2AAA8A', fontWeight: 600 }}>Seminari</span>
                     </div>
                     <input type="file" accept=".csv" id="csv-consultings" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('consultings', e.target.files[0]); }} />
                     <label htmlFor="csv-consultings" style={{ display: 'block', cursor: 'pointer', padding: '10px', background: 'rgba(156,39,176,0.1)', borderRadius: 8, textAlign: 'center', color: reportCSVs.consultings ? '#4CAF50' : '#666666', fontSize: 12 }}>
@@ -1897,12 +1905,12 @@ export default function Home() {
                 {/* Bottoni azione */}
                 <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                   <button 
-                    style={{ ...S.btn, flex: 1, minWidth: 150, padding: '14px 20px', background: 'linear-gradient(135deg, #FF6B35, #FF8F00)', opacity: Object.values(reportCSVs).some(v => v) ? 1 : 0.5 }} 
+                    style={{ ...S.btn, flex: 1, minWidth: 150, padding: '14px 20px', background: 'linear-gradient(135deg, #2AAA8A, #FF8F00)', opacity: Object.values(reportCSVs).some(v => v) ? 1 : 0.5 }} 
                     onClick={() => setReportData(generateReportData())}
                     disabled={!Object.values(reportCSVs).some(v => v)}
                   >📊 Genera Report</button>
                   <button 
-                    style={{ ...S.btn, flex: 1, minWidth: 150, padding: '14px 20px', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)' }} 
+                    style={{ ...S.btn, flex: 1, minWidth: 150, padding: '14px 20px', background: 'transparent', border: '1px solid #E0E0E0' }} 
                     onClick={clearReportCSVs}
                   >🗑️ Reset</button>
                 </div>
@@ -1917,7 +1925,7 @@ export default function Home() {
                     <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.1), rgba(255,107,53,0.02))', borderRadius: 20, padding: 20, border: '1px solid rgba(255,107,53,0.2)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
                         <div>
-                          <h3 style={{ color: '#FF6B35', fontSize: 16, margin: 0 }}>🗓️ CALENDARIO CALDO</h3>
+                          <h3 style={{ color: '#2AAA8A', fontSize: 16, margin: 0 }}>🗓️ CALENDARIO CALDO</h3>
                           <p style={{ color: '#666666', fontSize: 11, margin: '5px 0 0' }}>
                             {heatmapDrilldown ? `Giorni di ${['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'][heatmapDrilldown.mese]} - Click per tornare ai mesi` : 'Click su un mese per vedere i giorni'}
                           </p>
@@ -1930,7 +1938,7 @@ export default function Home() {
                       {/* Heatmap per pilastro */}
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 15 }}>
                         {Object.entries(reportData.heatmapMesi).map(([type, heatData]) => {
-                          const info = { fv: { emoji: '☀️', label: 'Fotovoltaico', color: '#FF9800' }, energy: { emoji: '⚡', label: 'Luce Amica', color: '#FFC107' }, consultings: { emoji: '🎓', label: 'Seminari', color: '#9C27B0' }, ivd: { emoji: '🟠', label: 'Attivati', color: '#FF6B35' } }[type];
+                          const info = { fv: { emoji: '☀️', label: 'Fotovoltaico', color: '#2AAA8A' }, energy: { emoji: '⚡', label: 'Luce Amica', color: '#FFD700' }, consultings: { emoji: '🎓', label: 'Seminari', color: '#2AAA8A' }, ivd: { emoji: '🟠', label: 'Attivati', color: '#2AAA8A' } }[type];
                           if (!info) return null;
                           
                           const mesiNomi = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
@@ -1951,9 +1959,9 @@ export default function Home() {
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
                                   {giorni.slice(0, 31).map((val, i) => {
                                     const intensity = val / maxGiorno;
-                                    const bgColor = val === 0 ? '#F5F5F5' : intensity > 0.7 ? '#4CAF50' : intensity > 0.4 ? '#FFC107' : info.color;
+                                    const bgColor = val === 0 ? '#F5F5F5' : intensity > 0.7 ? '#4CAF50' : intensity > 0.4 ? '#FFD700' : info.color;
                                     return (
-                                      <div key={i} style={{ height: 28, borderRadius: 4, background: bgColor, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: val === 0 ? 'rgba(255,255,255,0.2)' : '#fff', position: 'relative' }}>
+                                      <div key={i} style={{ height: 28, borderRadius: 4, background: bgColor, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: val === 0 ? '#E0E0E0' : '#fff', position: 'relative' }}>
                                         <span>{i + 1}</span>
                                         {val > 0 && <span style={{ fontSize: 7, fontWeight: 700 }}>{val}</span>}
                                         {val > 0 && intensity > 0.7 && <span style={{ position: 'absolute', top: -3, right: -1, fontSize: 7 }}>🔥</span>}
@@ -1972,7 +1980,7 @@ export default function Home() {
                               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
                                 {heatData.mesi.map((val, i) => {
                                   const intensity = val / maxMese;
-                                  const bgColor = val === 0 ? '#F5F5F5' : intensity > 0.7 ? '#4CAF50' : intensity > 0.4 ? '#FFC107' : info.color;
+                                  const bgColor = val === 0 ? '#F5F5F5' : intensity > 0.7 ? '#4CAF50' : intensity > 0.4 ? '#FFD700' : info.color;
                                   const isHot = intensity > 0.7 && val > 0;
                                   return (
                                     <div key={i} onClick={() => val > 0 && setHeatmapDrilldown({ pilastro: type, mese: i })} style={{ height: 40, borderRadius: 6, background: bgColor, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: val > 0 ? 'pointer' : 'default', position: 'relative', boxShadow: isHot ? `0 0 10px ${info.color}50` : 'none', transition: 'transform 0.2s' }}>
@@ -1997,16 +2005,16 @@ export default function Home() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
                         <span style={{ fontSize: 28 }}>☀️</span>
                         <div>
-                          <h3 style={{ color: '#FF9800', fontSize: 18, margin: 0 }}>PILASTRO FOTOVOLTAICO</h3>
-                          <p style={{ color: '#666666', fontSize: 12, margin: 0 }}>Totale inseriti: <strong style={{ color: '#FF9800' }}>{reportData.pilastri.fv.totale}</strong></p>
+                          <h3 style={{ color: '#2AAA8A', fontSize: 18, margin: 0 }}>PILASTRO FOTOVOLTAICO</h3>
+                          <p style={{ color: '#666666', fontSize: 12, margin: 0 }}>Totale inseriti: <strong style={{ color: '#2AAA8A' }}>{reportData.pilastri.fv.totale}</strong></p>
                         </div>
                       </div>
                       
                       {/* FUNNEL FV */}
-                      <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 16, padding: 20, marginBottom: 15 }}>
+                      <div style={{ background: '#F0F0F0', borderRadius: 16, padding: 20, marginBottom: 15 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, flexWrap: 'wrap' }}>
                           <div style={{ textAlign: 'center', minWidth: 90 }}>
-                            <div style={{ fontSize: 28, fontWeight: 800, color: '#FF9800' }}>{reportData.pilastri.fv.funnel.inseriti}</div>
+                            <div style={{ fontSize: 28, fontWeight: 800, color: '#2AAA8A' }}>{reportData.pilastri.fv.funnel.inseriti}</div>
                             <div style={{ fontSize: 10, color: '#666666' }}>📋 Inseriti</div>
                           </div>
                           <div style={{ color: '#AAAAAA', fontSize: 20 }}>→</div>
@@ -2016,7 +2024,7 @@ export default function Home() {
                             <div style={{ fontSize: 9, color: '#4CAF50' }}>{reportData.pilastri.fv.funnel.pctPositivi}%</div>
                           </div>
                           <div style={{ textAlign: 'center', minWidth: 90 }}>
-                            <div style={{ fontSize: 28, fontWeight: 800, color: '#FFC107' }}>{reportData.pilastri.fv.funnel.lavorazione}</div>
+                            <div style={{ fontSize: 28, fontWeight: 800, color: '#FFD700' }}>{reportData.pilastri.fv.funnel.lavorazione}</div>
                             <div style={{ fontSize: 10, color: '#666666' }}>🟡 Lavoraz.</div>
                           </div>
                           <div style={{ textAlign: 'center', minWidth: 90 }}>
@@ -2029,12 +2037,12 @@ export default function Home() {
                       
                       {/* Stati FV Dettaglio */}
                       {reportData.pilastri.fv.statiDettaglio && reportData.pilastri.fv.statiDettaglio.length > 0 && (
-                      <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 15, marginBottom: 15 }}>
+                      <div style={{ background: '#F5F5F5', borderRadius: 12, padding: 15, marginBottom: 15 }}>
                         <div style={{ fontSize: 12, color: '#666666', marginBottom: 10 }}>📋 DETTAGLIO STATI</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {reportData.pilastri.fv.statiDettaglio.map(([stato, val], i) => {
                             const cat = Object.entries(STATO_MAP_FV).find(([k]) => stato.toLowerCase().includes(k.toLowerCase()))?.[1] || 'altro';
-                            const color = cat === 'positivo' ? '#4CAF50' : cat === 'lavorazione' ? '#FFC107' : cat === 'negativo' ? '#f44336' : '#9E9E9E';
+                            const color = cat === 'positivo' ? '#4CAF50' : cat === 'lavorazione' ? '#FFD700' : cat === 'negativo' ? '#f44336' : '#999999';
                             return (
                               <div key={stato} style={{ background: `${color}20`, border: `1px solid ${color}40`, borderRadius: 6, padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
                                 <span style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
@@ -2060,7 +2068,7 @@ export default function Home() {
                               <span style={{ fontSize: 10, color: i < 3 ? '#FFD700' : '#666666' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
                               <span style={{ fontSize: 11, color: '#333333', fontWeight: i < 3 ? 600 : 400 }}>{name}</span>
                               <span style={{ fontSize: 11, fontWeight: 600, color: '#4CAF50', textAlign: 'center' }}>{stats.positivo || 0}</span>
-                              <span style={{ fontSize: 11, fontWeight: 600, color: '#FFC107', textAlign: 'center' }}>{(stats.lavorazione || 0) + (stats.altro || 0)}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#FFD700', textAlign: 'center' }}>{(stats.lavorazione || 0) + (stats.altro || 0)}</span>
                               <span style={{ fontSize: 11, fontWeight: 600, color: '#f44336', textAlign: 'center' }}>{stats.negativo || 0}</span>
                             </div>
                           ))}
@@ -2071,16 +2079,16 @@ export default function Home() {
                         
                         {/* NW FV */}
                         <div style={{ background: 'rgba(156,39,176,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(156,39,176,0.2)', maxHeight: 280, overflowY: 'auto' }}>
-                          <div style={{ fontSize: 12, color: '#9C27B0', fontWeight: 600, marginBottom: 8 }}>⭐ NETWORKER ({reportData.pilastri.fv.classifiche.nw.length})</div>
+                          <div style={{ fontSize: 12, color: '#2AAA8A', fontWeight: 600, marginBottom: 8 }}>⭐ NETWORKER ({reportData.pilastri.fv.classifiche.nw.length})</div>
                           <div style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, fontSize: 8, color: '#999999', marginBottom: 4 }}>
                             <span>#</span><span>Nome</span><span style={{ textAlign: 'center' }}>🟢</span><span style={{ textAlign: 'center' }}>🟡</span><span style={{ textAlign: 'center' }}>🔴</span>
                           </div>
                           {reportData.pilastri.fv.classifiche.nw.slice(0, 20).map(([name, stats], i) => (
                             <div key={i} style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, alignItems: 'center', marginBottom: 2, fontSize: 10 }}>
-                              <span style={{ color: i < 3 ? '#9C27B0' : '#999999' }}>{i+1}°</span>
+                              <span style={{ color: i < 3 ? '#2AAA8A' : '#999999' }}>{i+1}°</span>
                               <span style={{ color: '#333333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                               <span style={{ color: '#4CAF50', textAlign: 'center', fontWeight: 600 }}>{stats.positivo || 0}</span>
-                              <span style={{ color: '#FFC107', textAlign: 'center', fontWeight: 600 }}>{(stats.lavorazione || 0) + (stats.altro || 0)}</span>
+                              <span style={{ color: '#FFD700', textAlign: 'center', fontWeight: 600 }}>{(stats.lavorazione || 0) + (stats.altro || 0)}</span>
                               <span style={{ color: '#f44336', textAlign: 'center', fontWeight: 600 }}>{stats.negativo || 0}</span>
                             </div>
                           ))}
@@ -2088,16 +2096,16 @@ export default function Home() {
                         
                         {/* SDP FV */}
                         <div style={{ background: 'rgba(33,150,243,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(33,150,243,0.2)', maxHeight: 280, overflowY: 'auto' }}>
-                          <div style={{ fontSize: 12, color: '#2196F3', fontWeight: 600, marginBottom: 8 }}>🔵 SDP ({reportData.pilastri.fv.classifiche.sdp.length})</div>
+                          <div style={{ fontSize: 12, color: '#2AAA8A', fontWeight: 600, marginBottom: 8 }}>🔵 SDP ({reportData.pilastri.fv.classifiche.sdp.length})</div>
                           <div style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, fontSize: 8, color: '#999999', marginBottom: 4 }}>
                             <span>#</span><span>Nome</span><span style={{ textAlign: 'center' }}>🟢</span><span style={{ textAlign: 'center' }}>🟡</span><span style={{ textAlign: 'center' }}>🔴</span>
                           </div>
                           {reportData.pilastri.fv.classifiche.sdp.slice(0, 20).map(([name, stats], i) => (
                             <div key={i} style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, alignItems: 'center', marginBottom: 2, fontSize: 10 }}>
-                              <span style={{ color: i < 3 ? '#2196F3' : '#999999' }}>{i+1}°</span>
+                              <span style={{ color: i < 3 ? '#2AAA8A' : '#999999' }}>{i+1}°</span>
                               <span style={{ color: '#333333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                               <span style={{ color: '#4CAF50', textAlign: 'center', fontWeight: 600 }}>{stats.positivo || 0}</span>
-                              <span style={{ color: '#FFC107', textAlign: 'center', fontWeight: 600 }}>{(stats.lavorazione || 0) + (stats.altro || 0)}</span>
+                              <span style={{ color: '#FFD700', textAlign: 'center', fontWeight: 600 }}>{(stats.lavorazione || 0) + (stats.altro || 0)}</span>
                               <span style={{ color: '#f44336', textAlign: 'center', fontWeight: 600 }}>{stats.negativo || 0}</span>
                             </div>
                           ))}
@@ -2112,14 +2120,14 @@ export default function Home() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
                         <span style={{ fontSize: 28 }}>⚡</span>
                         <div>
-                          <h3 style={{ color: '#FFC107', fontSize: 18, margin: 0 }}>PILASTRO LUCE AMICA</h3>
-                          <p style={{ color: '#666666', fontSize: 12, margin: 0 }}>Totale inseriti: <strong style={{ color: '#FFC107' }}>{reportData.pilastri.energy.totale}</strong></p>
+                          <h3 style={{ color: '#FFD700', fontSize: 18, margin: 0 }}>PILASTRO LUCE AMICA</h3>
+                          <p style={{ color: '#666666', fontSize: 12, margin: 0 }}>Totale inseriti: <strong style={{ color: '#FFD700' }}>{reportData.pilastri.energy.totale}</strong></p>
                         </div>
                       </div>
                       
                       {/* Stati NWG Spa */}
                       {reportData.pilastri.energy.statiNwgSpa && reportData.pilastri.energy.statiNwgSpa.length > 0 && (
-                      <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 15, marginBottom: 10 }}>
+                      <div style={{ background: '#F5F5F5', borderRadius: 12, padding: 15, marginBottom: 10 }}>
                         <div style={{ fontSize: 12, color: '#666666', marginBottom: 10 }}>📋 STATI NWG SPA</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                           {reportData.pilastri.energy.statiNwgSpa.map(([stato, val], i) => {
@@ -2140,7 +2148,7 @@ export default function Home() {
                       
                       {/* Stati NWG Energia (se presenti) */}
                       {reportData.pilastri.energy.statiNwgEnergia && reportData.pilastri.energy.statiNwgEnergia.length > 0 && (
-                        <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 15, marginBottom: 15 }}>
+                        <div style={{ background: '#F5F5F5', borderRadius: 12, padding: 15, marginBottom: 15 }}>
                           <div style={{ fontSize: 12, color: '#666666', marginBottom: 10 }}>⚡ STATI NWG ENERGIA</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                             {reportData.pilastri.energy.statiNwgEnergia.map(([stato, val], i) => {
@@ -2178,24 +2186,24 @@ export default function Home() {
                         
                         {/* NW LA */}
                         <div style={{ background: 'rgba(156,39,176,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(156,39,176,0.2)', maxHeight: 250, overflowY: 'auto' }}>
-                          <div style={{ fontSize: 12, color: '#9C27B0', fontWeight: 600, marginBottom: 8 }}>⭐ NETWORKER ({reportData.pilastri.energy.classifiche.nw.length})</div>
+                          <div style={{ fontSize: 12, color: '#2AAA8A', fontWeight: 600, marginBottom: 8 }}>⭐ NETWORKER ({reportData.pilastri.energy.classifiche.nw.length})</div>
                           {reportData.pilastri.energy.classifiche.nw.map(([name, stats], i) => (
                             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                              <span style={{ width: 20, fontSize: 9, color: i < 3 ? '#9C27B0' : '#999999' }}>{i+1}°</span>
+                              <span style={{ width: 20, fontSize: 9, color: i < 3 ? '#2AAA8A' : '#999999' }}>{i+1}°</span>
                               <span style={{ flex: 1, fontSize: 10, color: '#333333' }}>{name}</span>
-                              <span style={{ fontSize: 11, fontWeight: 600, color: '#9C27B0' }}>{typeof stats === 'object' ? stats.total : stats}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#2AAA8A' }}>{typeof stats === 'object' ? stats.total : stats}</span>
                             </div>
                           ))}
                         </div>
                         
                         {/* SDP LA */}
                         <div style={{ background: 'rgba(33,150,243,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(33,150,243,0.2)', maxHeight: 250, overflowY: 'auto' }}>
-                          <div style={{ fontSize: 12, color: '#2196F3', fontWeight: 600, marginBottom: 8 }}>🔵 SDP ({reportData.pilastri.energy.classifiche.sdp.length})</div>
+                          <div style={{ fontSize: 12, color: '#2AAA8A', fontWeight: 600, marginBottom: 8 }}>🔵 SDP ({reportData.pilastri.energy.classifiche.sdp.length})</div>
                           {reportData.pilastri.energy.classifiche.sdp.map(([name, stats], i) => (
                             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                              <span style={{ width: 20, fontSize: 9, color: i < 3 ? '#2196F3' : '#999999' }}>{i+1}°</span>
+                              <span style={{ width: 20, fontSize: 9, color: i < 3 ? '#2AAA8A' : '#999999' }}>{i+1}°</span>
                               <span style={{ flex: 1, fontSize: 10, color: '#333333' }}>{name}</span>
-                              <span style={{ fontSize: 11, fontWeight: 600, color: '#2196F3' }}>{typeof stats === 'object' ? stats.total : stats}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#2AAA8A' }}>{typeof stats === 'object' ? stats.total : stats}</span>
                             </div>
                           ))}
                         </div>
@@ -2209,17 +2217,17 @@ export default function Home() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
                         <span style={{ fontSize: 28 }}>🎓</span>
                         <div>
-                          <h3 style={{ color: '#9C27B0', fontSize: 18, margin: 0 }}>PILASTRO COLLABORATORI</h3>
+                          <h3 style={{ color: '#2AAA8A', fontSize: 18, margin: 0 }}>PILASTRO COLLABORATORI</h3>
                           <p style={{ color: '#666666', fontSize: 12, margin: 0 }}>Funnel: Iscritti → Presenti → Attivati</p>
                         </div>
                       </div>
                       
                       {/* Funnel Collaboratori */}
-                      <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 16, padding: 20, marginBottom: 15 }}>
+                      <div style={{ background: '#F0F0F0', borderRadius: 16, padding: 20, marginBottom: 15 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, flexWrap: 'wrap' }}>
                           {/* Iscritti */}
                           <div style={{ textAlign: 'center', minWidth: 90 }}>
-                            <div style={{ fontSize: 28, fontWeight: 800, color: '#9C27B0' }}>{reportData.pilastri.collaboratori.funnel?.iscritti || 0}</div>
+                            <div style={{ fontSize: 28, fontWeight: 800, color: '#2AAA8A' }}>{reportData.pilastri.collaboratori.funnel?.iscritti || 0}</div>
                             <div style={{ fontSize: 10, color: '#666666' }}>📝 Iscritti</div>
                           </div>
                           
@@ -2236,9 +2244,9 @@ export default function Home() {
                           
                           {/* Attivati */}
                           <div style={{ textAlign: 'center', minWidth: 90 }}>
-                            <div style={{ fontSize: 28, fontWeight: 800, color: '#FF6B35' }}>{reportData.pilastri.collaboratori.funnel?.attivati || 0}</div>
+                            <div style={{ fontSize: 28, fontWeight: 800, color: '#2AAA8A' }}>{reportData.pilastri.collaboratori.funnel?.attivati || 0}</div>
                             <div style={{ fontSize: 10, color: '#666666' }}>🟠 Attivati</div>
-                            <div style={{ fontSize: 9, color: '#FF6B35' }}>{reportData.pilastri.collaboratori.funnel?.pctAttivati || 0}%</div>
+                            <div style={{ fontSize: 9, color: '#2AAA8A' }}>{reportData.pilastri.collaboratori.funnel?.pctAttivati || 0}%</div>
                           </div>
                         </div>
                       </div>
@@ -2256,9 +2264,9 @@ export default function Home() {
                             <div key={i} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 45px 45px 45px', gap: 4, alignItems: 'center', marginBottom: 4, padding: '4px 0', borderBottom: '1px solid #F5F5F5' }}>
                               <span style={{ fontSize: 10, color: i < 3 ? '#FFD700' : '#666666' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}</span>
                               <span style={{ fontSize: 11, color: '#333333', fontWeight: i < 3 ? 600 : 400 }}>{name}</span>
-                              <span style={{ fontSize: 11, fontWeight: 600, color: '#9C27B0', textAlign: 'center' }}>{typeof stats === 'object' ? (stats.iscritti || stats.total || 0) : stats}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#2AAA8A', textAlign: 'center' }}>{typeof stats === 'object' ? (stats.iscritti || stats.total || 0) : stats}</span>
                               <span style={{ fontSize: 11, fontWeight: 600, color: '#4CAF50', textAlign: 'center' }}>{typeof stats === 'object' ? (stats.presenti || 0) : '-'}</span>
-                              <span style={{ fontSize: 11, fontWeight: 600, color: '#FF6B35', textAlign: 'center' }}>{typeof stats === 'object' ? (stats.attivati || 0) : '-'}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#2AAA8A', textAlign: 'center' }}>{typeof stats === 'object' ? (stats.attivati || 0) : '-'}</span>
                             </div>
                           ))}
                           <div style={{ borderTop: '1px solid #E0E0E0', marginTop: 8, paddingTop: 8, textAlign: 'right', fontSize: 11, color: '#666666' }}>
@@ -2268,34 +2276,34 @@ export default function Home() {
                         
                         {/* NW Coll */}
                         <div style={{ background: 'rgba(156,39,176,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(156,39,176,0.2)', maxHeight: 280, overflowY: 'auto' }}>
-                          <div style={{ fontSize: 12, color: '#9C27B0', fontWeight: 600, marginBottom: 8 }}>⭐ NETWORKER ({reportData.pilastri.collaboratori.classifiche.nw.length})</div>
+                          <div style={{ fontSize: 12, color: '#2AAA8A', fontWeight: 600, marginBottom: 8 }}>⭐ NETWORKER ({reportData.pilastri.collaboratori.classifiche.nw.length})</div>
                           <div style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, fontSize: 8, color: '#999999', marginBottom: 4 }}>
                             <span>#</span><span>Nome</span><span style={{ textAlign: 'center' }}>📝</span><span style={{ textAlign: 'center' }}>✅</span><span style={{ textAlign: 'center' }}>🟠</span>
                           </div>
                           {reportData.pilastri.collaboratori.classifiche.nw.slice(0, 20).map(([name, stats], i) => (
                             <div key={i} style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, alignItems: 'center', marginBottom: 2, fontSize: 10 }}>
-                              <span style={{ color: i < 3 ? '#9C27B0' : '#999999' }}>{i+1}°</span>
+                              <span style={{ color: i < 3 ? '#2AAA8A' : '#999999' }}>{i+1}°</span>
                               <span style={{ color: '#333333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
-                              <span style={{ color: '#9C27B0', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.iscritti || stats.total || 0) : stats}</span>
+                              <span style={{ color: '#2AAA8A', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.iscritti || stats.total || 0) : stats}</span>
                               <span style={{ color: '#4CAF50', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.presenti || 0) : '-'}</span>
-                              <span style={{ color: '#FF6B35', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.attivati || 0) : '-'}</span>
+                              <span style={{ color: '#2AAA8A', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.attivati || 0) : '-'}</span>
                             </div>
                           ))}
                         </div>
                         
                         {/* SDP Coll */}
                         <div style={{ background: 'rgba(33,150,243,0.08)', borderRadius: 12, padding: 12, border: '1px solid rgba(33,150,243,0.2)', maxHeight: 280, overflowY: 'auto' }}>
-                          <div style={{ fontSize: 12, color: '#2196F3', fontWeight: 600, marginBottom: 8 }}>🔵 SDP ({reportData.pilastri.collaboratori.classifiche.sdp.length})</div>
+                          <div style={{ fontSize: 12, color: '#2AAA8A', fontWeight: 600, marginBottom: 8 }}>🔵 SDP ({reportData.pilastri.collaboratori.classifiche.sdp.length})</div>
                           <div style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, fontSize: 8, color: '#999999', marginBottom: 4 }}>
                             <span>#</span><span>Nome</span><span style={{ textAlign: 'center' }}>📝</span><span style={{ textAlign: 'center' }}>✅</span><span style={{ textAlign: 'center' }}>🟠</span>
                           </div>
                           {reportData.pilastri.collaboratori.classifiche.sdp.slice(0, 20).map(([name, stats], i) => (
                             <div key={i} style={{ display: 'grid', gridTemplateColumns: '25px 1fr 35px 35px 35px', gap: 3, alignItems: 'center', marginBottom: 2, fontSize: 10 }}>
-                              <span style={{ color: i < 3 ? '#2196F3' : '#999999' }}>{i+1}°</span>
+                              <span style={{ color: i < 3 ? '#2AAA8A' : '#999999' }}>{i+1}°</span>
                               <span style={{ color: '#333333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
-                              <span style={{ color: '#9C27B0', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.iscritti || stats.total || 0) : stats}</span>
+                              <span style={{ color: '#2AAA8A', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.iscritti || stats.total || 0) : stats}</span>
                               <span style={{ color: '#4CAF50', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.presenti || 0) : '-'}</span>
-                              <span style={{ color: '#FF6B35', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.attivati || 0) : '-'}</span>
+                              <span style={{ color: '#2AAA8A', textAlign: 'center', fontWeight: 600 }}>{typeof stats === 'object' ? (stats.attivati || 0) : '-'}</span>
                             </div>
                           ))}
                         </div>
@@ -2337,7 +2345,7 @@ export default function Home() {
                 {/* STATS CARDS - PIU GRANDI */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
                   <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.25), rgba(255,107,53,0.08))', borderRadius: 16, padding: '18px 12px', textAlign: 'center', border: '1px solid rgba(255,107,53,0.4)' }}>
-                    <div style={{ fontSize: 36, fontWeight: 800, color: '#FF6B35' }}>{animatedStats.ins}</div>
+                    <div style={{ fontSize: 36, fontWeight: 800, color: '#2AAA8A' }}>{animatedStats.ins}</div>
                     <div style={{ fontSize: 11, color: '#444444', textTransform: 'uppercase', marginTop: 4 }}>{labels.c1}</div>
                   </div>
                   <div style={{ background: 'linear-gradient(135deg, rgba(76,175,80,0.25), rgba(76,175,80,0.08))', borderRadius: 16, padding: '18px 12px', textAlign: 'center', border: '1px solid rgba(76,175,80,0.4)' }}>
@@ -2357,7 +2365,7 @@ export default function Home() {
                 {/* PODIO + TOP 7 affiancati - PIU GRANDI */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 15 }}>
                   {/* PODIO */}
-                  <div style={{ background: '#FAFAFA', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ background: '#FAFAFA', borderRadius: 20, padding: 20, border: '1px solid #F0F0F0' }}>
                     <h3 style={{ color: '#FFD700', fontSize: 16, marginBottom: 15, textAlign: 'center' }}>🏆 PODIO</h3>
                     <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 10, height: 170 }}>
                       {/* 2° */}
@@ -2379,7 +2387,7 @@ export default function Home() {
                       {/* 3° */}
                       <div style={{ textAlign: 'center', flex: 1 }}>
                         <div style={{ fontSize: 12, color: '#333333', fontWeight: 600, marginBottom: 8, lineHeight: 1.3 }}>{stats.top3[2]?.name || '-'}</div>
-                        <div style={{ background: 'linear-gradient(180deg, #FFAB91, #CD7F32)', borderRadius: '10px 10px 0 0', height: 65, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ background: 'linear-gradient(180deg, #B2DFDB, #CD7F32)', borderRadius: '10px 10px 0 0', height: 65, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                           <span style={{ fontSize: 20, fontWeight: 800, color: '#333' }}>🥉</span>
                           <span style={{ fontSize: 14, fontWeight: 700, color: '#333' }}>{stats.top3[2]?.v1 || 0}</span>
                         </div>
@@ -2388,17 +2396,17 @@ export default function Home() {
                   </div>
 
                   {/* TOP 4-10 */}
-                  <div style={{ background: '#FAFAFA', borderRadius: 20, padding: 20, border: '1px solid rgba(255,255,255,0.08)' }}>
-                    <h3 style={{ color: '#FF6B35', fontSize: 16, marginBottom: 12 }}>📈 TOP 4° - 10°</h3>
+                  <div style={{ background: '#FAFAFA', borderRadius: 20, padding: 20, border: '1px solid #F0F0F0' }}>
+                    <h3 style={{ color: '#2AAA8A', fontSize: 16, marginBottom: 12 }}>📈 TOP 4° - 10°</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {stats.top10.slice(3, 10).map((p, i) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <span style={{ width: 28, fontSize: 13, color: '#666666', fontWeight: 600 }}>{i + 4}°</span>
-                          <div style={{ flex: 1, height: 28, background: 'rgba(255,255,255,0.06)', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
-                            <div style={{ width: `${(p.v1 / stats.maxV1) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #2AAA8A, #9575CD)', borderRadius: 6 }} />
+                          <div style={{ flex: 1, height: 28, background: '#F5F5F5', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
+                            <div style={{ width: `${(p.v1 / stats.maxV1) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #2AAA8A, #4DB6AC)', borderRadius: 6 }} />
                             <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: '#333333', fontWeight: 500 }}>{p.name}</span>
                           </div>
-                          <span style={{ width: 28, fontSize: 14, fontWeight: 700, color: '#FF6B35', textAlign: 'right' }}>{p.v1}</span>
+                          <span style={{ width: 28, fontSize: 14, fontWeight: 700, color: '#2AAA8A', textAlign: 'right' }}>{p.v1}</span>
                         </div>
                       ))}
                     </div>
@@ -2421,7 +2429,7 @@ export default function Home() {
                     <div>
                       <div style={{ fontSize: 12, color: '#666666', marginBottom: 5 }}>CONVERSIONE</div>
                       <div style={{ display: 'flex', gap: 15 }}>
-                        <div><span style={{ fontSize: 16, fontWeight: 700, color: '#FF6B35' }}>{stats.ins}</span><span style={{ fontSize: 10, color: '#999999', marginLeft: 4 }}>ins</span></div>
+                        <div><span style={{ fontSize: 16, fontWeight: 700, color: '#2AAA8A' }}>{stats.ins}</span><span style={{ fontSize: 10, color: '#999999', marginLeft: 4 }}>ins</span></div>
                         <div><span style={{ fontSize: 16, fontWeight: 700, color: '#4CAF50' }}>{stats.acc}</span><span style={{ fontSize: 10, color: '#999999', marginLeft: 4 }}>acc</span></div>
                       </div>
                     </div>
@@ -2436,26 +2444,26 @@ export default function Home() {
                         {dayNames.map((day, i) => {
                           const val = stats.weeklyData[i];
                           const intensity = val / maxWeekly;
-                          const bgColor = val === 0 ? '#F5F5F5' : intensity > 0.7 ? '#4CAF50' : intensity > 0.4 ? '#FFC107' : '#FF6B35';
+                          const bgColor = val === 0 ? '#F5F5F5' : intensity > 0.7 ? '#4CAF50' : intensity > 0.4 ? '#FFD700' : '#2AAA8A';
                           return (
                             <div key={day} style={{ flex: 1, textAlign: 'center' }}>
                               <div style={{ fontSize: 9, color: '#999999', marginBottom: 4 }}>{day}</div>
-                              <div style={{ height: 36, borderRadius: 6, background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: val === 0 ? 'rgba(255,255,255,0.2)' : '#fff' }}>{val}</div>
+                              <div style={{ height: 36, borderRadius: 6, background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: val === 0 ? '#E0E0E0' : '#fff' }}>{val}</div>
                             </div>
                           );
                         })}
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 10 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#4CAF50' }} /><span style={{ fontSize: 9, color: '#666666' }}>Alto (&gt;70%)</span></div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#FFC107' }} /><span style={{ fontSize: 9, color: '#666666' }}>Medio</span></div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#FF6B35' }} /><span style={{ fontSize: 9, color: '#666666' }}>Basso</span></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#FFD700' }} /><span style={{ fontSize: 9, color: '#666666' }}>Medio</span></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#2AAA8A' }} /><span style={{ fontSize: 9, color: '#666666' }}>Basso</span></div>
                       </div>
                     </div>
                   ) : (
                     // HEATMAP MENSILE - Griglia Calendario WOW
                     <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.08), rgba(255,107,53,0.02))', borderRadius: 16, padding: 15, border: '1px solid rgba(255,107,53,0.2)', gridColumn: 'span 2' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                        <div style={{ fontSize: 14, color: '#FF6B35', fontWeight: 600 }}>🔥 TEMPERATURA CONTRATTI</div>
+                        <div style={{ fontSize: 14, color: '#2AAA8A', fontWeight: 600 }}>🔥 TEMPERATURA CONTRATTI</div>
                         <div style={{ fontSize: 10, color: '#666666' }}>Giorni caldi del mese</div>
                       </div>
                       {(() => {
@@ -2483,7 +2491,7 @@ export default function Home() {
                                 const intensity = val / maxM;
                                 const bgColor = val === 0 ? '#F5F5F5' : 
                                                intensity > 0.7 ? '#4CAF50' : 
-                                               intensity > 0.4 ? '#FFC107' : '#FF6B35';
+                                               intensity > 0.4 ? '#FFD700' : '#2AAA8A';
                                 const isHot = intensity > 0.7 && val > 0;
                                 return (
                                   <div key={i} style={{ 
@@ -2508,8 +2516,8 @@ export default function Home() {
                             {/* Legenda */}
                             <div style={{ display: 'flex', justifyContent: 'center', gap: 15, marginTop: 12 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#4CAF50', boxShadow: '0 0 6px rgba(76,175,80,0.5)' }} /><span style={{ fontSize: 10, color: '#666666' }}>🔥 Caldo</span></div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FFC107' }} /><span style={{ fontSize: 10, color: '#666666' }}>Tiepido</span></div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FF6B35' }} /><span style={{ fontSize: 10, color: '#666666' }}>Freddo</span></div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FFD700' }} /><span style={{ fontSize: 10, color: '#666666' }}>Tiepido</span></div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#2AAA8A' }} /><span style={{ fontSize: 10, color: '#666666' }}>Freddo</span></div>
                             </div>
                           </div>
                         );
@@ -2558,7 +2566,7 @@ export default function Home() {
                                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#444444', marginBottom: 2 }}>
                                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                     <span style={{ width: 8, height: 8, borderRadius: 2, background: PIE_COLORS[i] }} />
-                                    {name.split(' ')[0]}
+                                    {name}
                                   </span>
                                   <span style={{ fontWeight: 600 }}>{val} ({Math.round(val/totalK*100)}%)</span>
                                 </div>
@@ -2572,13 +2580,13 @@ export default function Home() {
                       {pies.stati.length > 0 && (
                         <div style={{ background: '#FCFCFC', borderRadius: 16, padding: 15, border: '1px solid rgba(76,175,80,0.2)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <MiniPie data={pies.stati} total={totalStati} colors={pies.stati.map(([s]) => STATO_COLORS[s] || '#607D8B')} size={65} />
+                            <MiniPie data={pies.stati} total={totalStati} colors={pies.stati.map(([s]) => STATO_COLORS[s] || '#666666')} size={65} />
                             <div style={{ flex: 1 }}>
                               <div style={{ fontSize: 12, color: '#4CAF50', fontWeight: 600, marginBottom: 6 }}>📋 STATI</div>
                               {pies.stati.slice(0, 4).map(([name, val], i) => (
                                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#444444', marginBottom: 2 }}>
                                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                    <span style={{ width: 8, height: 8, borderRadius: 2, background: STATO_COLORS[name] || '#607D8B' }} />
+                                    <span style={{ width: 8, height: 8, borderRadius: 2, background: STATO_COLORS[name] || '#666666' }} />
                                     {name}
                                   </span>
                                   <span style={{ fontWeight: 600 }}>{val} ({Math.round(val/totalStati*100)}%)</span>
@@ -2592,7 +2600,7 @@ export default function Home() {
                       {/* BARRA NW TOP 5 */}
                       {pies.nw.length > 0 && (
                         <div style={{ background: '#FCFCFC', borderRadius: 16, padding: 15, border: '1px solid rgba(156,39,176,0.2)', gridColumn: pies.k.length > 0 && pies.stati.length > 0 ? 'span 2' : 'span 1' }}>
-                          <div style={{ fontSize: 12, color: '#9C27B0', fontWeight: 600, marginBottom: 10 }}>⭐ TOP 5 NETWORKER</div>
+                          <div style={{ fontSize: 12, color: '#2AAA8A', fontWeight: 600, marginBottom: 10 }}>⭐ TOP 5 NETWORKER</div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                             {pies.nw.slice(0, 5).map(([name, val], i) => {
                               const maxNw = pies.nw[0]?.[1] || 1;
@@ -2601,7 +2609,7 @@ export default function Home() {
                                   <span style={{ width: 20, fontSize: 10, color: '#666666' }}>{i+1}°</span>
                                   <div style={{ flex: 1, height: 18, background: '#F5F5F5', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
                                     <div style={{ width: `${(val/maxNw)*100}%`, height: '100%', background: `linear-gradient(90deg, ${PIE_COLORS[i]}, ${PIE_COLORS[i]}88)`, borderRadius: 4 }} />
-                                    <span style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 9, color: '#333333' }}>{name.split(' ').slice(0,2).join(' ')}</span>
+                                    <span style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 9, color: '#333333' }}>{name}</span>
                                   </div>
                                   <span style={{ width: 25, fontSize: 11, fontWeight: 600, color: PIE_COLORS[i], textAlign: 'right' }}>{val}</span>
                                 </div>
@@ -2614,13 +2622,68 @@ export default function Home() {
                   );
                 })()}
 
+                {/* CLASSIFICHE COMPLETE CON CONVERSIONI */}
+                {(() => {
+                  const pies = getPieDistributions();
+                  // Crea tabella con conversioni per K, NW
+                  const ClassificaTable = ({ title, emoji, data, color }) => {
+                    if (!data || data.length === 0) return null;
+                    return (
+                      <div style={{ background: '#FFFFFF', borderRadius: 16, padding: 15, border: `1px solid ${color}30` }}>
+                        <div style={{ fontSize: 14, color: color, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span>{emoji}</span> {title}
+                        </div>
+                        <div style={{ overflowX: 'auto' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                            <thead>
+                              <tr style={{ borderBottom: '2px solid #E0E0E0' }}>
+                                <th style={{ padding: '8px 4px', textAlign: 'center', color: '#666666', fontWeight: 600, width: 30 }}>#</th>
+                                <th style={{ padding: '8px 4px', textAlign: 'left', color: '#666666', fontWeight: 600 }}>Nome Completo</th>
+                                <th style={{ padding: '8px 4px', textAlign: 'center', color: '#2AAA8A', fontWeight: 600 }}>Ins</th>
+                                <th style={{ padding: '8px 4px', textAlign: 'center', color: '#4CAF50', fontWeight: 600 }}>Acc</th>
+                                <th style={{ padding: '8px 4px', textAlign: 'center', color: '#FFD700', fontWeight: 600 }}>Conv%</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {data.slice(0, 10).map(([name, val], i) => {
+                                // val può essere un numero o un oggetto con v1,v2
+                                const ins = typeof val === 'object' ? (val.v1 || val.total || 0) : val;
+                                const acc = typeof val === 'object' ? (val.v2 || 0) : 0;
+                                const conv = ins > 0 ? Math.round((acc / ins) * 100) : 0;
+                                return (
+                                  <tr key={i} style={{ borderBottom: '1px solid #F5F5F5', background: i < 3 ? `${color}08` : 'transparent' }}>
+                                    <td style={{ padding: '10px 4px', textAlign: 'center', fontWeight: i < 3 ? 700 : 400 }}>
+                                      {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}
+                                    </td>
+                                    <td style={{ padding: '10px 4px', fontWeight: i < 3 ? 600 : 400, color: '#333333' }}>{name}</td>
+                                    <td style={{ padding: '10px 4px', textAlign: 'center', color: '#2AAA8A', fontWeight: 600 }}>{ins}</td>
+                                    <td style={{ padding: '10px 4px', textAlign: 'center', color: '#4CAF50', fontWeight: 600 }}>{acc}</td>
+                                    <td style={{ padding: '10px 4px', textAlign: 'center', fontWeight: 700, color: conv >= 50 ? '#4CAF50' : conv >= 30 ? '#FFD700' : '#999999' }}>{conv}%</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  };
+                  
+                  return (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 15 }}>
+                      <ClassificaTable title="K MANAGER" emoji="👑" data={pies.k} color="#FFD700" />
+                      <ClassificaTable title="NETWORKER" emoji="⭐" data={pies.nw} color="#2AAA8A" />
+                    </div>
+                  );
+                })()}
+
                 {/* BOTTONI DOWNLOAD SLIDE */}
                 <div style={{ background: 'linear-gradient(135deg, rgba(42,170,138,0.2), rgba(42,170,138,0.05))', borderRadius: 16, padding: 20, border: '1px solid rgba(42,170,138,0.3)' }}>
                   <div style={{ fontSize: 16, color: '#2AAA8A', fontWeight: 700, marginBottom: 5 }}>📥 SCARICA PER SLIDE</div>
                   <div style={{ fontSize: 12, color: '#666666', marginBottom: 15 }}>PNG 1920x1080 (16:9) - Sfondo verde NWG</div>
                   <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                     <button style={{ ...S.btn, flex: 1, minWidth: 180, padding: '14px 20px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', fontSize: 14 }} onClick={() => downloadSlidePNG('full')}>📊 Podio + Classifica</button>
-                    <button style={{ ...S.btn, flex: 1, minWidth: 180, padding: '14px 20px', background: 'linear-gradient(135deg, #FFD700, #FFA000)', color: '#1a1a2e', fontSize: 14 }} onClick={() => downloadSlidePNG('solo')}>🏆 Solo Podio</button>
+                    <button style={{ ...S.btn, flex: 1, minWidth: 180, padding: '14px 20px', background: 'linear-gradient(135deg, #FFD700, #20917A)', color: '#FFFFFF', fontSize: 14 }} onClick={() => downloadSlidePNG('solo')}>🏆 Solo Podio</button>
                   </div>
                 </div>
               </div>
@@ -2628,13 +2691,13 @@ export default function Home() {
           })()}
 
           {/* CLASSIFICHE TAB */}
-          {rankings && activeTab === 'classifiche' ? (<div style={S.rankCard}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 15 }}><div><h2 style={{ color: config.color, fontSize: 18, margin: 0 }}>{config.emoji} {config.label}</h2><p style={{ color: '#666666', fontSize: 12, marginTop: 4 }}>{getData().length} partecipanti • {getClassificaTotal()} contratti • {eventDate}</p></div><div style={{ display: 'flex', gap: 15 }}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: config.color }}>{getClassificaTotal()}</div><div style={{ fontSize: 9, color: '#999999' }}>{labels.c1}</div></div><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</div><div style={{ fontSize: 9, color: '#999999' }}>{labels.c2}</div></div></div></div><div style={{ overflowX: 'auto', maxHeight: '50vh', overflowY: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 300 }}><thead><tr style={{ borderBottom: '1px solid #E0E0E0' }}><th style={S.th}>#</th><th style={{ ...S.th, textAlign: 'left' }}>Nome</th><th style={S.th}>{labels.c1}</th>{isExclusive() && <><th style={S.th}>%</th><th style={S.th}>{labels.c2}</th></>}</tr></thead><tbody>{getData().map(([name, s], i) => { const p = s.v1 > 0 ? Math.round(s.v2 / s.v1 * 100) : 0; return (<tr key={name} style={{ borderBottom: '1px solid #F5F5F5', ...(i < 3 ? { background: `${config.color}10` } : {}) }}><td style={{ padding: 10, textAlign: 'center' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td><td style={{ padding: 10, fontWeight: i < 3 ? 700 : 500, fontSize: 13 }}>{name}</td><td style={{ padding: 10, textAlign: 'center', color: config.color, fontWeight: 700 }}>{s.v1}</td>{isExclusive() && <><td style={{ padding: 10, textAlign: 'center', color: p >= 50 ? '#4CAF50' : '#FFC107', fontSize: 12 }}>{p}%</td><td style={{ padding: 10, textAlign: 'center', color: '#4CAF50', fontWeight: 700 }}>{s.v2}</td></>}</tr>); })}</tbody></table></div>{(user.role === 'admin' || user.role === 'assistente') && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}>📸 PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg,#00BFA5,#1DE9B6)' }} onClick={() => handleSendToBot()}>🤖 Invia a Bot</button>{sendStatus && <span style={{ fontSize: 13, color: sendStatus.includes('✅') ? '#4CAF50' : sendStatus.includes('❌') ? '#f44' : '#FFC107' }}>{sendStatus}</span>}</div>)}{user.role === 'k' && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}>📸 PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg,#666,#888)' }} onClick={() => handleSendToBot()}>🤖 Invia a Bot</button></div>)}</div>) : !rankings && (<div style={{ textAlign: 'center', padding: 60, color: '#999999' }}><div style={{ fontSize: 50 }}>📊</div><p>Carica un CSV per iniziare</p></div>)}
+          {rankings && activeTab === 'classifiche' ? (<div style={S.rankCard}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 15 }}><div><h2 style={{ color: config.color, fontSize: 18, margin: 0 }}>{config.emoji} {config.label}</h2><p style={{ color: '#666666', fontSize: 12, marginTop: 4 }}>{getData().length} partecipanti • {getClassificaTotal()} contratti • {eventDate}</p></div><div style={{ display: 'flex', gap: 15 }}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: config.color }}>{getClassificaTotal()}</div><div style={{ fontSize: 9, color: '#999999' }}>{labels.c1}</div></div><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</div><div style={{ fontSize: 9, color: '#999999' }}>{labels.c2}</div></div></div></div><div style={{ overflowX: 'auto', maxHeight: '50vh', overflowY: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 300 }}><thead><tr style={{ borderBottom: '1px solid #E0E0E0' }}><th style={S.th}>#</th><th style={{ ...S.th, textAlign: 'left' }}>Nome</th><th style={S.th}>{labels.c1}</th>{isExclusive() && <><th style={S.th}>%</th><th style={S.th}>{labels.c2}</th></>}</tr></thead><tbody>{getData().map(([name, s], i) => { const p = s.v1 > 0 ? Math.round(s.v2 / s.v1 * 100) : 0; return (<tr key={name} style={{ borderBottom: '1px solid #F5F5F5', ...(i < 3 ? { background: `${config.color}10` } : {}) }}><td style={{ padding: 10, textAlign: 'center' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td><td style={{ padding: 10, fontWeight: i < 3 ? 700 : 500, fontSize: 13 }}>{name}</td><td style={{ padding: 10, textAlign: 'center', color: config.color, fontWeight: 700 }}>{s.v1}</td>{isExclusive() && <><td style={{ padding: 10, textAlign: 'center', color: p >= 50 ? '#4CAF50' : '#FFD700', fontSize: 12 }}>{p}%</td><td style={{ padding: 10, textAlign: 'center', color: '#4CAF50', fontWeight: 700 }}>{s.v2}</td></>}</tr>); })}</tbody></table></div>{(user.role === 'admin' || user.role === 'assistente') && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}>📸 PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg,#2AAA8A,#4DB6AC)' }} onClick={() => handleSendToBot()}>🤖 Invia a Bot</button>{sendStatus && <span style={{ fontSize: 13, color: sendStatus.includes('✅') ? '#4CAF50' : sendStatus.includes('❌') ? '#f44' : '#FFD700' }}>{sendStatus}</span>}</div>)}{user.role === 'k' && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}>📸 PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg,#2AAA8A,#20917A)' }} onClick={() => handleSendToBot()}>🤖 Invia a Bot</button></div>)}</div>) : !rankings && (<div style={{ textAlign: 'center', padding: 60, color: '#999999' }}><div style={{ fontSize: 50 }}>📊</div><p>Carica un CSV per iniziare</p></div>)}
         </section>
       </main>
       {showConfirmModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
-          <div style={{ background: 'linear-gradient(135deg,#1a1a2e,#12121f)', borderRadius: 20, padding: 30, maxWidth: 450, width: '100%', border: '1px solid #E0E0E0' }}>
-            <h2 style={{ color: '#FFC107', marginBottom: 20, fontSize: 20 }}>⚠️ VERIFICA PRIMA DI INVIARE</h2>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
+          <div style={{ background: 'linear-gradient(135deg,#FFFFFF,#F5F5F5)', borderRadius: 20, padding: 30, maxWidth: 450, width: '100%', border: '1px solid #E0E0E0' }}>
+            <h2 style={{ color: '#FFD700', marginBottom: 20, fontSize: 20 }}>⚠️ VERIFICA PRIMA DI INVIARE</h2>
             <div style={{ background: '#F5F5F5', borderRadius: 12, padding: 20, marginBottom: 20 }}>
               <p style={{ color: '#444444', marginBottom: 10, fontSize: 14 }}>📊 <strong style={{ color: '#333333' }}>Classifica:</strong> {config.label}</p>
               <p style={{ color: '#444444', marginBottom: 10, fontSize: 14 }}>📅 <strong style={{ color: '#333333' }}>Evento:</strong> {eventName} - {eventDate}</p>
@@ -2644,9 +2707,9 @@ export default function Home() {
               <p style={{ color: '#444444', marginBottom: 8, fontSize: 14 }}>✅ <strong style={{ color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</strong> {labels.c2}</p>
               <p style={{ color: '#444444', fontSize: 14 }}>👥 <strong style={{ color: '#333333' }}>{getData().length}</strong> partecipanti</p>
             </div>
-            <p style={{ color: '#FFC107', fontSize: 14, marginBottom: 20, textAlign: 'center' }}>✅ I numeri sono corretti?</p>
+            <p style={{ color: '#FFD700', fontSize: 14, marginBottom: 20, textAlign: 'center' }}>✅ I numeri sono corretti?</p>
             <div style={{ display: 'flex', gap: 12 }}>
-              <button style={{ ...S.btn, flex: 1, background: 'transparent', border: '1px solid rgba(255,255,255,0.2)' }} onClick={() => setShowConfirmModal(false)}>Annulla</button>
+              <button style={{ ...S.btn, flex: 1, background: 'transparent', border: '1px solid #E0E0E0' }} onClick={() => setShowConfirmModal(false)}>Annulla</button>
               <button style={{ ...S.btn, flex: 1, background: 'linear-gradient(135deg,#4CAF50,#81C784)' }} onClick={() => { setShowConfirmModal(false); handleSendToBot(true); }}>✅ Conferma e Invia</button>
             </div>
           </div>
@@ -2656,17 +2719,52 @@ export default function Home() {
 }
 
 const S = {
-  loginWrap: { minHeight: '100vh', background: '#F5F5F5', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif' },
-  loginCard: { background: '#FFFFFF', border: '1px solid #E0E0E0', borderRadius: 20, padding: '45px 35px', width: '100%', maxWidth: 400, textAlign: 'center', color: '#333333', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' },
-  logoContainer: { marginBottom: 25 }, logoIcon: { marginBottom: 15 },
-  podium: { display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 4, height: 55 },
-  podiumBar: { width: 30, borderRadius: '6px 6px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 4 },
-  podiumNum: { fontSize: 12, fontWeight: 800, color: '#333333' },
-  logoText: { fontSize: 32, marginBottom: 5, color: '#333333' }, logoTagline: { color: '#666666', fontSize: 13, fontStyle: 'italic' },
-  loginDivider: { height: 1, background: 'linear-gradient(90deg, transparent, #2AAA8A50, transparent)', margin: '25px 0' },
-  input: { width: '100%', padding: '16px 18px', fontSize: 15, border: '1px solid #E0E0E0', borderRadius: 12, background: '#FFFFFF', color: '#333333', marginBottom: 14, outline: 'none', boxSizing: 'border-box' },
-  btn: { padding: '16px 28px', fontSize: 15, fontWeight: 700, border: 'none', borderRadius: 12, background: '#2AAA8A', color: '#333333', cursor: 'pointer', width: '100%' },
-  categoryIcons: { display: 'flex', justifyContent: 'center', gap: 20, marginTop: 30 }, catIcon: { fontSize: 24, opacity: 0.6 },
+  loginWrap: { 
+    minHeight: '100vh', 
+    backgroundImage: 'url(https://images.unsplash.com/photo-1509391366360-2e959784a276?w=1920&q=80)',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundAttachment: 'fixed',
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    padding: 20, 
+    fontFamily: '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif',
+    position: 'relative'
+  },
+  loginOverlay: {
+    position: 'absolute',
+    inset: 0,
+    background: 'linear-gradient(135deg, rgba(0,0,0,0.5) 0%, rgba(42,170,138,0.3) 50%, rgba(0,0,0,0.6) 100%)',
+    zIndex: 1
+  },
+  loginCard: { 
+    background: 'rgba(255,255,255,0.92)', 
+    backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
+    border: '1px solid rgba(255,255,255,0.3)', 
+    borderRadius: 24, 
+    padding: '50px 40px', 
+    width: '100%', 
+    maxWidth: 420, 
+    textAlign: 'center', 
+    color: '#333333', 
+    boxShadow: '0 25px 50px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.1) inset',
+    position: 'relative',
+    zIndex: 2
+  },
+  logoContainer: { marginBottom: 30 }, 
+  logoIcon: { marginBottom: 20 },
+  podium: { display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 6, height: 65 },
+  podiumBar: { width: 36, borderRadius: '8px 8px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' },
+  podiumNum: { fontSize: 14, fontWeight: 800, color: '#333333' },
+  logoText: { fontSize: 36, marginBottom: 8, color: '#333333', letterSpacing: '-0.5px' }, 
+  logoTagline: { color: '#2AAA8A', fontSize: 14, fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase' },
+  loginDivider: { height: 2, background: 'linear-gradient(90deg, transparent, #2AAA8A, transparent)', margin: '28px 0', borderRadius: 1 },
+  input: { width: '100%', padding: '18px 20px', fontSize: 16, border: '2px solid #E8E8E8', borderRadius: 14, background: 'rgba(255,255,255,0.9)', color: '#333333', marginBottom: 16, outline: 'none', boxSizing: 'border-box', transition: 'all 0.3s ease' },
+  btn: { padding: '18px 28px', fontSize: 16, fontWeight: 700, border: 'none', borderRadius: 14, background: 'linear-gradient(135deg, #2AAA8A 0%, #20917A 100%)', color: '#FFFFFF', cursor: 'pointer', width: '100%', boxShadow: '0 8px 25px rgba(42,170,138,0.35)', transition: 'all 0.3s ease', textTransform: 'uppercase', letterSpacing: '1px' },
+  categoryIcons: { display: 'flex', justifyContent: 'center', gap: 24, marginTop: 35 }, 
+  catIcon: { fontSize: 28, opacity: 0.7, transition: 'all 0.3s ease' },
   homeWrap: { minHeight: '100vh', background: '#F5F5F5', fontFamily: '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif' },
   homeHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 25px', borderBottom: '1px solid #E0E0E0', background: '#FFFFFF' },
   homeLogoSmall: { fontSize: 18, color: '#333333' },
