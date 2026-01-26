@@ -26,14 +26,6 @@ const RANKING_CONFIG = {
   frm: { label: 'FORMATORI', category: 'formatore', color: '#673AB7', emoji: '🎓', design: 'exclusive' },
 };
 
-// === TEMA CHIARO NWG ===
-const THEME = {
-  bg: '#F5F5F5', bgCard: '#FFFFFF', text: '#333333', textSecondary: '#666666', textMuted: '#999999',
-  border: '#E0E0E0', borderLight: '#EEEEEE', primary: '#2AAA8A', primaryDark: '#20917A',
-  secondary: '#FFD700', secondaryDark: '#FFC107', success: '#4CAF50', warning: '#FF9800', danger: '#f44336',
-  shadow: '0 2px 8px rgba(0,0,0,0.08)'
-};
-
 const PRODUCTION_CALENDAR = {
   'Gennaio 2025': { start: '2025-01-07 13:00', end: '2025-02-03 11:00' },
   'Febbraio 2025': { start: '2025-02-03 13:00', end: '2025-03-03 11:00' },
@@ -1773,26 +1765,146 @@ export default function Home() {
       <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 25 }}>v9.8.1</p>
     </div></div></>);
 
-  // HOMEPAGE CSV
+  // HOMEPAGE CSV - CON TABS SEMPRE VISIBILI
   if (!csvData && (user.role === 'admin' || user.role === 'assistente' || user.role === 'k')) return (<><Head><title>Leader Ranking</title><meta name="viewport" content="width=device-width,initial-scale=1" /></Head>
     <div style={S.homeWrap}>
       <header style={S.homeHeader}><div style={S.homeLogoSmall}><span style={{ color: '#7C4DFF', fontWeight: 800 }}>LEADER</span><span style={{ fontWeight: 300 }}> RANKING</span></div><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Ciao, {user.name}</span><button style={S.logoutBtn} onClick={() => setUser(null)}>Esci</button></div></header>
       <main style={S.homeMain}>
-        <div style={S.homeLogo}>
-          <div style={S.homeLogoIcon}><div style={S.homePodium}>
-            <div style={{ ...S.homePodiumBar, height: 55, background: 'linear-gradient(180deg, #E0E0E0 0%, #9E9E9E 100%)' }}><span style={S.homePodiumNum}>2</span></div>
-            <div style={{ ...S.homePodiumBar, height: 80, background: 'linear-gradient(180deg, #FFE082 0%, #FFD700 100%)' }}><span style={S.homePodiumNum}>1</span></div>
-            <div style={{ ...S.homePodiumBar, height: 40, background: 'linear-gradient(180deg, #FFAB91 0%, #CD7F32 100%)' }}><span style={S.homePodiumNum}>3</span></div>
-          </div></div>
-          <h1 style={S.homeTitle}><span style={{ color: '#7C4DFF' }}>LEADER</span> RANKING</h1>
-          <p style={S.homeSubtitle}>Power your team rankings</p>
+        {/* TABS SEMPRE VISIBILI */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 25, width: '100%', maxWidth: 500 }}>
+          <button style={{ flex: 1, padding: '12px 20px', borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer', background: activeTab === 'dashboard' || activeTab === 'classifiche' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', opacity: 0.5 }} disabled>📊 Dashboard</button>
+          <button style={{ flex: 1, padding: '12px 20px', borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer', background: activeTab === 'classifiche' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', opacity: 0.5 }} disabled>🏆 Classifiche</button>
+          <button style={{ flex: 1, padding: '12px 20px', borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer', background: activeTab === 'report' ? 'linear-gradient(135deg,#FF6B35,#FF8F00)' : 'rgba(255,255,255,0.1)', border: activeTab === 'report' ? 'none' : '1px solid rgba(255,255,255,0.2)', color: activeTab === 'report' ? '#fff' : 'rgba(255,255,255,0.8)' }} onClick={() => setActiveTab('report')}>📈 Report</button>
         </div>
-        <div style={{ ...S.uploadArea, ...(isDragging ? S.uploadAreaActive : {}) }} onDragOver={e => { e.preventDefault(); setIsDragging(true); }} onDragLeave={e => { e.preventDefault(); setIsDragging(false); }} onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.csv')) processFile(f); }}>
-          <input type="file" accept=".csv" id="csvUpload" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processFile(e.target.files[0]); }} />
-          <label htmlFor="csvUpload" style={S.uploadLabel}><div style={S.uploadIcon}>📊</div><div style={S.uploadText}>CARICA FILE CSV</div><div style={S.uploadHint}>Trascina qui o clicca per selezionare</div></label>
-        </div>
-        <div style={S.categoriesPreview}><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>🟠</span><span>IVD</span></div><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>🔵</span><span>SDP</span></div><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>⭐</span><span>NW</span></div><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>👑</span><span>K</span></div></div>
-        <p style={S.homeFooter}>Formati supportati: Luce Amica, Fotovoltaico, Seminario, Attivazioni</p>
+        
+        {activeTab !== 'report' ? (
+          <>
+            <div style={S.homeLogo}>
+              <div style={S.homeLogoIcon}><div style={S.homePodium}>
+                <div style={{ ...S.homePodiumBar, height: 55, background: 'linear-gradient(180deg, #E0E0E0 0%, #9E9E9E 100%)' }}><span style={S.homePodiumNum}>2</span></div>
+                <div style={{ ...S.homePodiumBar, height: 80, background: 'linear-gradient(180deg, #FFE082 0%, #FFD700 100%)' }}><span style={S.homePodiumNum}>1</span></div>
+                <div style={{ ...S.homePodiumBar, height: 40, background: 'linear-gradient(180deg, #FFAB91 0%, #CD7F32 100%)' }}><span style={S.homePodiumNum}>3</span></div>
+              </div></div>
+              <h1 style={S.homeTitle}><span style={{ color: '#7C4DFF' }}>LEADER</span> RANKING</h1>
+              <p style={S.homeSubtitle}>Power your team rankings</p>
+            </div>
+            <div style={{ ...S.uploadArea, ...(isDragging ? S.uploadAreaActive : {}) }} onDragOver={e => { e.preventDefault(); setIsDragging(true); }} onDragLeave={e => { e.preventDefault(); setIsDragging(false); }} onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.csv')) processFile(f); }}>
+              <input type="file" accept=".csv" id="csvUpload" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processFile(e.target.files[0]); }} />
+              <label htmlFor="csvUpload" style={S.uploadLabel}><div style={S.uploadIcon}>📊</div><div style={S.uploadText}>CARICA FILE CSV</div><div style={S.uploadHint}>Trascina qui o clicca per selezionare</div></label>
+            </div>
+            <div style={S.categoriesPreview}><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>🟠</span><span>IVD</span></div><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>🔵</span><span>SDP</span></div><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>⭐</span><span>NW</span></div><div style={S.catPreviewItem}><span style={S.catPreviewIcon}>👑</span><span>K</span></div></div>
+            <p style={S.homeFooter}>Formati supportati: Luce Amica, Fotovoltaico, Seminario, Attivazioni</p>
+          </>
+        ) : (
+          /* REPORT TAB CONTENT */
+          <div style={{ width: '100%', maxWidth: 900, padding: '0 20px' }}>
+            <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.15), rgba(255,107,53,0.05))', borderRadius: 20, padding: 25, border: '1px solid rgba(255,107,53,0.3)' }}>
+              <h2 style={{ color: '#FF6B35', fontSize: 20, marginBottom: 8 }}>📈 REPORT AGGREGATO</h2>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 20 }}>Carica i CSV per generare il report con i 3 pilastri</p>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
+                {[
+                  { key: 'ivd', label: 'IVD Attivati', emoji: '🟠', color: '#FF6B35' },
+                  { key: 'energy', label: 'Luce Amica', emoji: '⚡', color: '#FFC107' },
+                  { key: 'fv', label: 'Fotovoltaico', emoji: '☀️', color: '#FF9800' },
+                  { key: 'consultings', label: 'Seminari', emoji: '🎓', color: '#9C27B0' }
+                ].map(item => (
+                  <div key={item.key} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 15, border: reportCSVs[item.key] ? '2px solid #4CAF50' : '1px solid rgba(255,255,255,0.1)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                      <span style={{ fontSize: 20 }}>{item.emoji}</span>
+                      <span style={{ color: item.color, fontWeight: 600, fontSize: 13 }}>{item.label}</span>
+                    </div>
+                    <input type="file" accept=".csv" id={`home-csv-${item.key}`} style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV(item.key, e.target.files[0]); }} />
+                    <label htmlFor={`home-csv-${item.key}`} style={{ display: 'block', cursor: 'pointer', padding: 10, background: reportCSVs[item.key] ? 'rgba(76,175,80,0.15)' : 'rgba(255,255,255,0.05)', borderRadius: 8, textAlign: 'center', color: reportCSVs[item.key] ? '#4CAF50' : 'rgba(255,255,255,0.5)', fontSize: 12 }}>
+                      {reportCSVs[item.key] ? `✅ ${reportCSVs[item.key].rows} righe` : '📤 Carica'}
+                    </label>
+                  </div>
+                ))}
+              </div>
+              
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button style={{ flex: 1, padding: '14px 24px', borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer', background: Object.values(reportCSVs).some(v => v) ? 'linear-gradient(135deg,#2AAA8A,#20917A)' : 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', opacity: Object.values(reportCSVs).some(v => v) ? 1 : 0.5 }} onClick={() => { if (Object.values(reportCSVs).some(v => v)) setReportData(generateReportData()); }} disabled={!Object.values(reportCSVs).some(v => v)}>📊 Genera Report</button>
+                <button style={{ flex: 1, padding: '14px 24px', borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.7)' }} onClick={() => { setReportCSVs({ ivd: null, energy: null, fv: null, consultings: null }); setReportData(null); }}>🗑️ Reset</button>
+              </div>
+            </div>
+            
+            {/* REPORT RESULTS */}
+            {reportData && reportData.pilastri && (
+              <div style={{ marginTop: 20 }}>
+                {/* Pilastro FV */}
+                {reportData.pilastri.fv && (
+                  <div style={{ background: 'rgba(255,152,0,0.1)', borderRadius: 16, padding: 20, marginBottom: 15, border: '1px solid rgba(255,152,0,0.3)' }}>
+                    <h3 style={{ color: '#FF9800', fontSize: 18, marginBottom: 15 }}>☀️ FOTOVOLTAICO - {reportData.pilastri.fv.totale} contratti</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 15 }}>
+                      <div style={{ background: 'rgba(42,170,138,0.15)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                        <div style={{ fontSize: 24, fontWeight: 700, color: '#2AAA8A' }}>{reportData.pilastri.fv.totale}</div>
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>📋 INSERITI</div>
+                      </div>
+                      <div style={{ background: 'rgba(76,175,80,0.15)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                        <div style={{ fontSize: 24, fontWeight: 700, color: '#4CAF50' }}>{reportData.pilastri.fv.statiTotals?.positivo || 0}</div>
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>🟢 POSITIVI</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,152,0,0.15)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                        <div style={{ fontSize: 24, fontWeight: 700, color: '#FF9800' }}>{reportData.pilastri.fv.statiTotals?.lavorazione || 0}</div>
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>🟡 LAVORAZIONE</div>
+                      </div>
+                      <div style={{ background: 'rgba(244,67,54,0.15)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                        <div style={{ fontSize: 24, fontWeight: 700, color: '#f44336' }}>{reportData.pilastri.fv.statiTotals?.perso || 0}</div>
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>🔴 PERSI</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Pilastro LA */}
+                {reportData.pilastri.energy && (
+                  <div style={{ background: 'rgba(255,193,7,0.1)', borderRadius: 16, padding: 20, marginBottom: 15, border: '1px solid rgba(255,193,7,0.3)' }}>
+                    <h3 style={{ color: '#FFC107', fontSize: 18, marginBottom: 15 }}>⚡ LUCE AMICA - {reportData.pilastri.energy.totale} contratti</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+                      <div style={{ background: 'rgba(42,170,138,0.15)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                        <div style={{ fontSize: 24, fontWeight: 700, color: '#2AAA8A' }}>{reportData.pilastri.energy.totale}</div>
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>📋 INSERITI</div>
+                      </div>
+                      <div style={{ background: 'rgba(76,175,80,0.15)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                        <div style={{ fontSize: 24, fontWeight: 700, color: '#4CAF50' }}>{reportData.pilastri.energy.statiTotals?.positivo || 0}</div>
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>🟢 ACCETTATI</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,152,0,0.15)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                        <div style={{ fontSize: 24, fontWeight: 700, color: '#FF9800' }}>{reportData.pilastri.energy.statiTotals?.lavorazione || 0}</div>
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>🟡 LAVORABILI</div>
+                      </div>
+                      <div style={{ background: 'rgba(244,67,54,0.15)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                        <div style={{ fontSize: 24, fontWeight: 700, color: '#f44336' }}>{reportData.pilastri.energy.statiTotals?.perso || 0}</div>
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>🔴 PERSI</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Pilastro Collaboratori */}
+                {reportData.pilastri.collaboratori && (
+                  <div style={{ background: 'rgba(156,39,176,0.1)', borderRadius: 16, padding: 20, border: '1px solid rgba(156,39,176,0.3)' }}>
+                    <h3 style={{ color: '#9C27B0', fontSize: 18, marginBottom: 15 }}>🎓 COLLABORATORI</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                      <div style={{ background: 'rgba(156,39,176,0.15)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                        <div style={{ fontSize: 24, fontWeight: 700, color: '#9C27B0' }}>{reportData.pilastri.collaboratori.iscritti || 0}</div>
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>📝 ISCRITTI</div>
+                      </div>
+                      <div style={{ background: 'rgba(76,175,80,0.15)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                        <div style={{ fontSize: 24, fontWeight: 700, color: '#4CAF50' }}>{reportData.pilastri.collaboratori.presenti || 0}</div>
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>✅ PRESENTI</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,107,53,0.15)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                        <div style={{ fontSize: 24, fontWeight: 700, color: '#FF6B35' }}>{reportData.pilastri.collaboratori.attivati || 0}</div>
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>🟠 ATTIVATI</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </main>
     </div></>);
 
@@ -1825,9 +1937,8 @@ export default function Home() {
         <section style={S.content}>
           {(user.role === 'admin' || user.role === 'assistente') && (<div style={{ ...S.uploadBox, ...(isDragging ? { borderColor: '#7C4DFF', background: 'rgba(124,77,255,0.1)' } : {}) }} onDragOver={e => { e.preventDefault(); setIsDragging(true); }} onDragLeave={e => { e.preventDefault(); setIsDragging(false); }} onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.csv')) processFile(f); }}><input type="file" accept=".csv" id="csv" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processFile(e.target.files[0]); }} /><label htmlFor="csv" style={{ cursor: 'pointer', padding: '10px 20px', background: 'rgba(124,77,255,0.1)', borderRadius: 8, color: '#7C4DFF', fontWeight: 600 }}>{filteredData ? `✅ ${filteredData.length} righe caricate` : '📤 Carica CSV'}</label></div>)}
           
-          {/* TABS - SEMPRE VISIBILI PER TUTTI */}
-          {(rankings || true) && (
-            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+          {/* TABS - SEMPRE VISIBILI */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
               <button 
                 style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'dashboard' ? 'linear-gradient(135deg,#7C4DFF,#536DFE)' : 'rgba(255,255,255,0.05)', border: activeTab === 'dashboard' ? 'none' : '1px solid rgba(255,255,255,0.1)', opacity: rankings ? 1 : 0.5 }} 
                 onClick={() => rankings && setActiveTab('dashboard')}
@@ -1843,7 +1954,6 @@ export default function Home() {
                 onClick={() => setActiveTab('report')}
               >📈 Report</button>
             </div>
-          )}
           
           {/* TAB REPORT AGGREGATO - Accessibile a TUTTI */}
           {activeTab === 'report' && (
