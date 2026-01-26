@@ -482,7 +482,7 @@ export default function Home() {
     'Extended_06+15': { prezzo: 22748, punti: 340, kw: 6, kwh: 15 }
   };
 
-  // LUCE AMICA - Fasce consumo per stima fatturato
+  // LUCE AMICA - Fasce consumo per stima fatturato + PUNTI!
   const FASCE_CONSUMO_LA = {
     '0 a 1000': { kwhMedi: 500, prezzoKwh: 0.26 },
     '1001 a 1800': { kwhMedi: 1400, prezzoKwh: 0.26 },
@@ -493,55 +493,115 @@ export default function Home() {
     'oltre 15001': { kwhMedi: 18000, prezzoKwh: 0.26 }
   };
 
-  // Funzione per matchare prodotto CSV con listino
+  // Funzione MIGLIORATA per matchare prodotto CSV con listino FV
   const matchProdottoFV = (prodotto) => {
     if (!prodotto) return null;
-    const p = prodotto.toLowerCase();
+    const p = prodotto.toLowerCase().trim();
     
-    // Cerca match diretto
-    for (const [key, value] of Object.entries(LISTINO_FV)) {
-      const keyLower = key.toLowerCase().replace(/_/g, ' ').replace(/\+/g, '+');
-      // Match configurazione (es. "06+10")
-      const configMatch = p.match(/(\d+)[_+](\d+)/);
-      const keyConfigMatch = keyLower.match(/(\d+)[_+](\d+)/);
+    // Estrai configurazione kW+kWh dal prodotto (es. "06+10", "6+10", "35_06+10")
+    const configMatch = p.match(/(\d+)[_\s]*\+[_\s]*(\d+)/);
+    // Estrai solo kW per impianti senza batteria (es. "35_06", "Elite 35_06")
+    const soloKwMatch = p.match(/35[_\s]+(\d+)(?![+\d])/);
+    
+    // Determina il tipo di prodotto
+    const isElite = p.includes('elite');
+    const isEvolution = p.includes('evolution');
+    const isExtended = p.includes('extended');
+    const isFullOptional = p.includes('full optional') || p.includes('full_optional') || p.includes('fo');
+    const isTrifase = p.includes('trifase') || p.includes('trif') || p.endsWith('t');
+    
+    if (configMatch) {
+      // Impianto CON batteria
+      let kw = parseInt(configMatch[1]);
+      let kwh = parseInt(configMatch[2]);
       
-      if (configMatch && keyConfigMatch) {
-        if (configMatch[1] === keyConfigMatch[1] && configMatch[2] === keyConfigMatch[2]) {
-          // Verifica tipo (Elite, Evolution, Extended)
-          if (p.includes('elite') && keyLower.includes('elite')) {
-            if (p.includes('full optional') && keyLower.includes('full optional')) return value;
-            if (!p.includes('full optional') && !keyLower.includes('full optional')) return value;
+      // Normalizza kW se è tipo "35_06" → kW = 6
+      if (kw === 35) kw = parseInt(configMatch[1]);
+      
+      // Cerca nel listino
+      for (const [key, value] of Object.entries(LISTINO_FV)) {
+        const keyLower = key.toLowerCase();
+        const keyConfig = keyLower.match(/(\d+)\+(\d+)/);
+        
+        if (keyConfig) {
+          const keyKw = parseInt(keyConfig[1]);
+          const keyKwh = parseInt(keyConfig[2]);
+          
+          if (kw === keyKw && kwh === keyKwh) {
+            // Match configurazione - verifica tipo
+            if (isElite && keyLower.includes('elite')) {
+              if (isFullOptional && keyLower.includes('full optional')) return value;
+              if (!isFullOptional && !keyLower.includes('full optional')) return value;
+            }
+            if (isEvolution && keyLower.includes('evolution')) return value;
+            if (isExtended && keyLower.includes('extended')) return value;
+            
+            // Fallback se tipo non specificato - usa Elite standard
+            if (!isElite && !isEvolution && !isExtended && keyLower.includes('elite') && !keyLower.includes('full optional')) {
+              return value;
+            }
           }
-          if (p.includes('evolution') && keyLower.includes('evolution')) return value;
-          if (p.includes('extended') && keyLower.includes('extended')) return value;
         }
       }
       
-      // Match senza batteria (solo kW)
-      const soloKwMatch = p.match(/elite\s*35[_\s]*(\d+)(?!\+)/i);
-      const keySoloKw = keyLower.match(/elite\s*35[_\s]*(\d+)$/i);
-      if (soloKwMatch && keySoloKw && soloKwMatch[1] === keySoloKw[1]) return value;
+      // Fallback: stima basata su configurazione
+      const prezzoBase = isFullOptional ? 2800 : 2500;
+      const puntiBase = isFullOptional ? 45 : 40;
+      return { 
+        prezzo: (kw * prezzoBase) + (kwh * 400), 
+        punti: (kw * puntiBase) + (kwh * 8), 
+        kw: kw, 
+        kwh: kwh 
+      };
     }
     
-    // Fallback: stima basata su potenza nel nome
-    const kwMatch = p.match(/(\d+)\s*kw/i) || p.match(/35[_\s]*(\d+)/);
-    if (kwMatch) {
-      const kw = parseInt(kwMatch[1]);
-      // Stima prezzo/punti basata su kW
+    if (soloKwMatch) {
+      // Impianto SENZA batteria
+      const kw = parseInt(soloKwMatch[1]);
+      
+      // Cerca nel listino
+      for (const [key, value] of Object.entries(LISTINO_FV)) {
+        const keyLower = key.toLowerCase();
+        const keySoloKw = keyLower.match(/elite\s*35[_\s]*(\d+)$/);
+        
+        if (keySoloKw && parseInt(keySoloKw[1]) === kw) {
+          return value;
+        }
+      }
+      
+      // Fallback
+      return { prezzo: kw * 2200, punti: kw * 35, kw: kw, kwh: 0 };
+    }
+    
+    // Ultimo fallback: cerca kW nel nome
+    const anyKw = p.match(/(\d+)\s*kw/i);
+    if (anyKw) {
+      const kw = parseInt(anyKw[1]);
       return { prezzo: kw * 2500, punti: kw * 40, kw: kw, kwh: 0 };
     }
     
     return null;
   };
 
-  // Funzione per estrarre fascia consumo da prodotto LA
+  // Funzione per estrarre fascia consumo E PUNTI da prodotto LA
   const getFasciaConsumoLA = (prodotto) => {
     if (!prodotto) return null;
+    const p = prodotto.toUpperCase();
+    
+    // Determina punti: LA 15 = 15 punti, LA 20 = 20 punti
+    let punti = 15; // default
+    if (p.includes('20')) punti = 20;
+    if (p.includes('15')) punti = 15;
+    
+    // Trova fascia consumo
     for (const [fascia, dati] of Object.entries(FASCE_CONSUMO_LA)) {
-      if (prodotto.includes(fascia)) return dati;
+      if (prodotto.includes(fascia)) {
+        return { ...dati, punti };
+      }
     }
+    
     // Default fascia media
-    return { kwhMedi: 2150, prezzoKwh: 0.26 };
+    return { kwhMedi: 2150, prezzoKwh: 0.26, punti };
   };
 
   // === REPORT AGGREGATO v3 - 3 PILASTRI CON CONVERSIONE ===
@@ -1078,14 +1138,30 @@ export default function Home() {
     }
     
     // ═══════════════════════════════════════════════════════════════════════════════
-    // 💰 ANALISI FATTURATO - Calcolo da listini
+    // 💰 ANALISI FATTURATO - Calcolo da listini (INSERITI + EFFETTIVI)
     // ═══════════════════════════════════════════════════════════════════════════════
     const fatturato = {
-      fv: { totale: 0, puntiCarriera: 0, puntiCapital: 0, kwTotali: 0, kwhBatterie: 0, perK: {}, perNW: {}, contratti: 0 },
-      la: { totale: 0, kwhAnnui: 0, perK: {}, perNW: {}, contratti: 0 }
+      fv: { 
+        // INSERITI (potenziale)
+        inseriti: { totale: 0, punti: 0, kw: 0, kwh: 0, contratti: 0 },
+        // EFFETTIVI (solo positivi)
+        effettivi: { totale: 0, punti: 0, kw: 0, kwh: 0, contratti: 0 },
+        // IN LAVORAZIONE (da sbloccare)
+        lavorazione: { totale: 0, punti: 0, contratti: 0 },
+        // PERSI
+        persi: { totale: 0, punti: 0, contratti: 0 },
+        perK: {}, perNW: {} 
+      },
+      la: { 
+        // INSERITI
+        inseriti: { totale: 0, punti: 0, kwh: 0, contratti: 0 },
+        // ACCETTATI
+        accettati: { totale: 0, punti: 0, kwh: 0, contratti: 0 },
+        perK: {}, perNW: {} 
+      }
     };
     
-    // 💰 FATTURATO FV - Solo contratti POSITIVI (installati/accettati)
+    // 💰 FATTURATO FV - Tutti i contratti con breakdown per stato
     if (reportCSVs.fv?.data?.length > 0) {
       const fvData = reportCSVs.fv.data;
       
@@ -1095,41 +1171,58 @@ export default function Home() {
         const k = row['Nome Primo K'] || '';
         const nw = row['Nome Primo Networker'] || '';
         
-        // Solo stati positivi contano per fatturato
-        const cat = categorizeStato(stato, STATO_MAP_FV);
-        if (cat !== 'positivo') return;
-        
         const match = matchProdottoFV(prodotto);
-        if (match) {
-          fatturato.fv.totale += match.prezzo;
-          fatturato.fv.puntiCarriera += match.punti;
-          fatturato.fv.puntiCapital += match.punti;
-          fatturato.fv.kwTotali += match.kw;
-          fatturato.fv.kwhBatterie += match.kwh;
-          fatturato.fv.contratti++;
-          
-          // Per K Manager
-          if (k && !k.includes('Nome Primo')) {
-            if (!fatturato.fv.perK[k]) fatturato.fv.perK[k] = { fatturato: 0, punti: 0, kw: 0, contratti: 0 };
-            fatturato.fv.perK[k].fatturato += match.prezzo;
-            fatturato.fv.perK[k].punti += match.punti;
-            fatturato.fv.perK[k].kw += match.kw;
-            fatturato.fv.perK[k].contratti++;
-          }
-          
-          // Per Networker
-          if (nw && !nw.includes('Nome Primo')) {
-            if (!fatturato.fv.perNW[nw]) fatturato.fv.perNW[nw] = { fatturato: 0, punti: 0, kw: 0, contratti: 0 };
-            fatturato.fv.perNW[nw].fatturato += match.prezzo;
-            fatturato.fv.perNW[nw].punti += match.punti;
-            fatturato.fv.perNW[nw].kw += match.kw;
-            fatturato.fv.perNW[nw].contratti++;
-          }
+        if (!match) return;
+        
+        const cat = categorizeStato(stato, STATO_MAP_FV);
+        
+        // TUTTI gli inseriti (potenziale)
+        fatturato.fv.inseriti.totale += match.prezzo;
+        fatturato.fv.inseriti.punti += match.punti;
+        fatturato.fv.inseriti.kw += match.kw;
+        fatturato.fv.inseriti.kwh += match.kwh;
+        fatturato.fv.inseriti.contratti++;
+        
+        // Breakdown per stato
+        if (cat === 'positivo') {
+          fatturato.fv.effettivi.totale += match.prezzo;
+          fatturato.fv.effettivi.punti += match.punti;
+          fatturato.fv.effettivi.kw += match.kw;
+          fatturato.fv.effettivi.kwh += match.kwh;
+          fatturato.fv.effettivi.contratti++;
+        } else if (cat === 'lavorazione') {
+          fatturato.fv.lavorazione.totale += match.prezzo;
+          fatturato.fv.lavorazione.punti += match.punti;
+          fatturato.fv.lavorazione.contratti++;
+        } else if (cat === 'negativo') {
+          fatturato.fv.persi.totale += match.prezzo;
+          fatturato.fv.persi.punti += match.punti;
+          fatturato.fv.persi.contratti++;
+        }
+        
+        // Classifiche per K (solo effettivi)
+        if (cat === 'positivo' && k && !k.includes('Nome Primo')) {
+          if (!fatturato.fv.perK[k]) fatturato.fv.perK[k] = { fatturato: 0, punti: 0, kw: 0, kwh: 0, contratti: 0 };
+          fatturato.fv.perK[k].fatturato += match.prezzo;
+          fatturato.fv.perK[k].punti += match.punti;
+          fatturato.fv.perK[k].kw += match.kw;
+          fatturato.fv.perK[k].kwh += match.kwh;
+          fatturato.fv.perK[k].contratti++;
+        }
+        
+        // Classifiche per NW (solo effettivi)
+        if (cat === 'positivo' && nw && !nw.includes('Nome Primo')) {
+          if (!fatturato.fv.perNW[nw]) fatturato.fv.perNW[nw] = { fatturato: 0, punti: 0, kw: 0, kwh: 0, contratti: 0 };
+          fatturato.fv.perNW[nw].fatturato += match.prezzo;
+          fatturato.fv.perNW[nw].punti += match.punti;
+          fatturato.fv.perNW[nw].kw += match.kw;
+          fatturato.fv.perNW[nw].kwh += match.kwh;
+          fatturato.fv.perNW[nw].contratti++;
         }
       });
     }
     
-    // 🌱 FATTURATO LA - Solo contratti ACCETTATI/IN FORNITURA
+    // 🌱 FATTURATO LA - Tutti i contratti con PUNTI (15 o 20)
     if (reportCSVs.energy?.data?.length > 0) {
       const laData = reportCSVs.energy.data;
       
@@ -1140,30 +1233,43 @@ export default function Home() {
         const k = row['Nome Primo K'] || '';
         const nw = row['Nome Primo Networker'] || '';
         
-        // Solo accettati o in fornitura
+        const fascia = getFasciaConsumoLA(prodotto);
+        if (!fascia) return;
+        
+        const fatturatoAnnuo = fascia.kwhMedi * fascia.prezzoKwh;
+        const punti = fascia.punti || 15;
+        
+        // TUTTI gli inseriti
+        fatturato.la.inseriti.totale += fatturatoAnnuo;
+        fatturato.la.inseriti.punti += punti;
+        fatturato.la.inseriti.kwh += fascia.kwhMedi;
+        fatturato.la.inseriti.contratti++;
+        
+        // Solo accettati/in fornitura
         const catSpa = categorizeStato(statoSpa, STATO_MAP_LA_SPA);
         const catEnergia = categorizeStato(statoEnergia, STATO_MAP_LA_ENERGIA);
-        if (catSpa !== 'positivo' && catEnergia !== 'positivo') return;
+        const isAccettato = catSpa === 'positivo' || catEnergia === 'positivo';
         
-        const fascia = getFasciaConsumoLA(prodotto);
-        if (fascia) {
-          const fatturatoAnnuo = fascia.kwhMedi * fascia.prezzoKwh;
-          fatturato.la.totale += fatturatoAnnuo;
-          fatturato.la.kwhAnnui += fascia.kwhMedi;
-          fatturato.la.contratti++;
+        if (isAccettato) {
+          fatturato.la.accettati.totale += fatturatoAnnuo;
+          fatturato.la.accettati.punti += punti;
+          fatturato.la.accettati.kwh += fascia.kwhMedi;
+          fatturato.la.accettati.contratti++;
           
-          // Per K Manager
+          // Classifiche per K
           if (k && !k.includes('Nome Primo')) {
-            if (!fatturato.la.perK[k]) fatturato.la.perK[k] = { fatturato: 0, kwh: 0, contratti: 0 };
+            if (!fatturato.la.perK[k]) fatturato.la.perK[k] = { fatturato: 0, punti: 0, kwh: 0, contratti: 0 };
             fatturato.la.perK[k].fatturato += fatturatoAnnuo;
+            fatturato.la.perK[k].punti += punti;
             fatturato.la.perK[k].kwh += fascia.kwhMedi;
             fatturato.la.perK[k].contratti++;
           }
           
-          // Per Networker
+          // Classifiche per NW
           if (nw && !nw.includes('Nome Primo')) {
-            if (!fatturato.la.perNW[nw]) fatturato.la.perNW[nw] = { fatturato: 0, kwh: 0, contratti: 0 };
+            if (!fatturato.la.perNW[nw]) fatturato.la.perNW[nw] = { fatturato: 0, punti: 0, kwh: 0, contratti: 0 };
             fatturato.la.perNW[nw].fatturato += fatturatoAnnuo;
+            fatturato.la.perNW[nw].punti += punti;
             fatturato.la.perNW[nw].kwh += fascia.kwhMedi;
             fatturato.la.perNW[nw].contratti++;
           }
@@ -1409,7 +1515,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v13.0 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v13.1 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -2344,7 +2450,7 @@ export default function Home() {
     ctx.fillStyle = '#999999';
     ctx.font = '14px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v13.0 • ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 40);
+    ctx.fillText(`Leader Ranking v13.1 • ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 40);
     
     // Download
     const link = document.createElement('a');
@@ -3244,70 +3350,123 @@ export default function Home() {
         </div>
         
         {/* 💰 ANALISI FATTURATO */}
-        {reportData.fatturato && (reportData.fatturato.fv.contratti > 0 || reportData.fatturato.la.contratti > 0) && (
+        {reportData.fatturato && (reportData.fatturato.fv.inseriti.contratti > 0 || reportData.fatturato.la.inseriti.contratti > 0) && (
           <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <div>
                 <h3 style={{ color: '#2AAA8A', fontSize: 18, margin: 0, fontWeight: 700 }}>💰 ANALISI FATTURATO LEADER</h3>
-                <p style={{ color: '#666', fontSize: 11, margin: '5px 0 0' }}>Fatturato generato da contratti positivi/accettati</p>
+                <p style={{ color: '#666', fontSize: 11, margin: '5px 0 0' }}>Fatturato e punti generati (Inseriti vs Effettivi)</p>
               </div>
             </div>
             
-            {/* RIEPILOGO TOTALE LEADER */}
-            <div style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', borderRadius: 16, padding: 20, marginBottom: 20, color: '#FFF' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 15 }}>
-                {/* FV Totale */}
-                <div style={{ textAlign: 'center', padding: 10, background: 'rgba(255,255,255,0.05)', borderRadius: 12 }}>
-                  <div style={{ fontSize: 10, color: '#888', marginBottom: 5 }}>☀️ FATTURATO FV</div>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: '#4CAF50' }}>€{reportData.fatturato.fv.totale.toLocaleString('it-IT')}</div>
-                  <div style={{ fontSize: 10, color: '#666' }}>{reportData.fatturato.fv.contratti} contratti</div>
+            {/* RIEPILOGO FV - INSERITI vs EFFETTIVI */}
+            <div style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', borderRadius: 16, padding: 20, marginBottom: 15, color: '#FFF' }}>
+              <div style={{ fontSize: 13, color: '#FFD700', fontWeight: 700, marginBottom: 15 }}>☀️ FOTOVOLTAICO</div>
+              
+              {/* Riga 1: Confronto INSERITI vs EFFETTIVI */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 15 }}>
+                {/* Inseriti (Potenziale) */}
+                <div style={{ textAlign: 'center', padding: 12, background: 'rgba(255,255,255,0.08)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <div style={{ fontSize: 9, color: '#888', marginBottom: 3 }}>📋 INSERITI (Potenziale)</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: '#FFF' }}>€{reportData.fatturato.fv.inseriti.totale.toLocaleString('it-IT')}</div>
+                  <div style={{ fontSize: 10, color: '#666' }}>{reportData.fatturato.fv.inseriti.contratti} contratti</div>
                 </div>
                 
-                {/* Punti FV */}
-                <div style={{ textAlign: 'center', padding: 10, background: 'rgba(255,255,255,0.05)', borderRadius: 12 }}>
-                  <div style={{ fontSize: 10, color: '#888', marginBottom: 5 }}>⭐ PUNTI GENERATI</div>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: '#FFD700' }}>{reportData.fatturato.fv.puntiCarriera.toLocaleString('it-IT')}</div>
-                  <div style={{ fontSize: 10, color: '#666' }}>carriera + capital</div>
+                {/* Effettivi (Positivi) */}
+                <div style={{ textAlign: 'center', padding: 12, background: 'rgba(76,175,80,0.15)', borderRadius: 10, border: '1px solid rgba(76,175,80,0.3)' }}>
+                  <div style={{ fontSize: 9, color: '#4CAF50', marginBottom: 3 }}>✅ EFFETTIVI (Positivi)</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: '#4CAF50' }}>€{reportData.fatturato.fv.effettivi.totale.toLocaleString('it-IT')}</div>
+                  <div style={{ fontSize: 10, color: '#666' }}>{reportData.fatturato.fv.effettivi.contratti} contratti</div>
                 </div>
                 
-                {/* kW Installati */}
-                <div style={{ textAlign: 'center', padding: 10, background: 'rgba(255,255,255,0.05)', borderRadius: 12 }}>
-                  <div style={{ fontSize: 10, color: '#888', marginBottom: 5 }}>⚡ kWp INSTALLATI</div>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: '#2AAA8A' }}>{reportData.fatturato.fv.kwTotali}</div>
-                  <div style={{ fontSize: 10, color: '#666' }}>potenza pannelli</div>
+                {/* In Lavorazione */}
+                <div style={{ textAlign: 'center', padding: 12, background: 'rgba(255,215,0,0.15)', borderRadius: 10, border: '1px solid rgba(255,215,0,0.3)' }}>
+                  <div style={{ fontSize: 9, color: '#FFD700', marginBottom: 3 }}>⏳ DA SBLOCCARE</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: '#FFD700' }}>€{reportData.fatturato.fv.lavorazione.totale.toLocaleString('it-IT')}</div>
+                  <div style={{ fontSize: 10, color: '#666' }}>{reportData.fatturato.fv.lavorazione.contratti} contratti</div>
                 </div>
                 
-                {/* kWh Batterie */}
-                <div style={{ textAlign: 'center', padding: 10, background: 'rgba(255,255,255,0.05)', borderRadius: 12 }}>
-                  <div style={{ fontSize: 10, color: '#888', marginBottom: 5 }}>🔋 kWh STORAGE</div>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: '#9C27B0' }}>{reportData.fatturato.fv.kwhBatterie}</div>
-                  <div style={{ fontSize: 10, color: '#666' }}>capacità batterie</div>
-                </div>
-                
-                {/* LA Ricorrente */}
-                <div style={{ textAlign: 'center', padding: 10, background: 'rgba(255,255,255,0.05)', borderRadius: 12 }}>
-                  <div style={{ fontSize: 10, color: '#888', marginBottom: 5 }}>🌱 LA RICORRENTE/ANNO</div>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: '#FF9800' }}>€{Math.round(reportData.fatturato.la.totale).toLocaleString('it-IT')}</div>
-                  <div style={{ fontSize: 10, color: '#666' }}>{reportData.fatturato.la.contratti} contratti attivi</div>
-                </div>
-                
-                {/* kWh Green */}
-                <div style={{ textAlign: 'center', padding: 10, background: 'rgba(255,255,255,0.05)', borderRadius: 12 }}>
-                  <div style={{ fontSize: 10, color: '#888', marginBottom: 5 }}>🍃 kWh GREEN/ANNO</div>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: '#4CAF50' }}>{reportData.fatturato.la.kwhAnnui.toLocaleString('it-IT')}</div>
-                  <div style={{ fontSize: 10, color: '#666' }}>energia rinnovabile</div>
+                {/* Persi */}
+                <div style={{ textAlign: 'center', padding: 12, background: 'rgba(229,57,53,0.15)', borderRadius: 10, border: '1px solid rgba(229,57,53,0.3)' }}>
+                  <div style={{ fontSize: 9, color: '#E53935', marginBottom: 3 }}>❌ PERSI</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: '#E53935' }}>€{reportData.fatturato.fv.persi.totale.toLocaleString('it-IT')}</div>
+                  <div style={{ fontSize: 10, color: '#666' }}>{reportData.fatturato.fv.persi.contratti} contratti</div>
                 </div>
               </div>
               
-              {/* Totale complessivo */}
-              <div style={{ marginTop: 15, paddingTop: 15, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
+              {/* Riga 2: Dettagli tecnici */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+                <div style={{ textAlign: 'center', padding: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
+                  <div style={{ fontSize: 9, color: '#888' }}>⚡ kWp INSTALLATI</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: '#2AAA8A' }}>{reportData.fatturato.fv.effettivi.kw}</div>
+                </div>
+                <div style={{ textAlign: 'center', padding: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
+                  <div style={{ fontSize: 9, color: '#888' }}>🔋 kWh BATTERIE</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: '#9C27B0' }}>{reportData.fatturato.fv.effettivi.kwh}</div>
+                </div>
+                <div style={{ textAlign: 'center', padding: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
+                  <div style={{ fontSize: 9, color: '#888' }}>⭐ PUNTI EFFETTIVI</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: '#FFD700' }}>{reportData.fatturato.fv.effettivi.punti.toLocaleString('it-IT')}</div>
+                </div>
+                <div style={{ textAlign: 'center', padding: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
+                  <div style={{ fontSize: 9, color: '#888' }}>📊 PUNTI INSERITI</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: '#888' }}>{reportData.fatturato.fv.inseriti.punti.toLocaleString('it-IT')}</div>
+                </div>
+              </div>
+            </div>
+            
+            {/* RIEPILOGO LA - INSERITI vs ACCETTATI */}
+            <div style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', borderRadius: 16, padding: 20, marginBottom: 20, color: '#FFF' }}>
+              <div style={{ fontSize: 13, color: '#FF9800', fontWeight: 700, marginBottom: 15 }}>🌱 LUCE AMICA - Fatturato Ricorrente</div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+                {/* Inseriti */}
+                <div style={{ textAlign: 'center', padding: 12, background: 'rgba(255,255,255,0.08)', borderRadius: 10 }}>
+                  <div style={{ fontSize: 9, color: '#888', marginBottom: 3 }}>📋 INSERITI</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#FFF' }}>€{Math.round(reportData.fatturato.la.inseriti.totale).toLocaleString('it-IT')}</div>
+                  <div style={{ fontSize: 10, color: '#666' }}>{reportData.fatturato.la.inseriti.contratti} contr. | {reportData.fatturato.la.inseriti.punti.toLocaleString('it-IT')} pt</div>
+                </div>
+                
+                {/* Accettati */}
+                <div style={{ textAlign: 'center', padding: 12, background: 'rgba(76,175,80,0.15)', borderRadius: 10, border: '1px solid rgba(76,175,80,0.3)' }}>
+                  <div style={{ fontSize: 9, color: '#4CAF50', marginBottom: 3 }}>✅ ACCETTATI/ANNO</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#4CAF50' }}>€{Math.round(reportData.fatturato.la.accettati.totale).toLocaleString('it-IT')}</div>
+                  <div style={{ fontSize: 10, color: '#666' }}>{reportData.fatturato.la.accettati.contratti} contr. | {reportData.fatturato.la.accettati.punti.toLocaleString('it-IT')} pt</div>
+                </div>
+                
+                {/* Mensile */}
+                <div style={{ textAlign: 'center', padding: 12, background: 'rgba(255,152,0,0.15)', borderRadius: 10, border: '1px solid rgba(255,152,0,0.3)' }}>
+                  <div style={{ fontSize: 9, color: '#FF9800', marginBottom: 3 }}>📅 MENSILE STIMATO</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#FF9800' }}>€{Math.round(reportData.fatturato.la.accettati.totale / 12).toLocaleString('it-IT')}</div>
+                  <div style={{ fontSize: 10, color: '#666' }}>/mese ricorrente</div>
+                </div>
+                
+                {/* kWh Green */}
+                <div style={{ textAlign: 'center', padding: 12, background: 'rgba(76,175,80,0.08)', borderRadius: 10 }}>
+                  <div style={{ fontSize: 9, color: '#4CAF50', marginBottom: 3 }}>🍃 kWh GREEN/ANNO</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#4CAF50' }}>{reportData.fatturato.la.accettati.kwh.toLocaleString('it-IT')}</div>
+                  <div style={{ fontSize: 10, color: '#666' }}>energia rinnovabile</div>
+                </div>
+              </div>
+            </div>
+            
+            {/* TOTALE COMPLESSIVO LEADER */}
+            <div style={{ background: 'linear-gradient(135deg, #2AAA8A 0%, #20917A 100%)', borderRadius: 16, padding: 20, marginBottom: 20, color: '#FFF', textAlign: 'center' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 15 }}>
                 <div>
-                  <div style={{ fontSize: 10, color: '#888' }}>FATTURATO TOTALE GENERATO</div>
-                  <div style={{ fontSize: 32, fontWeight: 800, color: '#FFF' }}>€{(reportData.fatturato.fv.totale + reportData.fatturato.la.totale).toLocaleString('it-IT')}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }}>💰 FATTURATO TOTALE EFFETTIVO</div>
+                  <div style={{ fontSize: 36, fontWeight: 800 }}>€{(reportData.fatturato.fv.effettivi.totale + reportData.fatturato.la.accettati.totale).toLocaleString('it-IT')}</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>FV + LA annuo</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 10, color: '#888' }}>LA MENSILE STIMATO</div>
-                  <div style={{ fontSize: 32, fontWeight: 800, color: '#FF9800' }}>€{Math.round(reportData.fatturato.la.totale / 12).toLocaleString('it-IT')}/mese</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }}>⭐ PUNTI TOTALI EFFETTIVI</div>
+                  <div style={{ fontSize: 36, fontWeight: 800 }}>{ (reportData.fatturato.fv.effettivi.punti + reportData.fatturato.la.accettati.punti).toLocaleString('it-IT')}</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>FV + LA</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }}>📊 PUNTI TOTALI INSERITI</div>
+                  <div style={{ fontSize: 36, fontWeight: 800 }}>{ (reportData.fatturato.fv.inseriti.punti + reportData.fatturato.la.inseriti.punti).toLocaleString('it-IT')}</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>potenziale</div>
                 </div>
               </div>
             </div>
@@ -3316,7 +3475,7 @@ export default function Home() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 15 }}>
               {/* Classifica K Manager FV */}
               <div style={{ background: '#F8F8F8', borderRadius: 12, padding: 15 }}>
-                <div style={{ fontSize: 12, color: '#2AAA8A', fontWeight: 700, marginBottom: 10 }}>👑 TOP K MANAGER - Fatturato FV</div>
+                <div style={{ fontSize: 12, color: '#2AAA8A', fontWeight: 700, marginBottom: 10 }}>👑 TOP K MANAGER - FV Effettivo</div>
                 <div style={{ maxHeight: 200, overflowY: 'auto', paddingRight: 5 }}>
                   {reportData.fatturato.fv.classificaK.slice(0, 10).map(([nome, dati], i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #E8E8E8', fontSize: 11 }}>
@@ -3326,7 +3485,7 @@ export default function Home() {
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontWeight: 700, color: '#4CAF50' }}>€{dati.fatturato.toLocaleString('it-IT')}</div>
-                        <div style={{ fontSize: 9, color: '#888' }}>{dati.contratti} contr. | {dati.punti} pt</div>
+                        <div style={{ fontSize: 9, color: '#888' }}>{dati.kw}kW | {dati.kwh}kWh | {dati.punti}pt</div>
                       </div>
                     </div>
                   ))}
@@ -3335,7 +3494,7 @@ export default function Home() {
               
               {/* Classifica Networker FV */}
               <div style={{ background: '#F8F8F8', borderRadius: 12, padding: 15 }}>
-                <div style={{ fontSize: 12, color: '#9C27B0', fontWeight: 700, marginBottom: 10 }}>⭐ TOP NETWORKER - Fatturato FV</div>
+                <div style={{ fontSize: 12, color: '#9C27B0', fontWeight: 700, marginBottom: 10 }}>⭐ TOP NETWORKER - FV Effettivo</div>
                 <div style={{ maxHeight: 200, overflowY: 'auto', paddingRight: 5 }}>
                   {reportData.fatturato.fv.classificaNW.slice(0, 10).map(([nome, dati], i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #E8E8E8', fontSize: 11 }}>
@@ -3345,7 +3504,7 @@ export default function Home() {
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontWeight: 700, color: '#4CAF50' }}>€{dati.fatturato.toLocaleString('it-IT')}</div>
-                        <div style={{ fontSize: 9, color: '#888' }}>{dati.kw} kW | {dati.punti} pt</div>
+                        <div style={{ fontSize: 9, color: '#888' }}>{dati.kw}kW | {dati.kwh}kWh | {dati.punti}pt</div>
                       </div>
                     </div>
                   ))}
@@ -3354,7 +3513,7 @@ export default function Home() {
               
               {/* Classifica K Manager LA */}
               <div style={{ background: '#F8F8F8', borderRadius: 12, padding: 15 }}>
-                <div style={{ fontSize: 12, color: '#FF9800', fontWeight: 700, marginBottom: 10 }}>👑 TOP K MANAGER - LA Ricorrente</div>
+                <div style={{ fontSize: 12, color: '#FF9800', fontWeight: 700, marginBottom: 10 }}>👑 TOP K MANAGER - LA Accettati</div>
                 <div style={{ maxHeight: 200, overflowY: 'auto', paddingRight: 5 }}>
                   {reportData.fatturato.la.classificaK.slice(0, 10).map(([nome, dati], i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #E8E8E8', fontSize: 11 }}>
@@ -3364,7 +3523,7 @@ export default function Home() {
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontWeight: 700, color: '#FF9800' }}>€{Math.round(dati.fatturato).toLocaleString('it-IT')}/anno</div>
-                        <div style={{ fontSize: 9, color: '#888' }}>{dati.contratti} contr. | {dati.kwh.toLocaleString('it-IT')} kWh</div>
+                        <div style={{ fontSize: 9, color: '#888' }}>{dati.contratti} contr. | {dati.punti}pt | {dati.kwh.toLocaleString('it-IT')}kWh</div>
                       </div>
                     </div>
                   ))}
@@ -3373,7 +3532,7 @@ export default function Home() {
               
               {/* Classifica Networker LA */}
               <div style={{ background: '#F8F8F8', borderRadius: 12, padding: 15 }}>
-                <div style={{ fontSize: 12, color: '#4CAF50', fontWeight: 700, marginBottom: 10 }}>⭐ TOP NETWORKER - LA Ricorrente</div>
+                <div style={{ fontSize: 12, color: '#4CAF50', fontWeight: 700, marginBottom: 10 }}>⭐ TOP NETWORKER - LA Accettati</div>
                 <div style={{ maxHeight: 200, overflowY: 'auto', paddingRight: 5 }}>
                   {reportData.fatturato.la.classificaNW.slice(0, 10).map(([nome, dati], i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #E8E8E8', fontSize: 11 }}>
@@ -3383,7 +3542,7 @@ export default function Home() {
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontWeight: 700, color: '#4CAF50' }}>€{Math.round(dati.fatturato).toLocaleString('it-IT')}/anno</div>
-                        <div style={{ fontSize: 9, color: '#888' }}>{dati.kwh.toLocaleString('it-IT')} kWh green</div>
+                        <div style={{ fontSize: 9, color: '#888' }}>{dati.punti}pt | {dati.kwh.toLocaleString('it-IT')}kWh green</div>
                       </div>
                     </div>
                   ))}
@@ -3494,7 +3653,7 @@ export default function Home() {
         </div>
         
         {/* Footer versione */}
-        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v13.0</p>
+        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v13.1</p>
       </div>
     </div></>);
 
@@ -3688,7 +3847,7 @@ export default function Home() {
           </div>
         )}
       </main>
-      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v13.0 • Leader Ranking</footer>
+      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v13.1 • Leader Ranking</footer>
     </div></>);
 
   // PREVIEW
