@@ -95,6 +95,7 @@ export default function Home() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'classifiche', 'report'
   const [animatedStats, setAnimatedStats] = useState({ ins: 0, acc: 0, part: 0, conv: 0 });
+  const [darkMode, setDarkMode] = useState(false); // Toggle dark/light mode
   
   // REPORT AGGREGATO - Multi CSV upload
   const [reportCSVs, setReportCSVs] = useState({ ivd: null, energy: null, fv: null, consultings: null });
@@ -1079,7 +1080,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v10.2 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v10.8 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -1570,15 +1571,15 @@ export default function Home() {
     const H = Math.max(1080, estimatedH);
     canvas.width = W; canvas.height = H;
     
-    // Background
-    const bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#0a0a12'); bg.addColorStop(0.5, '#F5F5F5'); bg.addColorStop(1, '#0a0a12');
+    // Background - ELEGANTE BIANCO/ORO NWG
+    const bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#FFFFFF'); bg.addColorStop(0.5, '#F8F9FA'); bg.addColorStop(1, '#FFFFFF');
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-    ctx.strokeStyle = `${config.color}30`; ctx.lineWidth = 2; ctx.strokeRect(20, 20, W - 40, H - 40);
+    ctx.strokeStyle = `${config.color}50`; ctx.lineWidth = 3; ctx.strokeRect(20, 20, W - 40, H - 40);
     ctx.fillStyle = config.color; ctx.fillRect(35, 35, W - 70, 4);
     
     // Header
     ctx.fillStyle = config.color; ctx.font = 'bold 16px Arial'; ctx.fillText('LEADER RANKING', 45, 65);
-    ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 42px Arial'; ctx.fillText(`${config.emoji} CLASSIFICA ${config.label}`, 45, 115);
+    ctx.fillStyle = '#333333'; ctx.font = 'bold 42px Arial'; ctx.fillText(`${config.emoji} CLASSIFICA ${config.label}`, 45, 115);
     ctx.fillStyle = '#666666'; ctx.font = '18px Arial'; ctx.fillText(`${eventName} • ${eventDate}`, 45, 148);
     
     // Partecipanti e contratti inline
@@ -1662,15 +1663,15 @@ export default function Home() {
         ctx.fillText(`${position}°`, 58, textStartY + (lines.length > 1 ? 0 : 4));
       }
       
-      // Nomi
-      ctx.fillStyle = isTop3 ? '#FFF' : '#333333';
+      // Nomi - TUTTO NERO per leggibilità
+      ctx.fillStyle = '#333333';
       ctx.font = `bold ${fontSize}px Arial`;
       lines.forEach((line, i) => {
         ctx.fillText(line, 100, textStartY + i * lineHeight);
       });
       
-      // Valore contratti
-      ctx.fillStyle = isAcc ? '#4CAF50' : config.color;
+      // Valore contratti - NERO
+      ctx.fillStyle = '#333333';
       ctx.font = `bold ${isTop3 ? 32 : 26}px Arial`;
       ctx.textAlign = 'right';
       ctx.fillText(value.toString(), W - 55, currentY + blockH / 2 + 10);
@@ -1698,11 +1699,11 @@ export default function Home() {
     const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d'), W = 1080, H = 1080;
     canvas.width = W; canvas.height = H;
     
-    // Background
-    const bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#08080f'); bg.addColorStop(0.3, '#101020'); bg.addColorStop(0.7, '#101020'); bg.addColorStop(1, '#08080f');
+    // Background - ELEGANTE BIANCO/ORO NWG
+    const bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#FFFFFF'); bg.addColorStop(0.3, '#F8F9FA'); bg.addColorStop(0.7, '#F8F9FA'); bg.addColorStop(1, '#FFFFFF');
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-    ctx.strokeStyle = `${config.color}50`; ctx.lineWidth = 3; ctx.strokeRect(18, 18, W - 36, H - 36);
-    ctx.strokeStyle = `${config.color}25`; ctx.lineWidth = 1; ctx.strokeRect(28, 28, W - 56, H - 56);
+    ctx.strokeStyle = `${config.color}60`; ctx.lineWidth = 3; ctx.strokeRect(18, 18, W - 36, H - 36);
+    ctx.strokeStyle = `${config.color}30`; ctx.lineWidth = 1; ctx.strokeRect(28, 28, W - 56, H - 56);
     
     // Header bar
     const hg = ctx.createLinearGradient(0, 0, W, 0); hg.addColorStop(0, 'transparent'); hg.addColorStop(0.15, config.color); hg.addColorStop(0.85, config.color); hg.addColorStop(1, 'transparent');
@@ -1711,7 +1712,7 @@ export default function Home() {
     // Title
     ctx.fillStyle = config.color; ctx.font = 'bold 40px Arial'; ctx.textAlign = 'center';
     ctx.fillText(`${config.emoji} CLASSIFICA ${config.label} ${config.emoji}`, W/2, 105);
-    ctx.fillStyle = '#666666'; ctx.font = '18px Arial';
+    ctx.fillStyle = '#333333'; ctx.font = '18px Arial';
     ctx.fillText(`${eventName} • ${eventDate}`, W/2, 138);
     
     // Stats - INLINE format (fix richiesto)
@@ -1928,6 +1929,89 @@ export default function Home() {
       setSendStatus('❌ Errore'); 
       setTimeout(() => setSendStatus(''), 3000); 
     }
+  };
+
+  // FUNZIONE DOWNLOAD REPORT PNG
+  const downloadReportPNG = () => {
+    if (!reportData || !reportData.pilastri) return alert('Nessun report da scaricare');
+    
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const W = 1200, H = 1600;
+    canvas.width = W; canvas.height = H;
+    
+    // Background elegante
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, W, H);
+    
+    // Border
+    ctx.strokeStyle = '#2AAA8A';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(20, 20, W - 40, H - 40);
+    
+    // Header
+    ctx.fillStyle = '#2AAA8A';
+    ctx.fillRect(40, 40, W - 80, 80);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 36px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('📊 REPORT AGGREGATO', W/2, 95);
+    
+    let y = 160;
+    
+    // FV
+    if (reportData.pilastri.fv) {
+      ctx.fillStyle = '#333333';
+      ctx.font = 'bold 24px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText('☀️ FOTOVOLTAICO', 50, y);
+      ctx.font = '18px Arial';
+      ctx.fillText(`Inseriti: ${reportData.pilastri.fv.totale} | Positivi: ${reportData.pilastri.fv.funnel.positivi} (${reportData.pilastri.fv.funnel.pctPositivi}%) | Persi: ${reportData.pilastri.fv.funnel.negativi}`, 50, y + 30);
+      y += 80;
+    }
+    
+    // LA
+    if (reportData.pilastri.energy) {
+      ctx.fillStyle = '#333333';
+      ctx.font = 'bold 24px Arial';
+      ctx.fillText('⚡ LUCE AMICA', 50, y);
+      ctx.font = '18px Arial';
+      ctx.fillText(`Inseriti: ${reportData.pilastri.energy.totale} | Accettati: ${reportData.pilastri.energy.funnel.accettati} (${reportData.pilastri.energy.funnel.pctAccettati}%)`, 50, y + 30);
+      y += 80;
+    }
+    
+    // COLLABORATORI
+    if (reportData.pilastri.collaboratori) {
+      ctx.fillStyle = '#333333';
+      ctx.font = 'bold 24px Arial';
+      ctx.fillText('🎓 COLLABORATORI', 50, y);
+      ctx.font = '18px Arial';
+      ctx.fillText(`Iscritti: ${reportData.pilastri.collaboratori.funnel.iscritti} | Presenti: ${reportData.pilastri.collaboratori.funnel.presenti} | Attivati: ${reportData.pilastri.collaboratori.funnel.attivati}`, 50, y + 30);
+      y += 80;
+    }
+    
+    // Alert
+    if (reportData.alertDaAttivare) {
+      ctx.fillStyle = '#E53935';
+      ctx.font = 'bold 24px Arial';
+      ctx.fillText('🚨 ALERT DA ATTIVARE', 50, y);
+      ctx.font = '18px Arial';
+      ctx.fillStyle = '#333333';
+      ctx.fillText(`Verde (0-30g): ${reportData.alertDaAttivare.verde.length} | Giallo (31-60g): ${reportData.alertDaAttivare.giallo.length} | Rosso (>60g): ${reportData.alertDaAttivare.rosso.length}`, 50, y + 30);
+      y += 80;
+    }
+    
+    // Footer
+    ctx.fillStyle = '#999999';
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Leader Ranking v10.8 • ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 40);
+    
+    // Download
+    const link = document.createElement('a');
+    link.download = `report_aggregato_${new Date().toISOString().split('T')[0]}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
   };
 
   // ═══════════════════════════════════════════════════════════════════════════════
@@ -2229,9 +2313,9 @@ export default function Home() {
               </div>
               
               {/* Lista urgenti */}
-              <div style={{ background: '#FFF9F9', borderRadius: 10, padding: 12, maxHeight: 250, overflowY: 'auto' }}>
+              <div style={{ background: '#FFF9F9', borderRadius: 10, padding: 12, maxHeight: 200, overflowY: 'auto', marginBottom: 12 }}>
                 <div style={{ fontSize: 11, color: '#E53935', fontWeight: 600, marginBottom: 8 }}>⚠️ Richiede intervento ({reportData.alertDaAttivare.rosso.length + reportData.alertDaAttivare.giallo.length})</div>
-                {[...reportData.alertDaAttivare.rosso, ...reportData.alertDaAttivare.giallo].slice(0, 15).map((a, i) => (
+                {[...reportData.alertDaAttivare.rosso, ...reportData.alertDaAttivare.giallo].slice(0, 10).map((a, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #FFE0E0', fontSize: 10 }}>
                     <div>
                       <div style={{ color: '#333', fontWeight: 500 }}>{a.cliente}</div>
@@ -2241,6 +2325,24 @@ export default function Home() {
                   </div>
                 ))}
               </div>
+              
+              {/* Bottone Scarica Lista CSV */}
+              <button 
+                onClick={() => {
+                  const allAlerts = [...reportData.alertDaAttivare.rosso, ...reportData.alertDaAttivare.giallo, ...reportData.alertDaAttivare.verde];
+                  const csvContent = 'Cliente;Intermediario;Giorni;Fascia\n' + 
+                    allAlerts.map(a => `${a.cliente};${a.intermediario};${a.giorni};${a.fascia}`).join('\n');
+                  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = 'alert_da_attivare.csv';
+                  link.click();
+                }}
+                style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg, #E53935, #C62828)', color: '#FFF', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+              >
+                📥 SCARICA LISTA COMPLETA ({reportData.alertDaAttivare.totale})
+              </button>
             </div>
           )}
           
@@ -2296,7 +2398,10 @@ export default function Home() {
         
         {/* BOTTONE DOWNLOAD */}
         <div style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, border: '1px solid #E0E0E0', textAlign: 'center' }}>
-          <button style={{ padding: '14px 40px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', color: '#FFF', border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+          <button 
+            onClick={downloadReportPNG}
+            style={{ padding: '14px 40px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', color: '#FFF', border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+          >
             📷 SCARICA REPORT PNG
           </button>
         </div>
@@ -2348,19 +2453,37 @@ export default function Home() {
           <span style={S.catIcon} title="Networker">⭐</span>
           <span style={S.catIcon} title="K Manager">👑</span>
         </div>
-        <p style={{ color: '#999999', fontSize: 12, marginTop: 30 }}>v10.7</p>
+        <p style={{ color: '#999999', fontSize: 12, marginTop: 30 }}>v10.8</p>
       </div>
     </div></>);
 
   // HOMEPAGE - TABS SEMPRE VISIBILI (senza area CSV)
   if (!csvData && (user.role === 'admin' || user.role === 'assistente' || user.role === 'k')) return (<><Head><title>Leader Ranking</title><meta name="viewport" content="width=device-width,initial-scale=1" /></Head>
-    <div style={{ minHeight: '100vh', background: '#F8F9FA', fontFamily: '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif' }}>
-      <header style={{ background: '#FFFFFF', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E0E0E0' }}>
-        <div><span style={{ color: '#2AAA8A', fontWeight: 800, fontSize: 18 }}>LEADER</span><span style={{ fontWeight: 300, fontSize: 18 }}> RANKING</span></div>
+    <div style={{ minHeight: '100vh', background: darkMode ? '#1a1a2e' : '#F8F9FA', fontFamily: '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif', transition: 'background 0.3s ease' }}>
+      <header style={{ background: darkMode ? '#16213e' : '#FFFFFF', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${darkMode ? '#0f3460' : '#E0E0E0'}` }}>
+        <div><span style={{ color: '#2AAA8A', fontWeight: 800, fontSize: 18 }}>LEADER</span><span style={{ fontWeight: 300, fontSize: 18, color: darkMode ? '#FFF' : '#333' }}> RANKING</span></div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 13, color: '#666666' }}>Ciao, {user.name}</span>
+          {/* Toggle Dark/Light Mode */}
+          <button 
+            onClick={() => setDarkMode(!darkMode)}
+            style={{ 
+              padding: '6px 12px', 
+              background: darkMode ? '#FFD700' : '#333', 
+              color: darkMode ? '#333' : '#FFF', 
+              border: 'none', 
+              borderRadius: 20, 
+              fontSize: 12, 
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4
+            }}
+          >
+            {darkMode ? '☀️ Light' : '🌙 Dark'}
+          </button>
+          <span style={{ fontSize: 13, color: darkMode ? '#AAA' : '#666666' }}>Ciao, {user.name}</span>
           <span style={{ padding: '4px 10px', background: '#2AAA8A', color: '#FFF', borderRadius: 6, fontSize: 11, fontWeight: 600 }}>{user.role.toUpperCase()}</span>
-          <button style={{ ...S.btn, padding: '6px 14px', fontSize: 12, background: 'transparent', border: '1px solid #E0E0E0', color: '#666' }} onClick={() => setUser(null)}>Esci</button>
+          <button style={{ ...S.btn, padding: '6px 14px', fontSize: 12, background: 'transparent', border: `1px solid ${darkMode ? '#444' : '#E0E0E0'}`, color: darkMode ? '#FFF' : '#666' }} onClick={() => setUser(null)}>Esci</button>
         </div>
       </header>
       
@@ -2371,9 +2494,9 @@ export default function Home() {
             onClick={() => setActiveTab('dashboard')}
             style={{ 
               padding: '20px', 
-              background: activeTab === 'dashboard' ? 'linear-gradient(135deg, #2AAA8A, #20917A)' : '#FFFFFF', 
-              color: activeTab === 'dashboard' ? '#FFF' : '#666666',
-              border: activeTab === 'dashboard' ? 'none' : '1px solid #E0E0E0',
+              background: activeTab === 'dashboard' ? 'linear-gradient(135deg, #2AAA8A, #20917A)' : darkMode ? '#16213e' : '#FFFFFF', 
+              color: activeTab === 'dashboard' ? '#FFF' : darkMode ? '#AAA' : '#666666',
+              border: activeTab === 'dashboard' ? 'none' : `1px solid ${darkMode ? '#0f3460' : '#E0E0E0'}`,
               borderRadius: 16, 
               fontSize: 16, 
               fontWeight: 600,
@@ -2386,9 +2509,9 @@ export default function Home() {
             onClick={() => setActiveTab('classifiche')}
             style={{ 
               padding: '20px', 
-              background: activeTab === 'classifiche' ? 'linear-gradient(135deg, #FFD700, #FFC107)' : '#FFFFFF', 
-              color: activeTab === 'classifiche' ? '#333' : '#666666',
-              border: activeTab === 'classifiche' ? 'none' : '1px solid #E0E0E0',
+              background: activeTab === 'classifiche' ? 'linear-gradient(135deg, #FFD700, #FFC107)' : darkMode ? '#16213e' : '#FFFFFF', 
+              color: activeTab === 'classifiche' ? '#333' : darkMode ? '#AAA' : '#666666',
+              border: activeTab === 'classifiche' ? 'none' : `1px solid ${darkMode ? '#0f3460' : '#E0E0E0'}`,
               borderRadius: 16, 
               fontSize: 16, 
               fontWeight: 600,
@@ -2401,9 +2524,9 @@ export default function Home() {
             onClick={() => setActiveTab('report')}
             style={{ 
               padding: '20px', 
-              background: activeTab === 'report' ? 'linear-gradient(135deg, #2AAA8A, #20917A)' : '#FFFFFF', 
-              color: activeTab === 'report' ? '#FFF' : '#666666',
-              border: activeTab === 'report' ? 'none' : '1px solid #E0E0E0',
+              background: activeTab === 'report' ? 'linear-gradient(135deg, #2AAA8A, #20917A)' : darkMode ? '#16213e' : '#FFFFFF', 
+              color: activeTab === 'report' ? '#FFF' : darkMode ? '#AAA' : '#666666',
+              border: activeTab === 'report' ? 'none' : `1px solid ${darkMode ? '#0f3460' : '#E0E0E0'}`,
               borderRadius: 16, 
               fontSize: 16, 
               fontWeight: 600,
@@ -2530,7 +2653,7 @@ export default function Home() {
           </div>
         )}
       </main>
-      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v10.6 • Leader Ranking</footer>
+      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v10.8 • Leader Ranking</footer>
     </div></>);
 
   // PREVIEW
@@ -2550,7 +2673,22 @@ export default function Home() {
   // DASHBOARD
   return (<><Head><title>Leader Ranking</title><meta name="viewport" content="width=device-width,initial-scale=1" /></Head>
     <div style={S.dash}>
-      <header style={S.header}><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><button style={S.menuBtn} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>☰</button><span style={{ fontWeight: 800, color: '#2AAA8A' }}>LEADER</span><span style={{ fontWeight: 300, color: '#333333' }}>RANKING</span></div><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={S.badge}>{user.role.toUpperCase()}</span><button style={{ ...S.btn, padding: '6px 12px', fontSize: 12, background: 'transparent', border: '1px solid #E0E0E0' }} onClick={() => { setUser(null); setCsvData(null); setRankings(null); }}>Esci</button></div></header>
+      <header style={S.header}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button style={S.menuBtn} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>☰</button>
+          <span style={{ fontWeight: 800, color: '#2AAA8A' }}>LEADER</span>
+          <span style={{ fontWeight: 300, color: '#333333' }}>RANKING</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* Tasto Indietro */}
+          <button 
+            style={{ ...S.btn, padding: '6px 12px', fontSize: 12, background: '#F5F5F5', border: '1px solid #E0E0E0', color: '#333' }} 
+            onClick={() => { setCsvData(null); setRankings(null); setFilteredData(null); setReportData(null); }}
+          >← Indietro</button>
+          <span style={S.badge}>{user.role.toUpperCase()}</span>
+          <button style={{ ...S.btn, padding: '6px 12px', fontSize: 12, background: 'transparent', border: '1px solid #E0E0E0' }} onClick={() => { setUser(null); setCsvData(null); setRankings(null); }}>Esci</button>
+        </div>
+      </header>
       <main style={{ display: 'flex' }}>
         <aside style={{ ...S.sidebar, ...(mobileMenuOpen ? { transform: 'translateX(0)' } : {}) }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}><span style={{ fontSize: 12, color: '#999999', letterSpacing: 1 }}>📊 CLASSIFICHE</span><button style={{ background: 'none', border: 'none', color: '#333333', fontSize: 18, cursor: 'pointer' }} onClick={() => setMobileMenuOpen(false)}>✕</button></div>
@@ -3420,7 +3558,7 @@ export default function Home() {
                             <MiniPie data={pies.k} total={totalK} colors={PIE_COLORS} size={65} />
                             <div style={{ flex: 1 }}>
                               <div style={{ fontSize: 12, color: '#FFD700', fontWeight: 600, marginBottom: 6 }}>👑 K MANAGER</div>
-                              {pies.k.slice(0, 4).map(([name, val], i) => (
+                              {pies.k.slice(0, 5).map(([name, val], i) => (
                                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#444444', marginBottom: 2 }}>
                                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                     <span style={{ width: 8, height: 8, borderRadius: 2, background: PIE_COLORS[i] }} />
