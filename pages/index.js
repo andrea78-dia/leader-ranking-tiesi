@@ -298,10 +298,10 @@ export default function Home() {
   };
 
   // Colori per torte e stati - DIFFERENZIATI
-  const PIE_COLORS_K = ['#FFD700', '#FFC107', '#FFB300', '#FFA000', '#FF8F00']; // Oro per K Manager
+  const PIE_COLORS_K = ['#FFD700', '#2AAA8A', '#2196F3', '#9C27B0', '#FF5722']; // K Manager - colori diversi!
   const PIE_COLORS_NW = ['#2196F3', '#1E88E5', '#1976D2', '#1565C0', '#0D47A1']; // Blu per Networker
   const PIE_COLORS_STATI = ['#4CAF50', '#66BB6A', '#81C784', '#A5D6A7', '#C8E6C9']; // Verde per Stati
-  const PIE_COLORS = ['#FFD700', '#2AAA8A', '#2196F3', '#4CAF50', '#FF9800', '#E91E63', '#9C27B0', '#607D8B', '#795548', '#666666'];
+  const PIE_COLORS = ['#FFD700', '#2AAA8A', '#2196F3', '#9C27B0', '#FF5722', '#E91E63', '#607D8B', '#795548', '#4CAF50', '#666666'];
   const STATO_COLORS = { 
     'Accettato': '#4CAF50', 'Sospeso': '#FFD700', 'In sospeso': '#FFD700', 'Presente': '#4CAF50', 'Assente': '#E53935', 
     'In lavorazione': '#FFD700', 'Installato': '#4CAF50', 'Impianto installato': '#4CAF50', 'Recesso': '#E53935', 
@@ -1083,7 +1083,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v11.0 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v11.1 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -2012,7 +2012,7 @@ export default function Home() {
     ctx.fillStyle = '#999999';
     ctx.font = '14px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v11.0 • ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 40);
+    ctx.fillText(`Leader Ranking v11.1 • ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 40);
     
     // Download
     const link = document.createElement('a');
@@ -2337,7 +2337,7 @@ export default function Home() {
         
         {/* ALERT + TRACKER COACHING - Layout 2 colonne */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 20 }}>
-          {/* ALERT DA ATTIVARE - Con 3 liste separate */}
+          {/* ALERT DA ATTIVARE - Con funnel + 3 liste separate */}
           {reportData.alertDaAttivare && reportData.alertDaAttivare.totale > 0 && (
             <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
@@ -2345,6 +2345,29 @@ export default function Home() {
                 <div>
                   <h3 style={{ color: '#E53935', fontSize: 16, margin: 0, fontWeight: 700 }}>ALERT DA ATTIVARE</h3>
                   <p style={{ color: '#666', fontSize: 11, margin: 0 }}>Luce Amica in attesa NWG Energia (max 150g)</p>
+                </div>
+              </div>
+              
+              {/* FUNNEL NUMERI */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, marginBottom: 20, padding: 15, background: 'linear-gradient(90deg, rgba(76,175,80,0.1), rgba(255,215,0,0.1), rgba(229,57,53,0.1))', borderRadius: 12 }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 32, fontWeight: 800, color: '#4CAF50' }}>{reportData.alertDaAttivare.verde.length}</div>
+                  <div style={{ fontSize: 10, color: '#4CAF50' }}>🟢 0-30g</div>
+                </div>
+                <span style={{ fontSize: 20, color: '#CCC' }}>→</span>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 32, fontWeight: 800, color: '#FF8F00' }}>{reportData.alertDaAttivare.giallo.length}</div>
+                  <div style={{ fontSize: 10, color: '#FF8F00' }}>🟡 31-60g</div>
+                </div>
+                <span style={{ fontSize: 20, color: '#CCC' }}>→</span>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 32, fontWeight: 800, color: '#E53935' }}>{reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150).length}</div>
+                  <div style={{ fontSize: 10, color: '#E53935' }}>🔴 61-150g</div>
+                </div>
+                <span style={{ fontSize: 20, color: '#CCC' }}>→</span>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 32, fontWeight: 800, color: '#666' }}>{reportData.alertDaAttivare.rosso.filter(a => a.giorni > 150).length}</div>
+                  <div style={{ fontSize: 10, color: '#666' }}>⚫ Persi</div>
                 </div>
               </div>
               
@@ -2536,7 +2559,7 @@ export default function Home() {
           <span style={S.catIcon} title="Networker">⭐</span>
           <span style={S.catIcon} title="K Manager">👑</span>
         </div>
-        <p style={{ color: '#999999', fontSize: 12, marginTop: 30 }}>v11.0</p>
+        <p style={{ color: '#999999', fontSize: 12, marginTop: 30 }}>v11.1</p>
       </div>
     </div></>);
 
@@ -2736,7 +2759,7 @@ export default function Home() {
           </div>
         )}
       </main>
-      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v11.0 • Leader Ranking</footer>
+      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v11.1 • Leader Ranking</footer>
     </div></>);
 
   // PREVIEW
@@ -3094,36 +3117,36 @@ export default function Home() {
                   );
                 })()}
 
-                {/* CLASSIFICHE COMPLETE - SENZA Conv% + SDP e IVD */}
+                {/* CLASSIFICHE COMPLETE - STILE NUOVO */}
                 {(() => {
                   const pies = getPieDistributions();
-                  // Tabella semplice senza conversione
+                  // Tabella stile nuovo - sfondo verde, testo nero
                   const ClassificaTable = ({ title, emoji, data, color }) => {
                     if (!data || data.length === 0) return null;
                     return (
-                      <div style={{ background: '#FFFFFF', borderRadius: 16, padding: 15, border: `1px solid ${color}30` }}>
+                      <div style={{ background: 'linear-gradient(135deg, rgba(42,170,138,0.12), rgba(42,170,138,0.04))', borderRadius: 16, padding: 15, border: `2px solid ${color}40` }}>
                         <div style={{ fontSize: 14, color: color, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span>{emoji}</span> {title}
                         </div>
                         <div style={{ overflowX: 'auto', maxHeight: 280, overflowY: 'auto' }}>
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                             <thead>
-                              <tr style={{ borderBottom: '2px solid #E0E0E0' }}>
-                                <th style={{ padding: '8px 4px', textAlign: 'center', color: '#666666', fontWeight: 600, width: 30 }}>#</th>
-                                <th style={{ padding: '8px 4px', textAlign: 'left', color: '#666666', fontWeight: 600 }}>Nome</th>
-                                <th style={{ padding: '8px 4px', textAlign: 'center', color: '#333333', fontWeight: 600 }}>Tot</th>
+                              <tr style={{ borderBottom: '2px solid rgba(42,170,138,0.3)' }}>
+                                <th style={{ padding: '8px 4px', textAlign: 'center', color: '#333', fontWeight: 600, width: 30 }}>#</th>
+                                <th style={{ padding: '8px 4px', textAlign: 'left', color: '#333', fontWeight: 600 }}>Nome</th>
+                                <th style={{ padding: '8px 4px', textAlign: 'center', color: '#333', fontWeight: 600 }}>Tot</th>
                               </tr>
                             </thead>
                             <tbody>
                               {data.slice(0, 15).map(([name, val], i) => {
                                 const tot = typeof val === 'object' ? (val.v1 || val.total || 0) : val;
                                 return (
-                                  <tr key={i} style={{ borderBottom: '1px solid #F5F5F5', background: i < 3 ? `${color}08` : 'transparent' }}>
-                                    <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: i < 3 ? 700 : 400, fontSize: 11, color: '#333333' }}>
+                                  <tr key={i} style={{ borderBottom: '1px solid rgba(42,170,138,0.15)', background: i < 3 ? 'rgba(42,170,138,0.15)' : 'transparent' }}>
+                                    <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: i < 3 ? 700 : 400, fontSize: 11, color: '#333' }}>
                                       {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}
                                     </td>
-                                    <td style={{ padding: '8px 4px', fontWeight: i < 3 ? 600 : 400, color: '#333333', fontSize: 11, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</td>
-                                    <td style={{ padding: '8px 4px', textAlign: 'center', color: '#333333', fontWeight: 700, fontSize: 13 }}>{tot}</td>
+                                    <td style={{ padding: '8px 4px', fontWeight: i < 3 ? 600 : 400, color: '#333', fontSize: 11, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</td>
+                                    <td style={{ padding: '8px 4px', textAlign: 'center', color: '#333', fontWeight: 700, fontSize: 13 }}>{tot}</td>
                                   </tr>
                                 );
                               })}
