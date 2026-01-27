@@ -630,8 +630,86 @@ export default function Home() {
     const result = {
       pilastri: {},
       heatmapMesi: {},
-      selectedMonth: null
+      selectedMonth: null,
+      periodoRiferimento: null,
+      bestPerformers: null
     };
+    
+    // ═══════════════════════════════════════════════════════════
+    // 📅 CALCOLO PERIODO DI RIFERIMENTO (dalle date nei CSV)
+    // ═══════════════════════════════════════════════════════════
+    const tutteLeDateStr = [];
+    const estraiDate = (data, colonne) => {
+      data.forEach(row => {
+        colonne.forEach(col => {
+          const val = row[col];
+          if (val) tutteLeDateStr.push(val);
+        });
+      });
+    };
+    
+    if (reportCSVs.fv?.data) estraiDate(reportCSVs.fv.data, ['Inserimento', 'Data', 'Data Inserimento']);
+    if (reportCSVs.energy?.data) estraiDate(reportCSVs.energy.data, ['Inserimento', 'Data', 'Data Inserimento']);
+    if (reportCSVs.ivd?.data) estraiDate(reportCSVs.ivd.data, ['Inserimento', 'Data', 'Data Attivazione', 'Data Inserimento']);
+    if (reportCSVs.consultings?.data) estraiDate(reportCSVs.consultings.data, ['Data', 'Data Seminario', 'Inserimento']);
+    
+    // Parse date e trova min/max
+    const dateValide = tutteLeDateStr
+      .map(s => {
+        if (!s) return null;
+        const d = new Date(s.replace(' ', 'T'));
+        return isNaN(d.getTime()) ? null : d;
+      })
+      .filter(d => d !== null);
+    
+    if (dateValide.length > 0) {
+      const minDate = new Date(Math.min(...dateValide));
+      const maxDate = new Date(Math.max(...dateValide));
+      
+      const mesiNomi = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+      const mesiShort = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+      
+      const stessoMese = minDate.getMonth() === maxDate.getMonth() && minDate.getFullYear() === maxDate.getFullYear();
+      const stessoAnno = minDate.getFullYear() === maxDate.getFullYear();
+      
+      let labelPeriodo = '';
+      let tipoPeriodo = 'custom';
+      
+      if (stessoMese) {
+        // Singolo mese
+        labelPeriodo = `${mesiNomi[minDate.getMonth()]} ${minDate.getFullYear()}`;
+        tipoPeriodo = 'mensile';
+      } else if (stessoAnno) {
+        // Stesso anno, più mesi
+        const diffMesi = maxDate.getMonth() - minDate.getMonth() + 1;
+        if (diffMesi === 3) {
+          // Trimestre
+          const trim = Math.floor(minDate.getMonth() / 3) + 1;
+          labelPeriodo = `Q${trim} ${minDate.getFullYear()} (${mesiShort[minDate.getMonth()]}-${mesiShort[maxDate.getMonth()]})`;
+          tipoPeriodo = 'trimestrale';
+        } else if (diffMesi === 6) {
+          labelPeriodo = `${minDate.getFullYear()} H${minDate.getMonth() < 6 ? '1' : '2'}`;
+          tipoPeriodo = 'semestrale';
+        } else if (diffMesi >= 11) {
+          labelPeriodo = `Anno ${minDate.getFullYear()}`;
+          tipoPeriodo = 'annuale';
+        } else {
+          labelPeriodo = `${mesiShort[minDate.getMonth()]} - ${mesiShort[maxDate.getMonth()]} ${minDate.getFullYear()}`;
+        }
+      } else {
+        // Anni diversi
+        labelPeriodo = `${mesiShort[minDate.getMonth()]} ${minDate.getFullYear()} - ${mesiShort[maxDate.getMonth()]} ${maxDate.getFullYear()}`;
+        tipoPeriodo = 'multiannuale';
+      }
+      
+      result.periodoRiferimento = {
+        da: minDate,
+        a: maxDate,
+        label: labelPeriodo,
+        tipo: tipoPeriodo,
+        labelShort: stessoMese ? `${mesiShort[minDate.getMonth()]} ${minDate.getFullYear()}` : labelPeriodo
+      };
+    }
     
     // Helper per categorizzare uno stato
     const categorizeStato = (stato, map) => {
@@ -844,7 +922,7 @@ export default function Home() {
     const collabData = { iscritti: 0, presenti: 0, attivati: 0, assenti: 0, omonimie: [], statiAttivati: null, classifiche: null };
     
     // Seminari: Iscritti e Presenti
-    // LOGICA: Se campo Presente è vuoto o diverso da SI → conta come ASSENTE
+    // LOGICA: Se campo "Presente SI" è vuoto o NO → conta come ASSENTE
     if (reportCSVs.consultings?.data?.length > 0) {
       const semData = reportCSVs.consultings.data;
       
@@ -852,7 +930,8 @@ export default function Home() {
       const nomiVisti = {};
       const omonimie = [];
       semData.forEach(row => {
-        const nome = (row['Nome e Cognome'] || row['Nome'] || row['Nominativo'] || '').trim().toUpperCase();
+        // Colonna nome: "Cognome e Nome" oppure altre varianti
+        const nome = (row['Cognome e Nome'] || row['Nome e Cognome'] || row['Nome'] || row['Nominativo'] || '').trim().toUpperCase();
         if (nome) {
           if (nomiVisti[nome]) {
             nomiVisti[nome]++;
@@ -870,14 +949,14 @@ export default function Home() {
       
       collabData.iscritti = semData.length;
       
-      // PRESENTI: campo deve essere esplicitamente SI/SÌ/YES/1
-      // ASSENTI: campo vuoto O qualsiasi altro valore
+      // PRESENTI: campo "Presente SI" deve essere esplicitamente SI
+      // ASSENTI: campo vuoto O valore NO O qualsiasi altro valore
       collabData.presenti = semData.filter(row => {
-        const presente = (row['Presente SI'] || row['Presente'] || '').toString().trim().toLowerCase();
-        return presente === 'si' || presente === 'sì' || presente === 'yes' || presente === '1';
+        const presente = (row['Presente SI'] || row['Presente'] || '').toString().trim().toUpperCase();
+        return presente === 'SI' || presente === 'SÌ' || presente === 'YES' || presente === '1';
       }).length;
       
-      // Assenti = Iscritti - Presenti (include campi vuoti)
+      // Assenti = Iscritti - Presenti (include campi vuoti e NO)
       collabData.assenti = collabData.iscritti - collabData.presenti;
       
       // Classifiche basate su tutti i dati seminario con conteggio presenti
@@ -886,8 +965,8 @@ export default function Home() {
         const k = row['Nome Primo K'] || '';
         const nw = row['Nome Primo Networker'] || '';
         const sdp = row['Nome Primo SDP FV'] || row['Nome Primo SDP Fv'] || row['Nome Primo SDP LA'] || row['Nome Primo SDP La'] || '';
-        const presente = (row['Presente SI'] || row['Presente'] || '').toString().trim().toLowerCase();
-        const isPresente = presente === 'si' || presente === 'sì' || presente === 'yes' || presente === '1';
+        const presente = (row['Presente SI'] || row['Presente'] || '').toString().trim().toUpperCase();
+        const isPresente = presente === 'SI' || presente === 'SÌ' || presente === 'YES' || presente === '1';
         
         if (k && !k.includes('Nome Primo')) {
           if (!kStats[k]) kStats[k] = { iscritti: 0, presenti: 0, assenti: 0, attivati: 0, total: 0 };
@@ -917,10 +996,10 @@ export default function Home() {
       
       result.heatmapMesi.consultings = calcHeatmapMesi(semData);
       
-      // Heatmap solo per PRESENTI
+      // Heatmap solo per PRESENTI (stesso check uppercase)
       const presentiData = semData.filter(row => {
-        const presente = (row['Presente SI'] || row['Presente'] || '').toString().trim().toLowerCase();
-        return presente === 'si' || presente === 'sì' || presente === 'yes' || presente === '1';
+        const presente = (row['Presente SI'] || row['Presente'] || '').toString().trim().toUpperCase();
+        return presente === 'SI' || presente === 'SÌ' || presente === 'YES' || presente === '1';
       });
       result.heatmapMesi.presenti = calcHeatmapMesi(presentiData);
     }
@@ -1785,6 +1864,114 @@ export default function Home() {
           (((result.pilastri.collaboratori.iscritti - result.pilastri.collaboratori.presenti) / result.pilastri.collaboratori.iscritti * 100) <= 25 ? 'verde' : 
           ((result.pilastri.collaboratori.iscritti - result.pilastri.collaboratori.presenti) / result.pilastri.collaboratori.iscritti * 100) <= 35 ? 'giallo' : 'rosso') : 'grigio',
         ivd: (result.trackerCoaching?.pctInattivi || 0) <= 15 ? 'verde' : (result.trackerCoaching?.pctInattivi || 0) <= 25 ? 'giallo' : 'rosso'
+      }
+    };
+    
+    // ═══════════════════════════════════════════════════════════
+    // 🏆 CALCOLO BEST PERFORMERS (K e NW per ogni categoria)
+    // ═══════════════════════════════════════════════════════════
+    result.bestPerformers = {
+      // ☀️ FOTOVOLTAICO
+      fv: {
+        fatturato: {
+          k: fatturato.fv.classificaK[0] ? { nome: fatturato.fv.classificaK[0][0], valore: fatturato.fv.classificaK[0][1].fatturato, dettaglio: `${fatturato.fv.classificaK[0][1].kw}kW | ${fatturato.fv.classificaK[0][1].punti}pt` } : null,
+          nw: fatturato.fv.classificaNW[0] ? { nome: fatturato.fv.classificaNW[0][0], valore: fatturato.fv.classificaNW[0][1].fatturato, dettaglio: `${fatturato.fv.classificaNW[0][1].kw}kW | ${fatturato.fv.classificaNW[0][1].punti}pt` } : null
+        },
+        positivi: {
+          k: result.pilastri.fv?.classifiche?.k[0] ? { nome: result.pilastri.fv.classifiche.k[0][0], valore: result.pilastri.fv.classifiche.k[0][1].positivo, dettaglio: `su ${result.pilastri.fv.classifiche.k[0][1].total} ins` } : null,
+          nw: result.pilastri.fv?.classifiche?.nw[0] ? { nome: result.pilastri.fv.classifiche.nw[0][0], valore: result.pilastri.fv.classifiche.nw[0][1].positivo, dettaglio: `su ${result.pilastri.fv.classifiche.nw[0][1].total} ins` } : null
+        },
+        conversione: (() => {
+          // Calcola % conversione per ogni K/NW
+          const kConv = (result.pilastri.fv?.classifiche?.k || []).map(([nome, stats]) => ({
+            nome, pct: stats.total > 0 ? Math.round(stats.positivo / stats.total * 100) : 0, totale: stats.total
+          })).filter(x => x.totale >= 5).sort((a, b) => b.pct - a.pct);
+          const nwConv = (result.pilastri.fv?.classifiche?.nw || []).map(([nome, stats]) => ({
+            nome, pct: stats.total > 0 ? Math.round(stats.positivo / stats.total * 100) : 0, totale: stats.total
+          })).filter(x => x.totale >= 3).sort((a, b) => b.pct - a.pct);
+          return {
+            k: kConv[0] ? { nome: kConv[0].nome, valore: kConv[0].pct, dettaglio: `su ${kConv[0].totale} ins` } : null,
+            nw: nwConv[0] ? { nome: nwConv[0].nome, valore: nwConv[0].pct, dettaglio: `su ${nwConv[0].totale} ins` } : null
+          };
+        })()
+      },
+      
+      // ⚡ LUCE AMICA
+      la: {
+        fatturato: {
+          k: fatturato.la.classificaK[0] ? { nome: fatturato.la.classificaK[0][0], valore: Math.round(fatturato.la.classificaK[0][1].fatturato / 12), dettaglio: `${fatturato.la.classificaK[0][1].contratti} contr | ${Math.round(fatturato.la.classificaK[0][1].kwh / 1000)}MWh` } : null,
+          nw: fatturato.la.classificaNW[0] ? { nome: fatturato.la.classificaNW[0][0], valore: Math.round(fatturato.la.classificaNW[0][1].fatturato / 12), dettaglio: `${fatturato.la.classificaNW[0][1].punti}pt | ${Math.round(fatturato.la.classificaNW[0][1].kwh / 1000)}MWh` } : null
+        },
+        accettati: {
+          k: result.pilastri.energy?.classifiche?.k[0] ? { nome: result.pilastri.energy.classifiche.k[0][0], valore: result.pilastri.energy.classifiche.k[0][1].positivo, dettaglio: `su ${result.pilastri.energy.classifiche.k[0][1].total} ins` } : null,
+          nw: result.pilastri.energy?.classifiche?.nw[0] ? { nome: result.pilastri.energy.classifiche.nw[0][0], valore: result.pilastri.energy.classifiche.nw[0][1].positivo, dettaglio: `su ${result.pilastri.energy.classifiche.nw[0][1].total} ins` } : null
+        },
+        kwhGreen: {
+          k: fatturato.la.classificaK[0] ? { nome: fatturato.la.classificaK[0][0], valore: fatturato.la.classificaK[0][1].kwh, dettaglio: `${fatturato.la.classificaK[0][1].contratti} contratti` } : null,
+          nw: fatturato.la.classificaNW[0] ? { nome: fatturato.la.classificaNW[0][0], valore: fatturato.la.classificaNW[0][1].kwh, dettaglio: `${fatturato.la.classificaNW[0][1].punti}pt` } : null
+        }
+      },
+      
+      // 🎓 SEMINARI
+      seminari: {
+        iscritti: {
+          k: result.pilastri.collaboratori?.classifiche?.k[0] ? { nome: result.pilastri.collaboratori.classifiche.k[0][0], valore: result.pilastri.collaboratori.classifiche.k[0][1].iscritti, dettaglio: `${result.pilastri.collaboratori.classifiche.k[0][1].presenti} presenti` } : null,
+          nw: result.pilastri.collaboratori?.classifiche?.nw[0] ? { nome: result.pilastri.collaboratori.classifiche.nw[0][0], valore: result.pilastri.collaboratori.classifiche.nw[0][1].iscritti, dettaglio: `${result.pilastri.collaboratori.classifiche.nw[0][1].presenti} presenti` } : null
+        },
+        presenti: (() => {
+          const kByPres = [...(result.pilastri.collaboratori?.classifiche?.k || [])].sort((a, b) => b[1].presenti - a[1].presenti);
+          const nwByPres = [...(result.pilastri.collaboratori?.classifiche?.nw || [])].sort((a, b) => b[1].presenti - a[1].presenti);
+          return {
+            k: kByPres[0] ? { nome: kByPres[0][0], valore: kByPres[0][1].presenti, dettaglio: `su ${kByPres[0][1].iscritti} iscr (${kByPres[0][1].iscritti > 0 ? Math.round(kByPres[0][1].presenti / kByPres[0][1].iscritti * 100) : 0}%)` } : null,
+            nw: nwByPres[0] ? { nome: nwByPres[0][0], valore: nwByPres[0][1].presenti, dettaglio: `su ${nwByPres[0][1].iscritti} iscr` } : null
+          };
+        })(),
+        attivati: (() => {
+          const kByAtt = [...(result.pilastri.collaboratori?.classifiche?.k || [])].sort((a, b) => b[1].attivati - a[1].attivati);
+          const nwByAtt = [...(result.pilastri.collaboratori?.classifiche?.nw || [])].sort((a, b) => b[1].attivati - a[1].attivati);
+          return {
+            k: kByAtt[0] && kByAtt[0][1].attivati > 0 ? { nome: kByAtt[0][0], valore: kByAtt[0][1].attivati, dettaglio: `da ${kByAtt[0][1].presenti} presenti` } : null,
+            nw: nwByAtt[0] && nwByAtt[0][1].attivati > 0 ? { nome: nwByAtt[0][0], valore: nwByAtt[0][1].attivati, dettaglio: `da ${nwByAtt[0][1].presenti} presenti` } : null
+          };
+        })()
+      },
+      
+      // 🎯 TRACKER VELOCITÀ (basato su medie)
+      tracker: {
+        primaLA: (() => {
+          if (!result.trackerCoaching?.lista) return { k: null, nw: null };
+          // Raggruppa per K e calcola media giorni
+          const perK = {}, perNW = {};
+          result.trackerCoaching.lista.forEach(ivd => {
+            if (ivd.giorniLA !== null) {
+              const k = ivd.networker?.split(' ')[0] || 'N/A'; // Approssimazione
+              // Per ora usiamo il networker come proxy
+              if (ivd.networker) {
+                if (!perNW[ivd.networker]) perNW[ivd.networker] = { somma: 0, count: 0 };
+                perNW[ivd.networker].somma += ivd.giorniLA;
+                perNW[ivd.networker].count++;
+              }
+            }
+          });
+          const nwSorted = Object.entries(perNW).map(([nome, d]) => ({ nome, media: Math.round(d.somma / d.count), count: d.count })).filter(x => x.count >= 2).sort((a, b) => a.media - b.media);
+          return {
+            k: null, // Richiede mapping K→IVD
+            nw: nwSorted[0] ? { nome: nwSorted[0].nome, valore: nwSorted[0].media, dettaglio: `${nwSorted[0].count} IVD formati` } : null
+          };
+        })(),
+        primaFV: (() => {
+          if (!result.trackerCoaching?.lista) return { k: null, nw: null };
+          const perNW = {};
+          result.trackerCoaching.lista.forEach(ivd => {
+            if (ivd.giorniFV !== null && ivd.networker) {
+              if (!perNW[ivd.networker]) perNW[ivd.networker] = { somma: 0, count: 0 };
+              perNW[ivd.networker].somma += ivd.giorniFV;
+              perNW[ivd.networker].count++;
+            }
+          });
+          const nwSorted = Object.entries(perNW).map(([nome, d]) => ({ nome, media: Math.round(d.somma / d.count), count: d.count })).filter(x => x.count >= 2).sort((a, b) => a.media - b.media);
+          return { k: null, nw: nwSorted[0] ? { nome: nwSorted[0].nome, valore: nwSorted[0].media, dettaglio: `${nwSorted[0].count} IVD` } : null };
+        })()
       }
     };
     
@@ -2880,92 +3067,619 @@ export default function Home() {
   };
 
   // FUNZIONE DOWNLOAD REPORT PNG
-  const downloadReportPNG = () => {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 📊 REPORT PNG PROFESSIONALE - Design WOW per presentazioni
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  const downloadReportPNG = (tipo = 'generale') => {
     if (!reportData || !reportData.pilastri) return alert('Nessun report da scaricare');
     
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    const W = 1200, H = 1600;
+    const W = 1200, H = tipo === 'generale' ? 1800 : 1400;
     canvas.width = W; canvas.height = H;
     
-    // Background elegante
-    ctx.fillStyle = '#FFFFFF';
+    const periodo = reportData.periodoRiferimento?.label || 'Periodo non specificato';
+    const colors = {
+      primary: '#2AAA8A',
+      fv: '#15803D',
+      la: '#B45309', 
+      seminari: '#7C3AED',
+      alert: '#DC2626',
+      bg: '#F8FAFC',
+      card: '#FFFFFF',
+      text: '#1F2937',
+      muted: '#6B7280'
+    };
+    
+    // Background con gradiente sottile
+    const gradient = ctx.createLinearGradient(0, 0, 0, H);
+    gradient.addColorStop(0, '#F0FDF4');
+    gradient.addColorStop(1, '#FFFFFF');
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, W, H);
     
-    // Border
-    ctx.strokeStyle = '#2AAA8A';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(20, 20, W - 40, H - 40);
+    // Border elegante
+    ctx.strokeStyle = colors.primary;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(15, 15, W - 30, H - 30);
     
-    // Header
-    ctx.fillStyle = '#2AAA8A';
-    ctx.fillRect(40, 40, W - 80, 80);
+    // Header con sfondo
+    ctx.fillStyle = colors.primary;
+    ctx.beginPath();
+    ctx.roundRect(30, 30, W - 60, 90, [15, 15, 0, 0]);
+    ctx.fill();
+    
+    // Titolo
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 36px Arial';
+    ctx.font = 'bold 32px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('📊 REPORT AGGREGATO', W/2, 95);
+    const titoli = {
+      generale: '📊 REPORT AGGREGATO',
+      fv: '☀️ REPORT FOTOVOLTAICO',
+      la: '⚡ REPORT LUCE AMICA',
+      seminari: '🎓 REPORT SEMINARI',
+      best: '🏆 TOP PERFORMERS'
+    };
+    ctx.fillText(titoli[tipo] || titoli.generale, W/2, 85);
     
-    let y = 160;
+    // Sottotitolo periodo
+    ctx.font = '16px Arial';
+    ctx.fillText(`📅 ${periodo}`, W/2, 110);
     
-    // FV
-    if (reportData.pilastri.fv) {
-      ctx.fillStyle = '#333333';
-      ctx.font = 'bold 24px Arial';
+    let y = 150;
+    
+    // Helper per disegnare card
+    const drawCard = (x, cardY, w, h, title, emoji, color) => {
+      ctx.fillStyle = colors.card;
+      ctx.shadowColor = 'rgba(0,0,0,0.1)';
+      ctx.shadowBlur = 10;
+      ctx.shadowOffsetY = 4;
+      ctx.beginPath();
+      ctx.roundRect(x, cardY, w, h, 12);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      
+      // Barra laterale colorata
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.roundRect(x, cardY, 6, h, [12, 0, 0, 12]);
+      ctx.fill();
+      
+      // Titolo card
+      ctx.fillStyle = color;
+      ctx.font = 'bold 18px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText('☀️ FOTOVOLTAICO', 50, y);
-      ctx.font = '18px Arial';
-      ctx.fillText(`Inseriti: ${reportData.pilastri.fv.totale} | Positivi: ${reportData.pilastri.fv.funnel.positivi} (${reportData.pilastri.fv.funnel.pctPositivi}%) | Persi: ${reportData.pilastri.fv.funnel.negativi}`, 50, y + 30);
-      y += 80;
+      ctx.fillText(`${emoji} ${title}`, x + 20, cardY + 30);
+      
+      return cardY + 45;
+    };
+    
+    // Helper per stat grande
+    const drawBigStat = (x, statY, value, label, color) => {
+      ctx.fillStyle = color;
+      ctx.font = 'bold 36px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(value, x, statY);
+      ctx.fillStyle = colors.muted;
+      ctx.font = '12px Arial';
+      ctx.fillText(label, x, statY + 18);
+    };
+    
+    if (tipo === 'generale' || tipo === 'fv') {
+      // ═══ SEZIONE FOTOVOLTAICO ═══
+      if (reportData.pilastri.fv) {
+        const fv = reportData.pilastri.fv;
+        const fat = reportData.fatturato?.fv;
+        const cardY = y;
+        const innerY = drawCard(40, cardY, W - 80, 180, 'FOTOVOLTAICO', '☀️', colors.fv);
+        
+        // Stats
+        const statW = (W - 120) / 5;
+        drawBigStat(40 + statW/2, innerY + 25, fv.funnel.inseriti.toString(), 'Inseriti', colors.text);
+        drawBigStat(40 + statW*1.5, innerY + 25, fv.funnel.positivi.toString(), 'Positivi', colors.fv);
+        drawBigStat(40 + statW*2.5, innerY + 25, `${fv.funnel.pctPositivi}%`, 'Conversione', '#10B981');
+        drawBigStat(40 + statW*3.5, innerY + 25, fv.funnel.negativi.toString(), 'Persi', colors.alert);
+        if (fat) {
+          drawBigStat(40 + statW*4.5, innerY + 25, `€${(fat.effettivi.totale/1000).toFixed(0)}K`, 'Fatturato', colors.fv);
+        }
+        
+        // Barra progresso
+        ctx.fillStyle = '#E5E7EB';
+        ctx.beginPath();
+        ctx.roundRect(60, innerY + 70, W - 140, 20, 10);
+        ctx.fill();
+        
+        const pctPos = fv.funnel.pctPositivi / 100;
+        ctx.fillStyle = colors.fv;
+        ctx.beginPath();
+        ctx.roundRect(60, innerY + 70, (W - 140) * pctPos, 20, 10);
+        ctx.fill();
+        
+        // Best performer
+        if (reportData.bestPerformers?.fv?.fatturato?.k) {
+          ctx.fillStyle = colors.muted;
+          ctx.font = '13px Arial';
+          ctx.textAlign = 'left';
+          ctx.fillText(`🏆 Top K: ${reportData.bestPerformers.fv.fatturato.k.nome} (€${reportData.bestPerformers.fv.fatturato.k.valore.toLocaleString('it-IT')})`, 60, innerY + 115);
+        }
+        
+        y = cardY + 200;
+      }
     }
     
-    // LA
-    if (reportData.pilastri.energy) {
-      ctx.fillStyle = '#333333';
-      ctx.font = 'bold 24px Arial';
-      ctx.fillText('⚡ LUCE AMICA', 50, y);
-      ctx.font = '18px Arial';
-      ctx.fillText(`Inseriti: ${reportData.pilastri.energy.totale} | Accettati: ${reportData.pilastri.energy.funnel.accettati} (${reportData.pilastri.energy.funnel.pctAccettati}%)`, 50, y + 30);
-      y += 80;
+    if (tipo === 'generale' || tipo === 'la') {
+      // ═══ SEZIONE LUCE AMICA ═══
+      if (reportData.pilastri.energy) {
+        const la = reportData.pilastri.energy;
+        const fat = reportData.fatturato?.la;
+        const cardY = y;
+        const innerY = drawCard(40, cardY, W - 80, 180, 'LUCE AMICA', '⚡', colors.la);
+        
+        const statW = (W - 120) / 5;
+        drawBigStat(40 + statW/2, innerY + 25, la.funnel.inseriti.toString(), 'Inseriti', colors.text);
+        drawBigStat(40 + statW*1.5, innerY + 25, la.funnel.accettati.toString(), 'Accettati', '#10B981');
+        drawBigStat(40 + statW*2.5, innerY + 25, `${la.funnel.pctAccettati}%`, 'Accettazione', colors.la);
+        drawBigStat(40 + statW*3.5, innerY + 25, la.funnel.persi.toString(), 'Cessati', colors.alert);
+        if (fat) {
+          drawBigStat(40 + statW*4.5, innerY + 25, `€${Math.round(fat.accettati.totale/12/1000)}K/m`, 'Fatt. Mensile', colors.la);
+        }
+        
+        // Barra progresso
+        ctx.fillStyle = '#E5E7EB';
+        ctx.beginPath();
+        ctx.roundRect(60, innerY + 70, W - 140, 20, 10);
+        ctx.fill();
+        
+        ctx.fillStyle = colors.la;
+        ctx.beginPath();
+        ctx.roundRect(60, innerY + 70, (W - 140) * (la.funnel.pctAccettati / 100), 20, 10);
+        ctx.fill();
+        
+        if (reportData.bestPerformers?.la?.fatturato?.k) {
+          ctx.fillStyle = colors.muted;
+          ctx.font = '13px Arial';
+          ctx.textAlign = 'left';
+          ctx.fillText(`🏆 Top K: ${reportData.bestPerformers.la.fatturato.k.nome} (€${reportData.bestPerformers.la.fatturato.k.valore.toLocaleString('it-IT')}/mese)`, 60, innerY + 115);
+        }
+        
+        y = cardY + 200;
+      }
     }
     
-    // COLLABORATORI
-    if (reportData.pilastri.collaboratori) {
-      ctx.fillStyle = '#333333';
-      ctx.font = 'bold 24px Arial';
-      ctx.fillText('🎓 COLLABORATORI', 50, y);
-      ctx.font = '18px Arial';
-      ctx.fillText(`Iscritti: ${reportData.pilastri.collaboratori.funnel.iscritti} | Presenti: ${reportData.pilastri.collaboratori.funnel.presenti} | Attivati: ${reportData.pilastri.collaboratori.funnel.attivati}`, 50, y + 30);
-      y += 80;
+    if (tipo === 'generale' || tipo === 'seminari') {
+      // ═══ SEZIONE SEMINARI ═══
+      if (reportData.pilastri.collaboratori) {
+        const sem = reportData.pilastri.collaboratori;
+        const cardY = y;
+        const innerY = drawCard(40, cardY, W - 80, 180, 'SEMINARI & COLLABORATORI', '🎓', colors.seminari);
+        
+        const statW = (W - 120) / 5;
+        drawBigStat(40 + statW/2, innerY + 25, sem.funnel.iscritti.toString(), 'Iscritti', colors.text);
+        drawBigStat(40 + statW*1.5, innerY + 25, sem.funnel.presenti.toString(), 'Presenti', '#10B981');
+        drawBigStat(40 + statW*2.5, innerY + 25, `${sem.funnel.pctPresenti}%`, 'Presenza', colors.seminari);
+        drawBigStat(40 + statW*3.5, innerY + 25, sem.funnel.attivati.toString(), 'Attivati', colors.la);
+        drawBigStat(40 + statW*4.5, innerY + 25, `${sem.funnel.pctAttivati}%`, 'Conversione', colors.fv);
+        
+        // Funnel visivo
+        const funnelX = 60;
+        ctx.fillStyle = '#E0E7FF';
+        ctx.beginPath();
+        ctx.moveTo(funnelX, innerY + 75);
+        ctx.lineTo(funnelX + 300, innerY + 75);
+        ctx.lineTo(funnelX + 250, innerY + 95);
+        ctx.lineTo(funnelX + 50, innerY + 95);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.fillStyle = '#A5B4FC';
+        ctx.beginPath();
+        ctx.moveTo(funnelX + 50, innerY + 95);
+        ctx.lineTo(funnelX + 250, innerY + 95);
+        ctx.lineTo(funnelX + 200, innerY + 115);
+        ctx.lineTo(funnelX + 100, innerY + 115);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.fillStyle = colors.seminari;
+        ctx.beginPath();
+        ctx.moveTo(funnelX + 100, innerY + 115);
+        ctx.lineTo(funnelX + 200, innerY + 115);
+        ctx.lineTo(funnelX + 175, innerY + 135);
+        ctx.lineTo(funnelX + 125, innerY + 135);
+        ctx.closePath();
+        ctx.fill();
+        
+        y = cardY + 200;
+      }
     }
     
-    // Alert
-    if (reportData.alertDaAttivare) {
-      ctx.fillStyle = '#E53935';
-      ctx.font = 'bold 24px Arial';
-      ctx.fillText('🚨 ALERT DA ATTIVARE', 50, y);
-      ctx.font = '18px Arial';
-      ctx.fillStyle = '#333333';
-      ctx.fillText(`Verde (0-30g): ${reportData.alertDaAttivare.verde.length} | Giallo (31-60g): ${reportData.alertDaAttivare.giallo.length} | Rosso (>60g): ${reportData.alertDaAttivare.rosso.length}`, 50, y + 30);
-      y += 80;
+    if (tipo === 'generale') {
+      // ═══ SEZIONE ALERT ═══
+      if (reportData.alertDaAttivare && reportData.alertDaAttivare.totale > 0) {
+        const alert = reportData.alertDaAttivare;
+        const cardY = y;
+        const innerY = drawCard(40, cardY, W - 80, 160, 'ALERT DA ATTIVARE', '🚨', colors.alert);
+        
+        const boxW = (W - 160) / 4;
+        const boxes = [
+          { label: '0-30g', count: alert.verde.length, color: '#10B981', bg: '#D1FAE5' },
+          { label: '31-60g', count: alert.giallo.length, color: '#F59E0B', bg: '#FEF3C7' },
+          { label: '61-150g', count: alert.rosso.filter(a => a.giorni <= 150).length, color: '#EF4444', bg: '#FEE2E2' },
+          { label: '>150g', count: alert.rosso.filter(a => a.giorni > 150).length, color: '#6B7280', bg: '#F3F4F6' }
+        ];
+        
+        boxes.forEach((box, i) => {
+          const bx = 60 + i * boxW + i * 10;
+          ctx.fillStyle = box.bg;
+          ctx.beginPath();
+          ctx.roundRect(bx, innerY, boxW, 80, 10);
+          ctx.fill();
+          ctx.strokeStyle = box.color;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          
+          ctx.fillStyle = box.color;
+          ctx.font = 'bold 28px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText(box.count.toString(), bx + boxW/2, innerY + 40);
+          ctx.font = '12px Arial';
+          ctx.fillText(box.label, bx + boxW/2, innerY + 60);
+        });
+        
+        y = cardY + 180;
+      }
+      
+      // ═══ SEZIONE BEST PERFORMERS ═══
+      if (reportData.bestPerformers) {
+        const cardY = y;
+        const innerY = drawCard(40, cardY, W - 80, 280, 'TOP PERFORMERS', '🏆', '#F59E0B');
+        
+        ctx.textAlign = 'left';
+        let lineY = innerY + 5;
+        const lineH = 28;
+        
+        // Colonna K Manager
+        ctx.fillStyle = '#B45309';
+        ctx.font = 'bold 14px Arial';
+        ctx.fillText('👑 TOP K MANAGER', 70, lineY);
+        lineY += lineH;
+        
+        const kData = [
+          { label: 'Fatturato FV', data: reportData.bestPerformers.fv?.fatturato?.k },
+          { label: 'Fatturato LA/m', data: reportData.bestPerformers.la?.fatturato?.k },
+          { label: 'Iscritti Sem.', data: reportData.bestPerformers.seminari?.iscritti?.k },
+          { label: 'Presenti Sem.', data: reportData.bestPerformers.seminari?.presenti?.k },
+          { label: 'Conversione FV', data: reportData.bestPerformers.fv?.conversione?.k }
+        ];
+        
+        kData.forEach(item => {
+          if (item.data) {
+            ctx.fillStyle = colors.muted;
+            ctx.font = '12px Arial';
+            ctx.fillText(`${item.label}:`, 70, lineY);
+            ctx.fillStyle = colors.text;
+            ctx.font = 'bold 12px Arial';
+            const val = typeof item.data.valore === 'number' && item.data.valore > 1000 ? 
+              `€${item.data.valore.toLocaleString('it-IT')}` : 
+              item.label.includes('%') ? `${item.data.valore}%` : item.data.valore;
+            ctx.fillText(`${item.data.nome} - ${val}`, 180, lineY);
+            lineY += lineH - 5;
+          }
+        });
+        
+        // Colonna Networker
+        lineY = innerY + 5;
+        ctx.fillStyle = '#059669';
+        ctx.font = 'bold 14px Arial';
+        ctx.fillText('⭐ TOP NETWORKER', W/2 + 30, lineY);
+        lineY += lineH;
+        
+        const nwData = [
+          { label: 'Fatturato FV', data: reportData.bestPerformers.fv?.fatturato?.nw },
+          { label: 'Fatturato LA/m', data: reportData.bestPerformers.la?.fatturato?.nw },
+          { label: 'Iscritti Sem.', data: reportData.bestPerformers.seminari?.iscritti?.nw },
+          { label: 'Presenti Sem.', data: reportData.bestPerformers.seminari?.presenti?.nw },
+          { label: 'Velocità 1° LA', data: reportData.bestPerformers.tracker?.primaLA?.nw }
+        ];
+        
+        nwData.forEach(item => {
+          if (item.data) {
+            ctx.fillStyle = colors.muted;
+            ctx.font = '12px Arial';
+            ctx.fillText(`${item.label}:`, W/2 + 30, lineY);
+            ctx.fillStyle = colors.text;
+            ctx.font = 'bold 12px Arial';
+            const val = typeof item.data.valore === 'number' && item.data.valore > 1000 ? 
+              `€${item.data.valore.toLocaleString('it-IT')}` : 
+              item.label.includes('Velocità') ? `${item.data.valore}g` : item.data.valore;
+            ctx.fillText(`${item.data.nome} - ${val}`, W/2 + 140, lineY);
+            lineY += lineH - 5;
+          }
+        });
+        
+        y = cardY + 300;
+      }
+      
+      // ═══ TOTALI ═══
+      const totY = y;
+      ctx.fillStyle = colors.primary;
+      ctx.beginPath();
+      ctx.roundRect(40, totY, W - 80, 100, 12);
+      ctx.fill();
+      
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('📊 TOTALI PERIODO', W/2, totY + 25);
+      
+      const totW = (W - 120) / 4;
+      const totals = [
+        { label: 'Contratti', value: (reportData.pilastri.fv?.totale || 0) + (reportData.pilastri.energy?.totale || 0) },
+        { label: 'Fatturato', value: `€${((reportData.fatturato?.totale?.fatturato || 0)/1000000).toFixed(2)}M` },
+        { label: 'Punti', value: (reportData.fatturato?.totale?.punti || 0).toLocaleString('it-IT') },
+        { label: 'IVD Attivi', value: reportData.trackerCoaching?.ivdConContratti || 0 }
+      ];
+      
+      totals.forEach((t, i) => {
+        ctx.font = 'bold 24px Arial';
+        ctx.fillText(t.value.toString(), 80 + totW/2 + i * totW, totY + 60);
+        ctx.font = '11px Arial';
+        ctx.fillText(t.label, 80 + totW/2 + i * totW, totY + 80);
+      });
     }
     
     // Footer
-    ctx.fillStyle = '#999999';
-    ctx.font = '14px Arial';
+    ctx.fillStyle = colors.muted;
+    ctx.font = '12px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v14.0 • ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 40);
+    ctx.fillText(`Leader Ranking v14.0 • Generato il ${new Date().toLocaleDateString('it-IT')} alle ${new Date().toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'})}`, W/2, H - 25);
     
     // Download
     const link = document.createElement('a');
-    link.download = `report_aggregato_${new Date().toISOString().split('T')[0]}.png`;
+    const tipoLabel = tipo === 'generale' ? 'aggregato' : tipo;
+    link.download = `report_${tipoLabel}_${periodo.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
+  };
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 📽️ EXPORT POWERPOINT - Generazione dinamica slide
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  const downloadPowerPoint = async () => {
+    if (!reportData || !reportData.pilastri) return alert('Nessun report da esportare');
+    
+    // Carica pptxgenjs dinamicamente
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
+    document.head.appendChild(script);
+    
+    script.onload = () => {
+      const pptx = new PptxGenJS();
+      pptx.layout = 'LAYOUT_16x9';
+      pptx.author = 'Leader Ranking';
+      pptx.title = `Report ${reportData.periodoRiferimento?.label || 'Periodo'}`;
+      
+      const periodo = reportData.periodoRiferimento?.label || 'Periodo';
+      const colors = { primary: '2AAA8A', fv: '15803D', la: 'B45309', seminari: '7C3AED', alert: 'DC2626', dark: '1F2937', muted: '6B7280' };
+      
+      // ═══ SLIDE 1: COPERTINA ═══
+      let slide = pptx.addSlide();
+      slide.background = { color: '1F2937' };
+      slide.addText('LEADER RANKING', { x: 0.5, y: 1.8, w: 9, h: 0.8, fontSize: 44, bold: true, color: '2AAA8A', align: 'center' });
+      slide.addText('Report Performance', { x: 0.5, y: 2.5, w: 9, h: 0.5, fontSize: 24, color: 'FFFFFF', align: 'center' });
+      slide.addShape(pptx.shapes.RECTANGLE, { x: 3.5, y: 3.2, w: 3, h: 0.05, fill: { color: '2AAA8A' } });
+      slide.addText(`📅 ${periodo}`, { x: 0.5, y: 3.5, w: 9, h: 0.5, fontSize: 20, color: 'F59E0B', align: 'center' });
+      slide.addText(`Generato il ${new Date().toLocaleDateString('it-IT')}`, { x: 0.5, y: 5, w: 9, h: 0.3, fontSize: 12, color: '9CA3AF', align: 'center' });
+      
+      // ═══ SLIDE 2: RIEPILOGO GENERALE ═══
+      slide = pptx.addSlide();
+      slide.background = { color: 'F8FAFC' };
+      slide.addText('📊 Riepilogo Generale', { x: 0.5, y: 0.3, w: 9, h: 0.6, fontSize: 28, bold: true, color: colors.dark });
+      slide.addText(`📅 ${periodo}`, { x: 0.5, y: 0.8, w: 9, h: 0.3, fontSize: 12, color: colors.muted });
+      
+      // Card FV
+      if (reportData.pilastri.fv) {
+        slide.addShape(pptx.shapes.RECTANGLE, { x: 0.5, y: 1.3, w: 2.9, h: 1.8, fill: { color: 'F0FDF4' }, line: { color: 'BBF7D0', pt: 1 } });
+        slide.addText('☀️ Fotovoltaico', { x: 0.6, y: 1.4, w: 2.7, h: 0.3, fontSize: 14, bold: true, color: colors.fv });
+        slide.addText(`€${((reportData.fatturato?.fv?.effettivi?.totale || 0)/1000000).toFixed(2)}M`, { x: 0.6, y: 1.75, w: 2.7, h: 0.5, fontSize: 28, bold: true, color: colors.fv });
+        slide.addText(`${reportData.pilastri.fv.totale} contratti • ${reportData.pilastri.fv.funnel.pctPositivi}% conv.`, { x: 0.6, y: 2.3, w: 2.7, h: 0.3, fontSize: 10, color: colors.muted });
+      }
+      
+      // Card LA
+      if (reportData.pilastri.energy) {
+        slide.addShape(pptx.shapes.RECTANGLE, { x: 3.55, y: 1.3, w: 2.9, h: 1.8, fill: { color: 'FFFBEB' }, line: { color: 'FCD34D', pt: 1 } });
+        slide.addText('⚡ Luce Amica', { x: 3.65, y: 1.4, w: 2.7, h: 0.3, fontSize: 14, bold: true, color: colors.la });
+        slide.addText(`€${((reportData.fatturato?.la?.accettati?.totale || 0)/1000000).toFixed(2)}M`, { x: 3.65, y: 1.75, w: 2.7, h: 0.5, fontSize: 28, bold: true, color: colors.la });
+        slide.addText(`${reportData.pilastri.energy.totale} contratti • ${reportData.pilastri.energy.funnel.pctAccettati}% acc.`, { x: 3.65, y: 2.3, w: 2.7, h: 0.3, fontSize: 10, color: colors.muted });
+      }
+      
+      // Card Totale
+      slide.addShape(pptx.shapes.RECTANGLE, { x: 6.6, y: 1.3, w: 2.9, h: 1.8, fill: { color: colors.dark } });
+      slide.addText('📊 Totale', { x: 6.7, y: 1.4, w: 2.7, h: 0.3, fontSize: 14, bold: true, color: 'FFFFFF' });
+      slide.addText(`€${((reportData.fatturato?.totale?.fatturato || 0)/1000000).toFixed(2)}M`, { x: 6.7, y: 1.75, w: 2.7, h: 0.5, fontSize: 28, bold: true, color: '2AAA8A' });
+      slide.addText(`${reportData.fatturato?.totale?.punti?.toLocaleString('it-IT') || 0} punti`, { x: 6.7, y: 2.3, w: 2.7, h: 0.3, fontSize: 10, color: 'D1D5DB' });
+      
+      // Seminari e IVD
+      if (reportData.pilastri.collaboratori) {
+        slide.addShape(pptx.shapes.RECTANGLE, { x: 0.5, y: 3.3, w: 4.4, h: 1.2, fill: { color: 'FFFFFF' }, line: { color: 'E5E7EB', pt: 1 } });
+        slide.addText('🎓 Seminari', { x: 0.6, y: 3.4, w: 4.2, h: 0.3, fontSize: 14, bold: true, color: colors.seminari });
+        slide.addText(`${reportData.pilastri.collaboratori.funnel.iscritti} iscritti → ${reportData.pilastri.collaboratori.funnel.presenti} presenti → ${reportData.pilastri.collaboratori.funnel.attivati} attivati`, { x: 0.6, y: 3.8, w: 4.2, h: 0.3, fontSize: 12, color: colors.dark });
+        slide.addText(`Presenza: ${reportData.pilastri.collaboratori.funnel.pctPresenti}% • Conversione: ${reportData.pilastri.collaboratori.funnel.pctAttivati}%`, { x: 0.6, y: 4.15, w: 4.2, h: 0.25, fontSize: 10, color: colors.muted });
+      }
+      
+      // IVD
+      if (reportData.trackerCoaching) {
+        slide.addShape(pptx.shapes.RECTANGLE, { x: 5.1, y: 3.3, w: 4.4, h: 1.2, fill: { color: 'FFFFFF' }, line: { color: 'E5E7EB', pt: 1 } });
+        slide.addText('👥 Nuovi IVD', { x: 5.2, y: 3.4, w: 4.2, h: 0.3, fontSize: 14, bold: true, color: colors.primary });
+        slide.addText(`${reportData.trackerCoaching.totale} totali • ${reportData.trackerCoaching.ivdConContratti} produttivi (${100 - reportData.trackerCoaching.pctInattivi}%)`, { x: 5.2, y: 3.8, w: 4.2, h: 0.3, fontSize: 12, color: colors.dark });
+        slide.addText(`${reportData.trackerCoaching.ivdInattivi} inattivi (${reportData.trackerCoaching.pctInattivi}%)`, { x: 5.2, y: 4.15, w: 4.2, h: 0.25, fontSize: 10, color: colors.alert });
+      }
+      
+      // ═══ SLIDE 3: FOTOVOLTAICO (se dati) ═══
+      if (reportData.pilastri.fv) {
+        slide = pptx.addSlide();
+        slide.background = { color: 'F0FDF4' };
+        slide.addText('☀️ Pilastro Fotovoltaico', { x: 0.5, y: 0.3, w: 9, h: 0.6, fontSize: 28, bold: true, color: colors.fv });
+        slide.addText(`📅 ${periodo}`, { x: 0.5, y: 0.8, w: 9, h: 0.3, fontSize: 12, color: colors.muted });
+        
+        // Funnel
+        const fv = reportData.pilastri.fv;
+        const funnelData = [
+          { label: 'Inseriti', value: fv.funnel.inseriti, color: colors.dark },
+          { label: 'Positivi', value: fv.funnel.positivi, color: colors.fv, pct: fv.funnel.pctPositivi },
+          { label: 'Lavorazione', value: fv.funnel.lavorazione, color: 'F59E0B' },
+          { label: 'Persi', value: fv.funnel.negativi, color: colors.alert, pct: fv.funnel.pctNegativi }
+        ];
+        
+        funnelData.forEach((item, i) => {
+          slide.addShape(pptx.shapes.RECTANGLE, { x: 0.5 + i * 2.4, y: 1.3, w: 2.2, h: 1.5, fill: { color: 'FFFFFF' }, line: { color: item.color, pt: 2 } });
+          slide.addText(item.value.toString(), { x: 0.5 + i * 2.4, y: 1.5, w: 2.2, h: 0.7, fontSize: 32, bold: true, color: item.color, align: 'center' });
+          slide.addText(`${item.label}${item.pct !== undefined ? ` (${item.pct}%)` : ''}`, { x: 0.5 + i * 2.4, y: 2.3, w: 2.2, h: 0.3, fontSize: 11, color: colors.muted, align: 'center' });
+        });
+        
+        // Top 5 K e NW
+        slide.addText('🏆 Top 5 K Manager', { x: 0.5, y: 3.1, w: 4.4, h: 0.4, fontSize: 14, bold: true, color: colors.fv });
+        fv.classifiche?.k.slice(0, 5).forEach(([nome, stats], i) => {
+          slide.addText(`${i + 1}. ${nome}`, { x: 0.5, y: 3.5 + i * 0.35, w: 2.5, h: 0.3, fontSize: 11, color: colors.dark });
+          slide.addText(`${stats.total} ins | ${stats.positivo} pos`, { x: 3, y: 3.5 + i * 0.35, w: 1.8, h: 0.3, fontSize: 10, color: colors.muted, align: 'right' });
+        });
+        
+        slide.addText('⭐ Top 5 Networker', { x: 5.1, y: 3.1, w: 4.4, h: 0.4, fontSize: 14, bold: true, color: colors.fv });
+        fv.classifiche?.nw.slice(0, 5).forEach(([nome, stats], i) => {
+          slide.addText(`${i + 1}. ${nome}`, { x: 5.1, y: 3.5 + i * 0.35, w: 2.5, h: 0.3, fontSize: 11, color: colors.dark });
+          slide.addText(`${stats.total} ins | ${stats.positivo} pos`, { x: 7.6, y: 3.5 + i * 0.35, w: 1.8, h: 0.3, fontSize: 10, color: colors.muted, align: 'right' });
+        });
+      }
+      
+      // ═══ SLIDE 4: LUCE AMICA (se dati) ═══
+      if (reportData.pilastri.energy) {
+        slide = pptx.addSlide();
+        slide.background = { color: 'FFFBEB' };
+        slide.addText('⚡ Pilastro Luce Amica', { x: 0.5, y: 0.3, w: 9, h: 0.6, fontSize: 28, bold: true, color: colors.la });
+        slide.addText(`📅 ${periodo}`, { x: 0.5, y: 0.8, w: 9, h: 0.3, fontSize: 12, color: colors.muted });
+        
+        const la = reportData.pilastri.energy;
+        const funnelData = [
+          { label: 'Inseriti', value: la.funnel.inseriti, color: colors.dark },
+          { label: 'Accettati', value: la.funnel.accettati, color: '10B981', pct: la.funnel.pctAccettati },
+          { label: 'Lavorabili', value: la.funnel.lavorabili, color: 'F59E0B' },
+          { label: 'Cessati', value: la.funnel.persi, color: colors.alert }
+        ];
+        
+        funnelData.forEach((item, i) => {
+          slide.addShape(pptx.shapes.RECTANGLE, { x: 0.5 + i * 2.4, y: 1.3, w: 2.2, h: 1.5, fill: { color: 'FFFFFF' }, line: { color: item.color, pt: 2 } });
+          slide.addText(item.value.toString(), { x: 0.5 + i * 2.4, y: 1.5, w: 2.2, h: 0.7, fontSize: 32, bold: true, color: item.color, align: 'center' });
+          slide.addText(`${item.label}${item.pct !== undefined ? ` (${item.pct}%)` : ''}`, { x: 0.5 + i * 2.4, y: 2.3, w: 2.2, h: 0.3, fontSize: 11, color: colors.muted, align: 'center' });
+        });
+        
+        // Fatturato
+        if (reportData.fatturato?.la) {
+          const fat = reportData.fatturato.la;
+          slide.addShape(pptx.shapes.RECTANGLE, { x: 0.5, y: 3.1, w: 9, h: 1.2, fill: { color: colors.la } });
+          slide.addText('💰 Fatturato Generato', { x: 0.6, y: 3.2, w: 8.8, h: 0.35, fontSize: 14, bold: true, color: 'FFFFFF' });
+          slide.addText(`€${Math.round(fat.accettati.totale).toLocaleString('it-IT')}/anno • €${Math.round(fat.accettati.totale/12).toLocaleString('it-IT')}/mese • ${fat.accettati.kwhTotali.toLocaleString('it-IT')} kWh green`, { x: 0.6, y: 3.6, w: 8.8, h: 0.35, fontSize: 16, color: 'FFFFFF' });
+          slide.addText(`${fat.accettati.contratti} contratti accettati • ${fat.accettati.puntiTotali.toLocaleString('it-IT')} punti`, { x: 0.6, y: 4, w: 8.8, h: 0.25, fontSize: 11, color: 'FEF3C7' });
+        }
+        
+        // Top 5
+        slide.addText('🏆 Top 5 K Manager', { x: 0.5, y: 4.5, w: 4.4, h: 0.4, fontSize: 14, bold: true, color: colors.la });
+        la.classifiche?.k.slice(0, 5).forEach(([nome, stats], i) => {
+          slide.addText(`${i + 1}. ${nome} - ${stats.total} ins | ${stats.positivo} acc`, { x: 0.5, y: 4.85 + i * 0.28, w: 4.4, h: 0.25, fontSize: 10, color: colors.dark });
+        });
+      }
+      
+      // ═══ SLIDE 5: BEST PERFORMERS ═══
+      if (reportData.bestPerformers) {
+        slide = pptx.addSlide();
+        slide.background = { color: 'FFFFFF' };
+        slide.addText('🏆 Top Performers', { x: 0.5, y: 0.3, w: 9, h: 0.6, fontSize: 28, bold: true, color: 'F59E0B' });
+        slide.addText(`📅 ${periodo}`, { x: 0.5, y: 0.8, w: 9, h: 0.3, fontSize: 12, color: colors.muted });
+        
+        // K Manager
+        slide.addShape(pptx.shapes.RECTANGLE, { x: 0.5, y: 1.2, w: 4.4, h: 4, fill: { color: 'FEF3C7' }, line: { color: 'FCD34D', pt: 2 } });
+        slide.addText('👑 TOP K MANAGER', { x: 0.6, y: 1.3, w: 4.2, h: 0.4, fontSize: 16, bold: true, color: colors.la });
+        
+        let ky = 1.8;
+        const kItems = [
+          { label: '☀️ Fatturato FV', data: reportData.bestPerformers.fv?.fatturato?.k, fmt: v => `€${v.toLocaleString('it-IT')}` },
+          { label: '⚡ Fatturato LA', data: reportData.bestPerformers.la?.fatturato?.k, fmt: v => `€${v.toLocaleString('it-IT')}/m` },
+          { label: '🎓 Iscritti Sem.', data: reportData.bestPerformers.seminari?.iscritti?.k, fmt: v => v },
+          { label: '✅ Presenti Sem.', data: reportData.bestPerformers.seminari?.presenti?.k, fmt: v => v },
+          { label: '📈 Conversione FV', data: reportData.bestPerformers.fv?.conversione?.k, fmt: v => `${v}%` }
+        ];
+        
+        kItems.forEach(item => {
+          if (item.data) {
+            slide.addText(item.label, { x: 0.7, y: ky, w: 1.8, h: 0.35, fontSize: 11, color: colors.muted });
+            slide.addText(`${item.data.nome}`, { x: 0.7, y: ky + 0.3, w: 2.5, h: 0.3, fontSize: 12, bold: true, color: colors.dark });
+            slide.addText(item.fmt(item.data.valore), { x: 3.2, y: ky + 0.15, w: 1.5, h: 0.35, fontSize: 14, bold: true, color: colors.la, align: 'right' });
+            ky += 0.7;
+          }
+        });
+        
+        // Networker
+        slide.addShape(pptx.shapes.RECTANGLE, { x: 5.1, y: 1.2, w: 4.4, h: 4, fill: { color: 'D1FAE5' }, line: { color: '6EE7B7', pt: 2 } });
+        slide.addText('⭐ TOP NETWORKER', { x: 5.2, y: 1.3, w: 4.2, h: 0.4, fontSize: 16, bold: true, color: '059669' });
+        
+        let ny = 1.8;
+        const nwItems = [
+          { label: '☀️ Fatturato FV', data: reportData.bestPerformers.fv?.fatturato?.nw, fmt: v => `€${v.toLocaleString('it-IT')}` },
+          { label: '⚡ Fatturato LA', data: reportData.bestPerformers.la?.fatturato?.nw, fmt: v => `€${v.toLocaleString('it-IT')}/m` },
+          { label: '🎓 Iscritti Sem.', data: reportData.bestPerformers.seminari?.iscritti?.nw, fmt: v => v },
+          { label: '✅ Presenti Sem.', data: reportData.bestPerformers.seminari?.presenti?.nw, fmt: v => v },
+          { label: '🎯 Velocità 1° LA', data: reportData.bestPerformers.tracker?.primaLA?.nw, fmt: v => `${v}g` }
+        ];
+        
+        nwItems.forEach(item => {
+          if (item.data) {
+            slide.addText(item.label, { x: 5.3, y: ny, w: 1.8, h: 0.35, fontSize: 11, color: colors.muted });
+            slide.addText(`${item.data.nome}`, { x: 5.3, y: ny + 0.3, w: 2.5, h: 0.3, fontSize: 12, bold: true, color: colors.dark });
+            slide.addText(item.fmt(item.data.valore), { x: 7.8, y: ny + 0.15, w: 1.5, h: 0.35, fontSize: 14, bold: true, color: '059669', align: 'right' });
+            ny += 0.7;
+          }
+        });
+      }
+      
+      // ═══ SLIDE 6: ALERT (se presenti) ═══
+      if (reportData.alertDaAttivare && reportData.alertDaAttivare.totale > 0) {
+        slide = pptx.addSlide();
+        slide.background = { color: 'FEF2F2' };
+        slide.addText('🚨 Alert Da Attivare', { x: 0.5, y: 0.3, w: 9, h: 0.6, fontSize: 28, bold: true, color: colors.alert });
+        slide.addText(`📅 ${periodo} • ${reportData.alertDaAttivare.totale} contratti in attesa`, { x: 0.5, y: 0.8, w: 9, h: 0.3, fontSize: 12, color: colors.muted });
+        
+        const alert = reportData.alertDaAttivare;
+        const boxes = [
+          { label: 'VERDI (0-30g)', count: alert.verde.length, color: '10B981', bg: 'D1FAE5' },
+          { label: 'GIALLI (31-60g)', count: alert.giallo.length, color: 'F59E0B', bg: 'FEF3C7' },
+          { label: 'ROSSI (61-150g)', count: alert.rosso.filter(a => a.giorni <= 150).length, color: 'EF4444', bg: 'FEE2E2' },
+          { label: 'CRITICI (>150g)', count: alert.rosso.filter(a => a.giorni > 150).length, color: '6B7280', bg: 'F3F4F6' }
+        ];
+        
+        boxes.forEach((box, i) => {
+          slide.addShape(pptx.shapes.RECTANGLE, { x: 0.5 + i * 2.4, y: 1.3, w: 2.2, h: 2, fill: { color: box.bg }, line: { color: box.color, pt: 3 } });
+          slide.addText(box.count.toString(), { x: 0.5 + i * 2.4, y: 1.6, w: 2.2, h: 0.8, fontSize: 48, bold: true, color: box.color, align: 'center' });
+          slide.addText(box.label, { x: 0.5 + i * 2.4, y: 2.6, w: 2.2, h: 0.4, fontSize: 11, bold: true, color: box.color, align: 'center' });
+        });
+      }
+      
+      // ═══ SLIDE FINALE: CHIUSURA ═══
+      slide = pptx.addSlide();
+      slide.background = { color: colors.dark };
+      slide.addText('Grazie!', { x: 0.5, y: 2, w: 9, h: 0.8, fontSize: 48, bold: true, color: 'FFFFFF', align: 'center' });
+      slide.addText('Leader Ranking v14.0', { x: 0.5, y: 2.9, w: 9, h: 0.4, fontSize: 18, color: colors.primary, align: 'center' });
+      slide.addText(`Report generato il ${new Date().toLocaleDateString('it-IT')}`, { x: 0.5, y: 4.5, w: 9, h: 0.3, fontSize: 12, color: '9CA3AF', align: 'center' });
+      
+      // Salva
+      pptx.writeFile({ fileName: `LeaderRanking_${periodo.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.pptx` });
+    };
   };
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // 📊 RIEPILOGO GENERALE - Design coerente con dashboard
   // ═══════════════════════════════════════════════════════════════════════════════
-  const ExecutiveSummaryComponent = ({ data }) => {
+  const ExecutiveSummaryComponent = ({ data, periodo }) => {
     if (!data) return null;
     
     const getSemaforoColor = (semaforo) => {
@@ -2984,7 +3698,7 @@ export default function Home() {
         border: '1px solid #E5E7EB',
         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
       }}>
-        {/* Header */}
+        {/* Header con PERIODO */}
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
@@ -2998,7 +3712,7 @@ export default function Home() {
               📊 Riepilogo Generale
             </h2>
             <p style={{ color: '#6B7280', fontSize: 12, margin: '4px 0 0' }}>
-              Panoramica completa risultati periodo
+              {periodo ? `📅 Periodo: ${periodo.label}` : 'Panoramica completa risultati periodo'}
             </p>
           </div>
           
@@ -3529,7 +4243,159 @@ export default function Home() {
         
         {/* 🎯 EXECUTIVE SUMMARY - PRIMA DI TUTTO */}
         {reportData.executiveSummary && (
-          <ExecutiveSummaryComponent data={reportData.executiveSummary} />
+          <ExecutiveSummaryComponent data={reportData.executiveSummary} periodo={reportData.periodoRiferimento} />
+        )}
+        
+        {/* 🏆 BEST PERFORMERS - Migliori K e NW per categoria */}
+        {reportData.bestPerformers && (
+          <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 24, border: '1px solid #E5E7EB' }}>
+            <div style={{ marginBottom: 20 }}>
+              <h3 style={{ color: '#1F2937', fontSize: 18, margin: 0, fontWeight: 700 }}>🏆 Best Performers</h3>
+              <p style={{ color: '#6B7280', fontSize: 12, margin: '4px 0 0' }}>
+                I migliori K Manager e Networker per ogni categoria {reportData.periodoRiferimento ? `• ${reportData.periodoRiferimento.label}` : ''}
+              </p>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+              {/* COLONNA K MANAGER */}
+              <div style={{ background: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)', borderRadius: 16, padding: 20, border: '2px solid #FCD34D' }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#B45309', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  👑 TOP K MANAGER
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {/* FV Fatturato */}
+                  {reportData.bestPerformers.fv?.fatturato?.k && (
+                    <div style={{ background: '#FFFFFF', borderRadius: 10, padding: 12, border: '1px solid #BBF7D0' }}>
+                      <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4 }}>☀️ Miglior Fatturato FV</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 700, color: '#15803D' }}>{reportData.bestPerformers.fv.fatturato.k.nome}</span>
+                        <span style={{ fontWeight: 800, color: '#166534' }}>€{reportData.bestPerformers.fv.fatturato.k.valore.toLocaleString('it-IT')}</span>
+                      </div>
+                      <div style={{ fontSize: 9, color: '#9CA3AF' }}>{reportData.bestPerformers.fv.fatturato.k.dettaglio}</div>
+                    </div>
+                  )}
+                  
+                  {/* LA Fatturato Mensile */}
+                  {reportData.bestPerformers.la?.fatturato?.k && (
+                    <div style={{ background: '#FFFFFF', borderRadius: 10, padding: 12, border: '1px solid #FCD34D' }}>
+                      <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4 }}>⚡ Miglior Fatturato LA /mese</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 700, color: '#B45309' }}>{reportData.bestPerformers.la.fatturato.k.nome}</span>
+                        <span style={{ fontWeight: 800, color: '#92400E' }}>€{reportData.bestPerformers.la.fatturato.k.valore.toLocaleString('it-IT')}/m</span>
+                      </div>
+                      <div style={{ fontSize: 9, color: '#9CA3AF' }}>{reportData.bestPerformers.la.fatturato.k.dettaglio}</div>
+                    </div>
+                  )}
+                  
+                  {/* Seminari Iscritti */}
+                  {reportData.bestPerformers.seminari?.iscritti?.k && (
+                    <div style={{ background: '#FFFFFF', borderRadius: 10, padding: 12, border: '1px solid #C4B5FD' }}>
+                      <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4 }}>🎓 Miglior Iscritti Seminari</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 700, color: '#7C3AED' }}>{reportData.bestPerformers.seminari.iscritti.k.nome}</span>
+                        <span style={{ fontWeight: 800, color: '#5B21B6' }}>{reportData.bestPerformers.seminari.iscritti.k.valore}</span>
+                      </div>
+                      <div style={{ fontSize: 9, color: '#9CA3AF' }}>{reportData.bestPerformers.seminari.iscritti.k.dettaglio}</div>
+                    </div>
+                  )}
+                  
+                  {/* Seminari Presenti */}
+                  {reportData.bestPerformers.seminari?.presenti?.k && (
+                    <div style={{ background: '#FFFFFF', borderRadius: 10, padding: 12, border: '1px solid #A7F3D0' }}>
+                      <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4 }}>✅ Miglior Presenti Seminari</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 700, color: '#059669' }}>{reportData.bestPerformers.seminari.presenti.k.nome}</span>
+                        <span style={{ fontWeight: 800, color: '#047857' }}>{reportData.bestPerformers.seminari.presenti.k.valore}</span>
+                      </div>
+                      <div style={{ fontSize: 9, color: '#9CA3AF' }}>{reportData.bestPerformers.seminari.presenti.k.dettaglio}</div>
+                    </div>
+                  )}
+                  
+                  {/* FV Conversione */}
+                  {reportData.bestPerformers.fv?.conversione?.k && (
+                    <div style={{ background: '#FFFFFF', borderRadius: 10, padding: 12, border: '1px solid #86EFAC' }}>
+                      <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4 }}>📈 Miglior Conversione FV</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 700, color: '#16A34A' }}>{reportData.bestPerformers.fv.conversione.k.nome}</span>
+                        <span style={{ fontWeight: 800, color: '#15803D' }}>{reportData.bestPerformers.fv.conversione.k.valore}%</span>
+                      </div>
+                      <div style={{ fontSize: 9, color: '#9CA3AF' }}>{reportData.bestPerformers.fv.conversione.k.dettaglio}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* COLONNA NETWORKER */}
+              <div style={{ background: 'linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 100%)', borderRadius: 16, padding: 20, border: '2px solid #6EE7B7' }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#059669', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  ⭐ TOP NETWORKER
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {/* FV Fatturato */}
+                  {reportData.bestPerformers.fv?.fatturato?.nw && (
+                    <div style={{ background: '#FFFFFF', borderRadius: 10, padding: 12, border: '1px solid #BBF7D0' }}>
+                      <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4 }}>☀️ Miglior Fatturato FV</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 700, color: '#15803D' }}>{reportData.bestPerformers.fv.fatturato.nw.nome}</span>
+                        <span style={{ fontWeight: 800, color: '#166534' }}>€{reportData.bestPerformers.fv.fatturato.nw.valore.toLocaleString('it-IT')}</span>
+                      </div>
+                      <div style={{ fontSize: 9, color: '#9CA3AF' }}>{reportData.bestPerformers.fv.fatturato.nw.dettaglio}</div>
+                    </div>
+                  )}
+                  
+                  {/* LA Fatturato Mensile */}
+                  {reportData.bestPerformers.la?.fatturato?.nw && (
+                    <div style={{ background: '#FFFFFF', borderRadius: 10, padding: 12, border: '1px solid #FCD34D' }}>
+                      <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4 }}>⚡ Miglior Fatturato LA /mese</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 700, color: '#B45309' }}>{reportData.bestPerformers.la.fatturato.nw.nome}</span>
+                        <span style={{ fontWeight: 800, color: '#92400E' }}>€{reportData.bestPerformers.la.fatturato.nw.valore.toLocaleString('it-IT')}/m</span>
+                      </div>
+                      <div style={{ fontSize: 9, color: '#9CA3AF' }}>{reportData.bestPerformers.la.fatturato.nw.dettaglio}</div>
+                    </div>
+                  )}
+                  
+                  {/* Seminari Iscritti */}
+                  {reportData.bestPerformers.seminari?.iscritti?.nw && (
+                    <div style={{ background: '#FFFFFF', borderRadius: 10, padding: 12, border: '1px solid #C4B5FD' }}>
+                      <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4 }}>🎓 Miglior Iscritti Seminari</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 700, color: '#7C3AED' }}>{reportData.bestPerformers.seminari.iscritti.nw.nome}</span>
+                        <span style={{ fontWeight: 800, color: '#5B21B6' }}>{reportData.bestPerformers.seminari.iscritti.nw.valore}</span>
+                      </div>
+                      <div style={{ fontSize: 9, color: '#9CA3AF' }}>{reportData.bestPerformers.seminari.iscritti.nw.dettaglio}</div>
+                    </div>
+                  )}
+                  
+                  {/* Seminari Presenti */}
+                  {reportData.bestPerformers.seminari?.presenti?.nw && (
+                    <div style={{ background: '#FFFFFF', borderRadius: 10, padding: 12, border: '1px solid #A7F3D0' }}>
+                      <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4 }}>✅ Miglior Presenti Seminari</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 700, color: '#059669' }}>{reportData.bestPerformers.seminari.presenti.nw.nome}</span>
+                        <span style={{ fontWeight: 800, color: '#047857' }}>{reportData.bestPerformers.seminari.presenti.nw.valore}</span>
+                      </div>
+                      <div style={{ fontSize: 9, color: '#9CA3AF' }}>{reportData.bestPerformers.seminari.presenti.nw.dettaglio}</div>
+                    </div>
+                  )}
+                  
+                  {/* Tracker Velocità LA */}
+                  {reportData.bestPerformers.tracker?.primaLA?.nw && (
+                    <div style={{ background: '#FFFFFF', borderRadius: 10, padding: 12, border: '1px solid #93C5FD' }}>
+                      <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4 }}>🎯 Più Veloce 1° LA</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 700, color: '#2563EB' }}>{reportData.bestPerformers.tracker.primaLA.nw.nome}</span>
+                        <span style={{ fontWeight: 800, color: '#1D4ED8' }}>{reportData.bestPerformers.tracker.primaLA.nw.valore}g</span>
+                      </div>
+                      <div style={{ fontSize: 9, color: '#9CA3AF' }}>{reportData.bestPerformers.tracker.primaLA.nw.dettaglio}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
         
         {/* 📈 FUNNEL ANALYSIS */}
@@ -3550,7 +4416,9 @@ export default function Home() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <div>
                 <h3 style={{ color: '#1F2937', fontSize: 18, margin: 0, fontWeight: 700 }}>🗓️ Calendario Attività</h3>
-                <p style={{ color: '#6B7280', fontSize: 12, margin: '4px 0 0' }}>Clicca un box per vedere il dettaglio mensile</p>
+                <p style={{ color: '#6B7280', fontSize: 12, margin: '4px 0 0' }}>
+                  Clicca un box per vedere il dettaglio mensile {reportData.periodoRiferimento ? `• ${reportData.periodoRiferimento.label}` : ''}
+                </p>
               </div>
               {heatmapDrilldown && (
                 <button 
@@ -3580,8 +4448,8 @@ export default function Home() {
                     { key: 'consultings', emoji: '🎓', label: 'Seminari', color: '#7C3AED', bgColor: '#F5F3FF', borderColor: '#C4B5FD' },
                     { key: 'presenti', emoji: '✅', label: 'Presenti', color: '#059669', bgColor: '#ECFDF5', borderColor: '#A7F3D0' },
                     { key: 'ivd', emoji: '👥', label: 'Attivati', color: '#EA580C', bgColor: '#FFF7ED', borderColor: '#FDBA74' },
-                    { key: 'guadagnoFV', emoji: '💰', label: 'Guadagno FV', color: '#15803D', bgColor: '#F0FDF4', borderColor: '#BBF7D0', isCurrency: true },
-                    { key: 'guadagnoLA', emoji: '💵', label: 'Guadagno LA', color: '#B45309', bgColor: '#FFFBEB', borderColor: '#FCD34D', isCurrency: true },
+                    { key: 'guadagnoFV', emoji: '💰', label: 'Fatturato FV', color: '#15803D', bgColor: '#F0FDF4', borderColor: '#BBF7D0', isCurrency: true },
+                    { key: 'guadagnoLA', emoji: '💵', label: 'Fatturato LA', color: '#B45309', bgColor: '#FFFBEB', borderColor: '#FCD34D', isCurrency: true },
                     { key: 'puntiFV', emoji: '⭐', label: 'Punti FV', color: '#7C3AED', bgColor: '#F5F3FF', borderColor: '#C4B5FD', unit: 'pt' },
                     { key: 'puntiLA', emoji: '🏆', label: 'Punti LA', color: '#EA580C', bgColor: '#FFF7ED', borderColor: '#FDBA74', unit: 'pt' }
                   ].map(item => {
@@ -3821,12 +4689,19 @@ export default function Home() {
         {/* PILASTRO FOTOVOLTAICO */}
         {reportData.pilastri.fv && (
           <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-              <span style={{ fontSize: 28 }}>☀️</span>
-              <div>
-                <h3 style={{ color: '#2AAA8A', fontSize: 20, margin: 0, fontWeight: 700 }}>PILASTRO FOTOVOLTAICO</h3>
-                <p style={{ color: '#666', fontSize: 12, margin: 0 }}>Totale inseriti: {reportData.pilastri.fv.totale}</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 28 }}>☀️</span>
+                <div>
+                  <h3 style={{ color: '#2AAA8A', fontSize: 20, margin: 0, fontWeight: 700 }}>PILASTRO FOTOVOLTAICO</h3>
+                  <p style={{ color: '#666', fontSize: 12, margin: 0 }}>Totale inseriti: {reportData.pilastri.fv.totale}</p>
+                </div>
               </div>
+              {reportData.periodoRiferimento && (
+                <div style={{ background: '#F0FDF4', padding: '6px 12px', borderRadius: 8, border: '1px solid #BBF7D0' }}>
+                  <span style={{ fontSize: 11, color: '#15803D', fontWeight: 600 }}>📅 {reportData.periodoRiferimento.label}</span>
+                </div>
+              )}
             </div>
             
             {/* FUNNEL GRANDE - CON TUTTE LE % */}
@@ -3959,12 +4834,19 @@ export default function Home() {
         {/* PILASTRO LUCE AMICA */}
         {reportData.pilastri.energy && (
           <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-              <span style={{ fontSize: 28 }}>⚡</span>
-              <div>
-                <h3 style={{ color: '#FFD700', fontSize: 20, margin: 0, fontWeight: 700 }}>PILASTRO LUCE AMICA</h3>
-                <p style={{ color: '#666', fontSize: 12, margin: 0 }}>Totale inseriti: {reportData.pilastri.energy.totale}</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 28 }}>⚡</span>
+                <div>
+                  <h3 style={{ color: '#FFD700', fontSize: 20, margin: 0, fontWeight: 700 }}>PILASTRO LUCE AMICA</h3>
+                  <p style={{ color: '#666', fontSize: 12, margin: 0 }}>Totale inseriti: {reportData.pilastri.energy.totale}</p>
+                </div>
               </div>
+              {reportData.periodoRiferimento && (
+                <div style={{ background: '#FFFBEB', padding: '6px 12px', borderRadius: 8, border: '1px solid #FCD34D' }}>
+                  <span style={{ fontSize: 11, color: '#B45309', fontWeight: 600 }}>📅 {reportData.periodoRiferimento.label}</span>
+                </div>
+              )}
             </div>
             
             {/* FUNNEL GRANDE */}
@@ -4143,12 +5025,19 @@ export default function Home() {
         {/* PILASTRO COLLABORATORI */}
         {reportData.pilastri.collaboratori && (
           <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-              <span style={{ fontSize: 28 }}>🎓</span>
-              <div>
-                <h3 style={{ color: '#2AAA8A', fontSize: 20, margin: 0, fontWeight: 700 }}>PILASTRO COLLABORATORI</h3>
-                <p style={{ color: '#666', fontSize: 12, margin: 0 }}>Funnel: Iscritti → Presenti → Attivati</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 28 }}>🎓</span>
+                <div>
+                  <h3 style={{ color: '#2AAA8A', fontSize: 20, margin: 0, fontWeight: 700 }}>PILASTRO COLLABORATORI</h3>
+                  <p style={{ color: '#666', fontSize: 12, margin: 0 }}>Funnel: Iscritti → Presenti → Attivati</p>
+                </div>
               </div>
+              {reportData.periodoRiferimento && (
+                <div style={{ background: '#F5F3FF', padding: '6px 12px', borderRadius: 8, border: '1px solid #C4B5FD' }}>
+                  <span style={{ fontSize: 11, color: '#7C3AED', fontWeight: 600 }}>📅 {reportData.periodoRiferimento.label}</span>
+                </div>
+              )}
             </div>
             
             {/* FUNNEL */}
@@ -4826,14 +5715,66 @@ export default function Home() {
           </div>
         )}
         
-        {/* BOTTONE DOWNLOAD */}
-        <div style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, border: '1px solid #E0E0E0', textAlign: 'center' }}>
-          <button 
-            onClick={downloadReportPNG}
-            style={{ padding: '14px 40px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', color: '#FFF', border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
-          >
-            📷 SCARICA REPORT PNG
-          </button>
+        {/* SEZIONE DOWNLOAD & EXPORT */}
+        <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 24, border: '1px solid #E5E7EB' }}>
+          <div style={{ marginBottom: 20 }}>
+            <h3 style={{ color: '#1F2937', fontSize: 18, margin: 0, fontWeight: 700 }}>📥 Download & Export</h3>
+            <p style={{ color: '#6B7280', fontSize: 12, margin: '4px 0 0' }}>
+              Scarica report per presentazioni e riunioni {reportData.periodoRiferimento ? `• ${reportData.periodoRiferimento.label}` : ''}
+            </p>
+          </div>
+          
+          {/* Report PNG */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 12 }}>📷 Report PNG (immagini)</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+              <button 
+                onClick={() => downloadReportPNG('generale')}
+                style={{ padding: '12px 20px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', color: '#FFF', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+              >
+                📊 Report Completo
+              </button>
+              <button 
+                onClick={() => downloadReportPNG('fv')}
+                style={{ padding: '12px 20px', background: '#F0FDF4', color: '#15803D', border: '2px solid #BBF7D0', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              >
+                ☀️ Fotovoltaico
+              </button>
+              <button 
+                onClick={() => downloadReportPNG('la')}
+                style={{ padding: '12px 20px', background: '#FFFBEB', color: '#B45309', border: '2px solid #FCD34D', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              >
+                ⚡ Luce Amica
+              </button>
+              <button 
+                onClick={() => downloadReportPNG('seminari')}
+                style={{ padding: '12px 20px', background: '#F5F3FF', color: '#7C3AED', border: '2px solid #C4B5FD', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              >
+                🎓 Seminari
+              </button>
+              <button 
+                onClick={() => downloadReportPNG('best')}
+                style={{ padding: '12px 20px', background: '#FEF3C7', color: '#B45309', border: '2px solid #FCD34D', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              >
+                🏆 Top Performers
+              </button>
+            </div>
+          </div>
+          
+          {/* PowerPoint */}
+          <div>
+            <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 12 }}>📽️ Presentazione PowerPoint</div>
+            <button 
+              onClick={downloadPowerPoint}
+              style={{ padding: '14px 28px', background: 'linear-gradient(135deg, #1E40AF, #3B82F6)', color: '#FFF', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)' }}
+            >
+              <span style={{ fontSize: 20 }}>📽️</span>
+              <div style={{ textAlign: 'left' }}>
+                <div>Scarica PowerPoint</div>
+                <div style={{ fontSize: 10, opacity: 0.8 }}>Slide dinamiche per riunioni</div>
+              </div>
+            </button>
+          </div>
         </div>
       </div>
     );
