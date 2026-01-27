@@ -841,16 +841,44 @@ export default function Home() {
     // ═══════════════════════════════════════════════════════════
     // 🎓 PILASTRO COLLABORATORI (Seminari + Attivati)
     // ═══════════════════════════════════════════════════════════
-    const collabData = { iscritti: 0, presenti: 0, attivati: 0, statiAttivati: null, classifiche: null };
+    const collabData = { iscritti: 0, presenti: 0, attivati: 0, assenti: 0, omonimie: [], statiAttivati: null, classifiche: null };
     
     // Seminari: Iscritti e Presenti
+    // LOGICA: Se campo Presente è vuoto o diverso da SI → conta come ASSENTE
     if (reportCSVs.consultings?.data?.length > 0) {
       const semData = reportCSVs.consultings.data;
+      
+      // Rileva OMONIMIE (stessa persona iscritta più volte)
+      const nomiVisti = {};
+      const omonimie = [];
+      semData.forEach(row => {
+        const nome = (row['Nome e Cognome'] || row['Nome'] || row['Nominativo'] || '').trim().toUpperCase();
+        if (nome) {
+          if (nomiVisti[nome]) {
+            nomiVisti[nome]++;
+            if (nomiVisti[nome] === 2) omonimie.push({ nome, count: 2 });
+            else {
+              const found = omonimie.find(o => o.nome === nome);
+              if (found) found.count = nomiVisti[nome];
+            }
+          } else {
+            nomiVisti[nome] = 1;
+          }
+        }
+      });
+      collabData.omonimie = omonimie;
+      
       collabData.iscritti = semData.length;
+      
+      // PRESENTI: campo deve essere esplicitamente SI/SÌ/YES/1
+      // ASSENTI: campo vuoto O qualsiasi altro valore
       collabData.presenti = semData.filter(row => {
-        const presente = (row['Presente SI'] || row['Presente'] || '').toLowerCase();
+        const presente = (row['Presente SI'] || row['Presente'] || '').toString().trim().toLowerCase();
         return presente === 'si' || presente === 'sì' || presente === 'yes' || presente === '1';
       }).length;
+      
+      // Assenti = Iscritti - Presenti (include campi vuoti)
+      collabData.assenti = collabData.iscritti - collabData.presenti;
       
       // Classifiche basate su tutti i dati seminario con conteggio presenti
       const kStats = {}, nwStats = {}, sdpStats = {};
@@ -858,26 +886,29 @@ export default function Home() {
         const k = row['Nome Primo K'] || '';
         const nw = row['Nome Primo Networker'] || '';
         const sdp = row['Nome Primo SDP FV'] || row['Nome Primo SDP Fv'] || row['Nome Primo SDP LA'] || row['Nome Primo SDP La'] || '';
-        const presente = (row['Presente SI'] || row['Presente'] || '').toLowerCase();
+        const presente = (row['Presente SI'] || row['Presente'] || '').toString().trim().toLowerCase();
         const isPresente = presente === 'si' || presente === 'sì' || presente === 'yes' || presente === '1';
         
         if (k && !k.includes('Nome Primo')) {
-          if (!kStats[k]) kStats[k] = { iscritti: 0, presenti: 0, attivati: 0, total: 0 };
+          if (!kStats[k]) kStats[k] = { iscritti: 0, presenti: 0, assenti: 0, attivati: 0, total: 0 };
           kStats[k].iscritti++;
           kStats[k].total++;
           if (isPresente) kStats[k].presenti++;
+          else kStats[k].assenti++;
         }
         if (nw && !nw.includes('Nome Primo')) {
-          if (!nwStats[nw]) nwStats[nw] = { iscritti: 0, presenti: 0, attivati: 0, total: 0 };
+          if (!nwStats[nw]) nwStats[nw] = { iscritti: 0, presenti: 0, assenti: 0, attivati: 0, total: 0 };
           nwStats[nw].iscritti++;
           nwStats[nw].total++;
           if (isPresente) nwStats[nw].presenti++;
+          else nwStats[nw].assenti++;
         }
         if (sdp && !sdp.includes('Nome Primo')) {
-          if (!sdpStats[sdp]) sdpStats[sdp] = { iscritti: 0, presenti: 0, attivati: 0, total: 0 };
+          if (!sdpStats[sdp]) sdpStats[sdp] = { iscritti: 0, presenti: 0, assenti: 0, attivati: 0, total: 0 };
           sdpStats[sdp].iscritti++;
           sdpStats[sdp].total++;
           if (isPresente) sdpStats[sdp].presenti++;
+          else sdpStats[sdp].assenti++;
         }
       });
       
@@ -888,7 +919,7 @@ export default function Home() {
       
       // Heatmap solo per PRESENTI
       const presentiData = semData.filter(row => {
-        const presente = (row['Presente SI'] || row['Presente'] || '').toLowerCase();
+        const presente = (row['Presente SI'] || row['Presente'] || '').toString().trim().toLowerCase();
         return presente === 'si' || presente === 'sì' || presente === 'yes' || presente === '1';
       });
       result.heatmapMesi.presenti = calcHeatmapMesi(presentiData);
@@ -930,10 +961,13 @@ export default function Home() {
         funnel: {
           iscritti: collabData.iscritti,
           presenti: collabData.presenti,
+          assenti: collabData.assenti,
           attivati: collabData.attivati,
           pctPresenti: collabData.iscritti > 0 ? Math.round(collabData.presenti / collabData.iscritti * 100) : 0,
+          pctAssenti: collabData.iscritti > 0 ? Math.round(collabData.assenti / collabData.iscritti * 100) : 0,
           pctAttivati: collabData.presenti > 0 ? Math.round(collabData.attivati / collabData.presenti * 100) : 0
         },
+        omonimie: collabData.omonimie || [],
         statiAttivati: collabData.statiAttivati,
         classifiche: collabData.classifiche || { k: [], nw: [], sdp: [] },
         totaleK: collabData.classifiche ? collabData.classifiche.k.reduce((s, [,v]) => s + v.total, 0) : 0,
@@ -1984,7 +2018,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v13.5 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v14.0 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -2919,7 +2953,7 @@ export default function Home() {
     ctx.fillStyle = '#999999';
     ctx.font = '14px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v13.5 • ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 40);
+    ctx.fillText(`Leader Ranking v14.0 • ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 40);
     
     // Download
     const link = document.createElement('a');
@@ -3562,6 +3596,20 @@ export default function Home() {
                     const bestMeseIdx = heatData.mesi.indexOf(Math.max(...heatData.mesi));
                     const annoDati = heatData.anno || new Date().getFullYear();
                     
+                    // Calcola TOP ORARIO dell'anno
+                    const orariKeys = ['notte', 'mattinaPrima', 'mattina', 'pranzo', 'pomeriggio', 'sera', 'notturno'];
+                    const orariLabels = ['00-06', '06-09', '09-12', '12-15', '15-18', '18-21', '21-24'];
+                    const totaliOrari = { notte: 0, mattinaPrima: 0, mattina: 0, pranzo: 0, pomeriggio: 0, sera: 0, notturno: 0 };
+                    Object.values(heatData.orariPerMese || {}).forEach(orari => {
+                      orariKeys.forEach(key => { totaliOrari[key] += orari[key] || 0; });
+                    });
+                    let bestOrarioIdx = 2;
+                    let maxOrarioVal = 0;
+                    orariKeys.forEach((key, idx) => {
+                      if (totaliOrari[key] > maxOrarioVal) { maxOrarioVal = totaliOrari[key]; bestOrarioIdx = idx; }
+                    });
+                    const bestOrario = maxOrarioVal > 0 ? orariLabels[bestOrarioIdx] : '-';
+                    
                     const formatValue = (val) => {
                       if (item.isCurrency) return `€${(val/1000).toFixed(0)}K`;
                       if (item.unit === 'pt') return val >= 1000 ? `${(val/1000).toFixed(1)}K` : val;
@@ -3631,9 +3679,12 @@ export default function Home() {
                           })}
                         </div>
                         
-                        {/* Footer con totale */}
+                        {/* Footer con totale e top orario */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: 10, color: '#6B7280' }}>🏆 Best: {mesiNomi[bestMeseIdx]}</span>
+                          <div style={{ display: 'flex', gap: 12 }}>
+                            <span style={{ fontSize: 10, color: '#6B7280' }}>🏆 {mesiNomi[bestMeseIdx]}</span>
+                            <span style={{ fontSize: 10, color: '#6B7280' }}>🕐 {bestOrario}</span>
+                          </div>
                           <span style={{ fontSize: 14, fontWeight: 800, color: item.color }}>{formatTotale(totale)}</span>
                         </div>
                       </div>
@@ -3644,9 +3695,21 @@ export default function Home() {
             ) : (
               /* DRILL-DOWN: Giorni + Settimane + Orari del mese selezionato */
               (() => {
-                const { type, mese, label, data: heatData, anno } = heatmapDrilldown;
+                const { type, mese, label, data: heatData, anno, info: passedInfo } = heatmapDrilldown;
                 const annoDrilldown = anno || heatData.anno || new Date().getFullYear();
-                const info = { fv: { emoji: '☀️', label: 'Fotovoltaico', color: '#2AAA8A' }, energy: { emoji: '⚡', label: 'Luce Amica', color: '#FFD700' }, consultings: { emoji: '🎓', label: 'Seminari', color: '#9C27B0' }, presenti: { emoji: '✅', label: 'Presenti', color: '#4CAF50' }, ivd: { emoji: '🟠', label: 'Attivati', color: '#FF9800' } }[type];
+                // Usa info passata dal click o fallback a mappa default
+                const infoMap = { 
+                  fv: { emoji: '☀️', label: 'Fotovoltaico', color: '#15803D' }, 
+                  energy: { emoji: '⚡', label: 'Luce Amica', color: '#B45309' }, 
+                  consultings: { emoji: '🎓', label: 'Seminari', color: '#7C3AED' }, 
+                  presenti: { emoji: '✅', label: 'Presenti', color: '#059669' }, 
+                  ivd: { emoji: '👥', label: 'Attivati', color: '#EA580C' },
+                  guadagnoFV: { emoji: '💰', label: 'Guadagno FV', color: '#15803D', isCurrency: true },
+                  guadagnoLA: { emoji: '💵', label: 'Guadagno LA', color: '#B45309', isCurrency: true },
+                  puntiFV: { emoji: '⭐', label: 'Punti FV', color: '#7C3AED', unit: 'pt' },
+                  puntiLA: { emoji: '🏆', label: 'Punti LA', color: '#EA580C', unit: 'pt' }
+                };
+                const info = passedInfo || infoMap[type] || { emoji: '📊', label: type, color: '#666' };
                 const giorni = heatData.giorniPerMese?.[mese] || Array(31).fill(0);
                 const settimane = heatData.settimanePerMese?.[mese] || Array(5).fill(0);
                 const orari = heatData.orariPerMese?.[mese] || { notte: 0, mattinaPrima: 0, mattina: 0, pranzo: 0, pomeriggio: 0, sera: 0, notturno: 0 };
@@ -3663,6 +3726,23 @@ export default function Home() {
                 ];
                 const maxOrario = Math.max(...orariArray.map(o => o.val), 1);
                 
+                // Calcola best orario del mese
+                const orariKeys = ['notte', 'mattinaPrima', 'mattina', 'pranzo', 'pomeriggio', 'sera', 'notturno'];
+                const orariLabels = ['00-06', '06-09', '09-12', '12-15', '15-18', '18-21', '21-24'];
+                let bestOrarioIdx = 2;
+                let maxOrarioVal = 0;
+                orariKeys.forEach((key, idx) => {
+                  if (orari[key] > maxOrarioVal) { maxOrarioVal = orari[key]; bestOrarioIdx = idx; }
+                });
+                const bestOrario = maxOrarioVal > 0 ? orariLabels[bestOrarioIdx] : '-';
+                
+                // Formatta valore per display
+                const formatVal = (val) => {
+                  if (info.isCurrency) return `€${(val/1000).toFixed(0)}K`;
+                  if (info.unit === 'pt') return `${val.toLocaleString('it-IT')}`;
+                  return val;
+                };
+                
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
                     <div style={{ background: `linear-gradient(135deg, ${info.color}15, ${info.color}05)`, borderRadius: 12, padding: 15, border: `1px solid ${info.color}30` }}>
@@ -3671,13 +3751,11 @@ export default function Home() {
                           <div style={{ fontSize: 14, color: info.color, fontWeight: 700, marginBottom: 5 }}>
                             {info.emoji} {info.label} - {label.toUpperCase()} {annoDrilldown}
                           </div>
-                          <div style={{ fontSize: 24, fontWeight: 800, color: '#333' }}>{heatData.mesi[mese]} contratti</div>
+                          <div style={{ fontSize: 24, fontWeight: 800, color: '#333' }}>{formatVal(heatData.mesi[mese])} {info.isCurrency ? '' : info.unit === 'pt' ? 'punti' : 'contratti'}</div>
                         </div>
-                        {/* Legenda */}
-                        <div style={{ display: 'flex', gap: 10, fontSize: 10 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#4CAF50' }} /><span style={{ color: '#666' }}>Caldo</span></div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FFD700' }} /><span style={{ color: '#666' }}>Tiepido</span></div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FF8F00' }} /><span style={{ color: '#666' }}>Freddo</span></div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>🕐 Best Orario</div>
+                          <div style={{ fontSize: 18, fontWeight: 700, color: info.color }}>{bestOrario}</div>
                         </div>
                       </div>
                     </div>
@@ -3842,7 +3920,7 @@ export default function Home() {
                 { title: 'SDP', emoji: '🔵', data: reportData.pilastri.fv.classifiche.sdp, color: '#2563EB' }
               ].map(({ title, emoji, data, color }) => (
                 <div key={title} style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
-                  <div style={{ fontSize: 13, color: color, fontWeight: 700, marginBottom: 12 }}>{emoji} {title}</div>
+                  <div style={{ fontSize: 13, color: color, fontWeight: 700, marginBottom: 12 }}>{emoji} {title} <span style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 400 }}>({data.length})</span></div>
                   {/* Header 4 colonne */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 40px)', gap: 4, marginBottom: 8, paddingBottom: 8, borderBottom: '2px solid #E5E7EB' }}>
                     <span style={{ fontSize: 9, color: '#9CA3AF', fontWeight: 600 }}>Nome</span>
@@ -3851,8 +3929,8 @@ export default function Home() {
                     <span style={{ fontSize: 9, color: '#F59E0B', fontWeight: 600, textAlign: 'center' }}>Lav</span>
                     <span style={{ fontSize: 9, color: '#EF4444', fontWeight: 600, textAlign: 'center' }}>Per</span>
                   </div>
-                  <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                    {data.slice(0, 10).map(([name, stats], i) => (
+                  <div style={{ maxHeight: 350, overflowY: 'auto' }}>
+                    {data.map(([name, stats], i) => (
                       <div key={i} style={{ 
                         display: 'grid', 
                         gridTemplateColumns: '1fr repeat(4, 40px)', 
@@ -3902,11 +3980,11 @@ export default function Home() {
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 42, fontWeight: 800, color: '#FFD700' }}>{reportData.pilastri.energy.funnel.lavorabili}</div>
-                <div style={{ fontSize: 12, color: '#FFD700' }}>🟡 Lavorabili</div>
+                <div style={{ fontSize: 12, color: '#FFD700' }}>🟡 Lavorabili <span style={{ fontSize: 10 }}>({reportData.pilastri.energy.funnel.inseriti > 0 ? Math.round(reportData.pilastri.energy.funnel.lavorabili / reportData.pilastri.energy.funnel.inseriti * 100) : 0}%)</span></div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 42, fontWeight: 800, color: '#E53935' }}>{reportData.pilastri.energy.funnel.persi}</div>
-                <div style={{ fontSize: 12, color: '#E53935' }}>🔴 Persi</div>
+                <div style={{ fontSize: 12, color: '#E53935' }}>🔴 Persi <span style={{ fontSize: 10 }}>({reportData.pilastri.energy.funnel.inseriti > 0 ? Math.round(reportData.pilastri.energy.funnel.persi / reportData.pilastri.energy.funnel.inseriti * 100) : 0}%)</span></div>
               </div>
             </div>
             
@@ -4026,7 +4104,7 @@ export default function Home() {
                 { title: 'SDP', emoji: '🔵', data: reportData.pilastri.energy.classifiche.sdp, color: '#2563EB' }
               ].map(({ title, emoji, data, color }) => (
                 <div key={title} style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
-                  <div style={{ fontSize: 13, color: color, fontWeight: 700, marginBottom: 12 }}>{emoji} {title}</div>
+                  <div style={{ fontSize: 13, color: color, fontWeight: 700, marginBottom: 12 }}>{emoji} {title} <span style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 400 }}>({data.length})</span></div>
                   {/* Header 4 colonne */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 40px)', gap: 4, marginBottom: 8, paddingBottom: 8, borderBottom: '2px solid #E5E7EB' }}>
                     <span style={{ fontSize: 9, color: '#9CA3AF', fontWeight: 600 }}>Nome</span>
@@ -4035,8 +4113,8 @@ export default function Home() {
                     <span style={{ fontSize: 9, color: '#F59E0B', fontWeight: 600, textAlign: 'center' }}>Lav</span>
                     <span style={{ fontSize: 9, color: '#EF4444', fontWeight: 600, textAlign: 'center' }}>Per</span>
                   </div>
-                  <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                    {data.slice(0, 10).map(([name, stats], i) => (
+                  <div style={{ maxHeight: 350, overflowY: 'auto' }}>
+                    {data.map(([name, stats], i) => (
                       <div key={i} style={{ 
                         display: 'grid', 
                         gridTemplateColumns: '1fr repeat(4, 40px)', 
@@ -4160,24 +4238,41 @@ export default function Home() {
               </div>
             )}
             
-            {/* CLASSIFICHE COLLAB */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+            {/* CLASSIFICHE COLLAB CON 4 COLONNE */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
               {[
-                { title: 'K MANAGER', emoji: '👑', data: reportData.pilastri.collaboratori.classifiche.k, color: '#FFD700' },
-                { title: 'NETWORKER', emoji: '⭐', data: reportData.pilastri.collaboratori.classifiche.nw, color: '#2AAA8A' },
-                { title: 'SDP', emoji: '🔵', data: reportData.pilastri.collaboratori.classifiche.sdp, color: '#2196F3' }
+                { title: 'K MANAGER', emoji: '👑', data: reportData.pilastri.collaboratori.classifiche.k, color: '#B45309' },
+                { title: 'NETWORKER', emoji: '⭐', data: reportData.pilastri.collaboratori.classifiche.nw, color: '#15803D' },
+                { title: 'SDP', emoji: '🔵', data: reportData.pilastri.collaboratori.classifiche.sdp, color: '#2563EB' }
               ].map(({ title, emoji, data, color }) => (
-                <div key={title} style={{ background: '#FAFAFA', borderRadius: 12, padding: 12, border: '1px solid #E8E8E8' }}>
-                  <div style={{ fontSize: 12, color: color, fontWeight: 600, marginBottom: 8 }}>{emoji} {title}</div>
-                  <div style={{ maxHeight: 180, overflowY: 'auto', paddingRight: 10 }}>
-                    {data.slice(0, 10).map(([name, stats], i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #F0F0F0', fontSize: 11 }}>
-                        <span style={{ color: '#333', fontWeight: i < 3 ? 600 : 400 }}>{i+1}° {name}</span>
-                        <div style={{ display: 'flex', gap: 10, minWidth: 70, justifyContent: 'flex-end' }}>
-                          <span style={{ color: '#2AAA8A' }}>{stats.iscritti || stats.total || 0}</span>
-                          <span style={{ color: '#4CAF50' }}>{stats.presenti || 0}</span>
-                          <span style={{ color: '#FF9800' }}>{stats.attivati || 0}</span>
-                        </div>
+                <div key={title} style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
+                  <div style={{ fontSize: 13, color: color, fontWeight: 700, marginBottom: 12 }}>{emoji} {title} <span style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 400 }}>({data.length})</span></div>
+                  {/* Header 4 colonne */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 40px)', gap: 4, marginBottom: 8, paddingBottom: 8, borderBottom: '2px solid #E5E7EB' }}>
+                    <span style={{ fontSize: 9, color: '#9CA3AF', fontWeight: 600 }}>Nome</span>
+                    <span style={{ fontSize: 9, color: '#3B82F6', fontWeight: 600, textAlign: 'center' }}>Iscr</span>
+                    <span style={{ fontSize: 9, color: '#10B981', fontWeight: 600, textAlign: 'center' }}>Pres</span>
+                    <span style={{ fontSize: 9, color: '#EF4444', fontWeight: 600, textAlign: 'center' }}>Ass</span>
+                    <span style={{ fontSize: 9, color: '#F59E0B', fontWeight: 600, textAlign: 'center' }}>Att</span>
+                  </div>
+                  <div style={{ maxHeight: 350, overflowY: 'auto' }}>
+                    {data.map(([name, stats], i) => (
+                      <div key={i} style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: '1fr repeat(4, 40px)', 
+                        gap: 4, 
+                        padding: '6px 0', 
+                        borderBottom: '1px solid #F3F4F6', 
+                        fontSize: 11,
+                        background: i < 3 ? `${color}08` : 'transparent'
+                      }}>
+                        <span style={{ color: '#1F2937', fontWeight: i < 3 ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {i < 3 ? ['🥇','🥈','🥉'][i] : `${i+1}°`} {name.length > 15 ? name.substring(0,15) + '...' : name}
+                        </span>
+                        <span style={{ color: '#3B82F6', fontWeight: 600, textAlign: 'center' }}>{stats.iscritti || stats.total || 0}</span>
+                        <span style={{ color: '#10B981', fontWeight: 600, textAlign: 'center' }}>{stats.presenti || 0}</span>
+                        <span style={{ color: '#EF4444', fontWeight: 600, textAlign: 'center' }}>{stats.assenti || 0}</span>
+                        <span style={{ color: '#F59E0B', fontWeight: 600, textAlign: 'center' }}>{stats.attivati || 0}</span>
                       </div>
                     ))}
                   </div>
@@ -4654,16 +4749,16 @@ export default function Home() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 15 }}>
               {/* Classifica K Manager FV */}
               <div style={{ background: '#F8F8F8', borderRadius: 12, padding: 15 }}>
-                <div style={{ fontSize: 12, color: '#2AAA8A', fontWeight: 700, marginBottom: 10 }}>👑 TOP K MANAGER - FV Effettivo</div>
-                <div style={{ maxHeight: 200, overflowY: 'auto', paddingRight: 5 }}>
-                  {reportData.fatturato.fv.classificaK.slice(0, 10).map(([nome, dati], i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #E8E8E8', fontSize: 11 }}>
+                <div style={{ fontSize: 12, color: '#2AAA8A', fontWeight: 700, marginBottom: 10 }}>👑 TOP K MANAGER - FV Effettivo <span style={{ fontSize: 10, color: '#999', fontWeight: 400 }}>({reportData.fatturato.fv.classificaK.length})</span></div>
+                <div style={{ maxHeight: 350, overflowY: 'auto', paddingRight: 5 }}>
+                  {reportData.fatturato.fv.classificaK.map(([nome, dati], i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #E8E8E8', fontSize: 11, background: i < 3 ? 'rgba(42,170,138,0.05)' : 'transparent' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ width: 20, height: 20, borderRadius: '50%', background: i < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: i < 3 ? '#FFF' : '#666' }}>{i + 1}</span>
-                        <span style={{ fontWeight: 500, color: '#333', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nome}</span>
+                        <span style={{ width: 22, height: 22, borderRadius: '50%', background: i < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: i < 3 ? '#FFF' : '#666' }}>{i + 1}</span>
+                        <span style={{ fontWeight: i < 3 ? 700 : 500, color: '#333', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nome}</span>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 700, color: '#4CAF50' }}>€{dati.fatturato.toLocaleString('it-IT')}</div>
+                        <div style={{ fontWeight: 700, color: '#4CAF50', fontSize: 13 }}>€{dati.fatturato.toLocaleString('it-IT')}</div>
                         <div style={{ fontSize: 9, color: '#888' }}>{dati.kw}kW | {dati.kwh}kWh | {dati.punti}pt</div>
                       </div>
                     </div>
@@ -4673,16 +4768,16 @@ export default function Home() {
               
               {/* Classifica Networker FV */}
               <div style={{ background: '#F8F8F8', borderRadius: 12, padding: 15 }}>
-                <div style={{ fontSize: 12, color: '#9C27B0', fontWeight: 700, marginBottom: 10 }}>⭐ TOP NETWORKER - FV Effettivo</div>
-                <div style={{ maxHeight: 200, overflowY: 'auto', paddingRight: 5 }}>
-                  {reportData.fatturato.fv.classificaNW.slice(0, 10).map(([nome, dati], i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #E8E8E8', fontSize: 11 }}>
+                <div style={{ fontSize: 12, color: '#9C27B0', fontWeight: 700, marginBottom: 10 }}>⭐ TOP NETWORKER - FV Effettivo <span style={{ fontSize: 10, color: '#999', fontWeight: 400 }}>({reportData.fatturato.fv.classificaNW.length})</span></div>
+                <div style={{ maxHeight: 350, overflowY: 'auto', paddingRight: 5 }}>
+                  {reportData.fatturato.fv.classificaNW.map(([nome, dati], i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #E8E8E8', fontSize: 11, background: i < 3 ? 'rgba(156,39,176,0.05)' : 'transparent' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ width: 20, height: 20, borderRadius: '50%', background: i < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: i < 3 ? '#FFF' : '#666' }}>{i + 1}</span>
-                        <span style={{ fontWeight: 500, color: '#333', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nome}</span>
+                        <span style={{ width: 22, height: 22, borderRadius: '50%', background: i < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: i < 3 ? '#FFF' : '#666' }}>{i + 1}</span>
+                        <span style={{ fontWeight: i < 3 ? 700 : 500, color: '#333', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nome}</span>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 700, color: '#4CAF50' }}>€{dati.fatturato.toLocaleString('it-IT')}</div>
+                        <div style={{ fontWeight: 700, color: '#4CAF50', fontSize: 13 }}>€{dati.fatturato.toLocaleString('it-IT')}</div>
                         <div style={{ fontSize: 9, color: '#888' }}>{dati.kw}kW | {dati.kwh}kWh | {dati.punti}pt</div>
                       </div>
                     </div>
@@ -4692,16 +4787,16 @@ export default function Home() {
               
               {/* Classifica K Manager LA */}
               <div style={{ background: '#F8F8F8', borderRadius: 12, padding: 15 }}>
-                <div style={{ fontSize: 12, color: '#FF9800', fontWeight: 700, marginBottom: 10 }}>👑 TOP K MANAGER - LA Accettati</div>
-                <div style={{ maxHeight: 200, overflowY: 'auto', paddingRight: 5 }}>
-                  {reportData.fatturato.la.classificaK.slice(0, 10).map(([nome, dati], i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #E8E8E8', fontSize: 11 }}>
+                <div style={{ fontSize: 12, color: '#FF9800', fontWeight: 700, marginBottom: 10 }}>👑 TOP K MANAGER - LA Accettati <span style={{ fontSize: 10, color: '#999', fontWeight: 400 }}>({reportData.fatturato.la.classificaK.length})</span></div>
+                <div style={{ maxHeight: 350, overflowY: 'auto', paddingRight: 5 }}>
+                  {reportData.fatturato.la.classificaK.map(([nome, dati], i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #E8E8E8', fontSize: 11, background: i < 3 ? 'rgba(255,152,0,0.05)' : 'transparent' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ width: 20, height: 20, borderRadius: '50%', background: i < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: i < 3 ? '#FFF' : '#666' }}>{i + 1}</span>
-                        <span style={{ fontWeight: 500, color: '#333', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nome}</span>
+                        <span style={{ width: 22, height: 22, borderRadius: '50%', background: i < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: i < 3 ? '#FFF' : '#666' }}>{i + 1}</span>
+                        <span style={{ fontWeight: i < 3 ? 700 : 500, color: '#333', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nome}</span>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 700, color: '#FF9800' }}>€{Math.round(dati.fatturato).toLocaleString('it-IT')}/anno</div>
+                        <div style={{ fontWeight: 700, color: '#FF9800', fontSize: 13 }}>€{Math.round(dati.fatturato).toLocaleString('it-IT')}/anno</div>
                         <div style={{ fontSize: 9, color: '#888' }}>{dati.contratti} contr. | {dati.punti}pt | {dati.kwh.toLocaleString('it-IT')}kWh</div>
                       </div>
                     </div>
@@ -4711,16 +4806,16 @@ export default function Home() {
               
               {/* Classifica Networker LA */}
               <div style={{ background: '#F8F8F8', borderRadius: 12, padding: 15 }}>
-                <div style={{ fontSize: 12, color: '#4CAF50', fontWeight: 700, marginBottom: 10 }}>⭐ TOP NETWORKER - LA Accettati</div>
-                <div style={{ maxHeight: 200, overflowY: 'auto', paddingRight: 5 }}>
-                  {reportData.fatturato.la.classificaNW.slice(0, 10).map(([nome, dati], i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #E8E8E8', fontSize: 11 }}>
+                <div style={{ fontSize: 12, color: '#4CAF50', fontWeight: 700, marginBottom: 10 }}>⭐ TOP NETWORKER - LA Accettati <span style={{ fontSize: 10, color: '#999', fontWeight: 400 }}>({reportData.fatturato.la.classificaNW.length})</span></div>
+                <div style={{ maxHeight: 350, overflowY: 'auto', paddingRight: 5 }}>
+                  {reportData.fatturato.la.classificaNW.map(([nome, dati], i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #E8E8E8', fontSize: 11, background: i < 3 ? 'rgba(76,175,80,0.05)' : 'transparent' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ width: 20, height: 20, borderRadius: '50%', background: i < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: i < 3 ? '#FFF' : '#666' }}>{i + 1}</span>
-                        <span style={{ fontWeight: 500, color: '#333', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nome}</span>
+                        <span style={{ width: 22, height: 22, borderRadius: '50%', background: i < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: i < 3 ? '#FFF' : '#666' }}>{i + 1}</span>
+                        <span style={{ fontWeight: i < 3 ? 700 : 500, color: '#333', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nome}</span>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 700, color: '#4CAF50' }}>€{Math.round(dati.fatturato).toLocaleString('it-IT')}/anno</div>
+                        <div style={{ fontWeight: 700, color: '#4CAF50', fontSize: 13 }}>€{Math.round(dati.fatturato).toLocaleString('it-IT')}/anno</div>
                         <div style={{ fontSize: 9, color: '#888' }}>{dati.punti}pt | {dati.kwh.toLocaleString('it-IT')}kWh green</div>
                       </div>
                     </div>
@@ -4832,7 +4927,7 @@ export default function Home() {
         </div>
         
         {/* Footer versione */}
-        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v13.5</p>
+        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v14.0</p>
       </div>
     </div></>);
 
@@ -5026,7 +5121,7 @@ export default function Home() {
           </div>
         )}
       </main>
-      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v13.5 • Leader Ranking</footer>
+      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v14.0 • Leader Ranking</footer>
     </div></>);
 
   // PREVIEW
