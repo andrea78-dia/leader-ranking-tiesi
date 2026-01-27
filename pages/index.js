@@ -3074,373 +3074,397 @@ export default function Home() {
   const downloadReportPNG = (tipo = 'generale') => {
     if (!reportData || !reportData.pilastri) return alert('Nessun report da scaricare');
     
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const W = 1200, H = tipo === 'generale' ? 1800 : 1400;
-    canvas.width = W; canvas.height = H;
-    
-    const periodo = reportData.periodoRiferimento?.label || 'Periodo non specificato';
-    const colors = {
-      primary: '#2AAA8A',
-      fv: '#15803D',
-      la: '#B45309', 
-      seminari: '#7C3AED',
-      alert: '#DC2626',
-      bg: '#F8FAFC',
-      card: '#FFFFFF',
-      text: '#1F2937',
-      muted: '#6B7280'
-    };
-    
-    // Background con gradiente sottile
-    const gradient = ctx.createLinearGradient(0, 0, 0, H);
-    gradient.addColorStop(0, '#F0FDF4');
-    gradient.addColorStop(1, '#FFFFFF');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, W, H);
-    
-    // Border elegante
-    ctx.strokeStyle = colors.primary;
-    ctx.lineWidth = 3;
-    ctx.strokeRect(15, 15, W - 30, H - 30);
-    
-    // Header con sfondo
-    ctx.fillStyle = colors.primary;
-    ctx.beginPath();
-    ctx.roundRect(30, 30, W - 60, 90, [15, 15, 0, 0]);
-    ctx.fill();
-    
-    // Titolo
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 32px Arial';
-    ctx.textAlign = 'center';
-    const titoli = {
-      generale: '📊 REPORT AGGREGATO',
-      fv: '☀️ REPORT FOTOVOLTAICO',
-      la: '⚡ REPORT LUCE AMICA',
-      seminari: '🎓 REPORT SEMINARI',
-      best: '🏆 TOP PERFORMERS'
-    };
-    ctx.fillText(titoli[tipo] || titoli.generale, W/2, 85);
-    
-    // Sottotitolo periodo
-    ctx.font = '16px Arial';
-    ctx.fillText(`📅 ${periodo}`, W/2, 110);
-    
-    let y = 150;
-    
-    // Helper per disegnare card
-    const drawCard = (x, cardY, w, h, title, emoji, color) => {
-      ctx.fillStyle = colors.card;
-      ctx.shadowColor = 'rgba(0,0,0,0.1)';
-      ctx.shadowBlur = 10;
-      ctx.shadowOffsetY = 4;
-      ctx.beginPath();
-      ctx.roundRect(x, cardY, w, h, 12);
-      ctx.fill();
-      ctx.shadowBlur = 0;
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const W = 1200, H = tipo === 'generale' ? 1600 : 1200;
+      canvas.width = W; canvas.height = H;
       
-      // Barra laterale colorata
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.roundRect(x, cardY, 6, h, [12, 0, 0, 12]);
-      ctx.fill();
+      const periodo = reportData.periodoRiferimento?.label || 'Periodo';
       
-      // Titolo card
-      ctx.fillStyle = color;
-      ctx.font = 'bold 18px Arial';
-      ctx.textAlign = 'left';
-      ctx.fillText(`${emoji} ${title}`, x + 20, cardY + 30);
-      
-      return cardY + 45;
-    };
-    
-    // Helper per stat grande
-    const drawBigStat = (x, statY, value, label, color) => {
-      ctx.fillStyle = color;
-      ctx.font = 'bold 36px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(value, x, statY);
-      ctx.fillStyle = colors.muted;
-      ctx.font = '12px Arial';
-      ctx.fillText(label, x, statY + 18);
-    };
-    
-    if (tipo === 'generale' || tipo === 'fv') {
-      // ═══ SEZIONE FOTOVOLTAICO ═══
-      if (reportData.pilastri.fv) {
-        const fv = reportData.pilastri.fv;
-        const fat = reportData.fatturato?.fv;
-        const cardY = y;
-        const innerY = drawCard(40, cardY, W - 80, 180, 'FOTOVOLTAICO', '☀️', colors.fv);
-        
-        // Stats
-        const statW = (W - 120) / 5;
-        drawBigStat(40 + statW/2, innerY + 25, fv.funnel.inseriti.toString(), 'Inseriti', colors.text);
-        drawBigStat(40 + statW*1.5, innerY + 25, fv.funnel.positivi.toString(), 'Positivi', colors.fv);
-        drawBigStat(40 + statW*2.5, innerY + 25, `${fv.funnel.pctPositivi}%`, 'Conversione', '#10B981');
-        drawBigStat(40 + statW*3.5, innerY + 25, fv.funnel.negativi.toString(), 'Persi', colors.alert);
-        if (fat) {
-          drawBigStat(40 + statW*4.5, innerY + 25, `€${(fat.effettivi.totale/1000).toFixed(0)}K`, 'Fatturato', colors.fv);
-        }
-        
-        // Barra progresso
-        ctx.fillStyle = '#E5E7EB';
+      // Helper per rettangoli arrotondati (compatibilità)
+      const roundRect = (x, y, w, h, r) => {
         ctx.beginPath();
-        ctx.roundRect(60, innerY + 70, W - 140, 20, 10);
-        ctx.fill();
-        
-        const pctPos = fv.funnel.pctPositivi / 100;
-        ctx.fillStyle = colors.fv;
-        ctx.beginPath();
-        ctx.roundRect(60, innerY + 70, (W - 140) * pctPos, 20, 10);
-        ctx.fill();
-        
-        // Best performer
-        if (reportData.bestPerformers?.fv?.fatturato?.k) {
-          ctx.fillStyle = colors.muted;
-          ctx.font = '13px Arial';
-          ctx.textAlign = 'left';
-          ctx.fillText(`🏆 Top K: ${reportData.bestPerformers.fv.fatturato.k.nome} (€${reportData.bestPerformers.fv.fatturato.k.valore.toLocaleString('it-IT')})`, 60, innerY + 115);
-        }
-        
-        y = cardY + 200;
-      }
-    }
-    
-    if (tipo === 'generale' || tipo === 'la') {
-      // ═══ SEZIONE LUCE AMICA ═══
-      if (reportData.pilastri.energy) {
-        const la = reportData.pilastri.energy;
-        const fat = reportData.fatturato?.la;
-        const cardY = y;
-        const innerY = drawCard(40, cardY, W - 80, 180, 'LUCE AMICA', '⚡', colors.la);
-        
-        const statW = (W - 120) / 5;
-        drawBigStat(40 + statW/2, innerY + 25, la.funnel.inseriti.toString(), 'Inseriti', colors.text);
-        drawBigStat(40 + statW*1.5, innerY + 25, la.funnel.accettati.toString(), 'Accettati', '#10B981');
-        drawBigStat(40 + statW*2.5, innerY + 25, `${la.funnel.pctAccettati}%`, 'Accettazione', colors.la);
-        drawBigStat(40 + statW*3.5, innerY + 25, la.funnel.persi.toString(), 'Cessati', colors.alert);
-        if (fat) {
-          drawBigStat(40 + statW*4.5, innerY + 25, `€${Math.round(fat.accettati.totale/12/1000)}K/m`, 'Fatt. Mensile', colors.la);
-        }
-        
-        // Barra progresso
-        ctx.fillStyle = '#E5E7EB';
-        ctx.beginPath();
-        ctx.roundRect(60, innerY + 70, W - 140, 20, 10);
-        ctx.fill();
-        
-        ctx.fillStyle = colors.la;
-        ctx.beginPath();
-        ctx.roundRect(60, innerY + 70, (W - 140) * (la.funnel.pctAccettati / 100), 20, 10);
-        ctx.fill();
-        
-        if (reportData.bestPerformers?.la?.fatturato?.k) {
-          ctx.fillStyle = colors.muted;
-          ctx.font = '13px Arial';
-          ctx.textAlign = 'left';
-          ctx.fillText(`🏆 Top K: ${reportData.bestPerformers.la.fatturato.k.nome} (€${reportData.bestPerformers.la.fatturato.k.valore.toLocaleString('it-IT')}/mese)`, 60, innerY + 115);
-        }
-        
-        y = cardY + 200;
-      }
-    }
-    
-    if (tipo === 'generale' || tipo === 'seminari') {
-      // ═══ SEZIONE SEMINARI ═══
-      if (reportData.pilastri.collaboratori) {
-        const sem = reportData.pilastri.collaboratori;
-        const cardY = y;
-        const innerY = drawCard(40, cardY, W - 80, 180, 'SEMINARI & COLLABORATORI', '🎓', colors.seminari);
-        
-        const statW = (W - 120) / 5;
-        drawBigStat(40 + statW/2, innerY + 25, sem.funnel.iscritti.toString(), 'Iscritti', colors.text);
-        drawBigStat(40 + statW*1.5, innerY + 25, sem.funnel.presenti.toString(), 'Presenti', '#10B981');
-        drawBigStat(40 + statW*2.5, innerY + 25, `${sem.funnel.pctPresenti}%`, 'Presenza', colors.seminari);
-        drawBigStat(40 + statW*3.5, innerY + 25, sem.funnel.attivati.toString(), 'Attivati', colors.la);
-        drawBigStat(40 + statW*4.5, innerY + 25, `${sem.funnel.pctAttivati}%`, 'Conversione', colors.fv);
-        
-        // Funnel visivo
-        const funnelX = 60;
-        ctx.fillStyle = '#E0E7FF';
-        ctx.beginPath();
-        ctx.moveTo(funnelX, innerY + 75);
-        ctx.lineTo(funnelX + 300, innerY + 75);
-        ctx.lineTo(funnelX + 250, innerY + 95);
-        ctx.lineTo(funnelX + 50, innerY + 95);
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
         ctx.closePath();
-        ctx.fill();
-        
-        ctx.fillStyle = '#A5B4FC';
-        ctx.beginPath();
-        ctx.moveTo(funnelX + 50, innerY + 95);
-        ctx.lineTo(funnelX + 250, innerY + 95);
-        ctx.lineTo(funnelX + 200, innerY + 115);
-        ctx.lineTo(funnelX + 100, innerY + 115);
-        ctx.closePath();
-        ctx.fill();
-        
-        ctx.fillStyle = colors.seminari;
-        ctx.beginPath();
-        ctx.moveTo(funnelX + 100, innerY + 115);
-        ctx.lineTo(funnelX + 200, innerY + 115);
-        ctx.lineTo(funnelX + 175, innerY + 135);
-        ctx.lineTo(funnelX + 125, innerY + 135);
-        ctx.closePath();
-        ctx.fill();
-        
-        y = cardY + 200;
-      }
-    }
-    
-    if (tipo === 'generale') {
-      // ═══ SEZIONE ALERT ═══
-      if (reportData.alertDaAttivare && reportData.alertDaAttivare.totale > 0) {
-        const alert = reportData.alertDaAttivare;
-        const cardY = y;
-        const innerY = drawCard(40, cardY, W - 80, 160, 'ALERT DA ATTIVARE', '🚨', colors.alert);
-        
-        const boxW = (W - 160) / 4;
-        const boxes = [
-          { label: '0-30g', count: alert.verde.length, color: '#10B981', bg: '#D1FAE5' },
-          { label: '31-60g', count: alert.giallo.length, color: '#F59E0B', bg: '#FEF3C7' },
-          { label: '61-150g', count: alert.rosso.filter(a => a.giorni <= 150).length, color: '#EF4444', bg: '#FEE2E2' },
-          { label: '>150g', count: alert.rosso.filter(a => a.giorni > 150).length, color: '#6B7280', bg: '#F3F4F6' }
-        ];
-        
-        boxes.forEach((box, i) => {
-          const bx = 60 + i * boxW + i * 10;
-          ctx.fillStyle = box.bg;
-          ctx.beginPath();
-          ctx.roundRect(bx, innerY, boxW, 80, 10);
-          ctx.fill();
-          ctx.strokeStyle = box.color;
-          ctx.lineWidth = 2;
-          ctx.stroke();
-          
-          ctx.fillStyle = box.color;
-          ctx.font = 'bold 28px Arial';
-          ctx.textAlign = 'center';
-          ctx.fillText(box.count.toString(), bx + boxW/2, innerY + 40);
-          ctx.font = '12px Arial';
-          ctx.fillText(box.label, bx + boxW/2, innerY + 60);
-        });
-        
-        y = cardY + 180;
-      }
+      };
       
-      // ═══ SEZIONE BEST PERFORMERS ═══
-      if (reportData.bestPerformers) {
-        const cardY = y;
-        const innerY = drawCard(40, cardY, W - 80, 280, 'TOP PERFORMERS', '🏆', '#F59E0B');
-        
-        ctx.textAlign = 'left';
-        let lineY = innerY + 5;
-        const lineH = 28;
-        
-        // Colonna K Manager
-        ctx.fillStyle = '#B45309';
-        ctx.font = 'bold 14px Arial';
-        ctx.fillText('👑 TOP K MANAGER', 70, lineY);
-        lineY += lineH;
-        
-        const kData = [
-          { label: 'Fatturato FV', data: reportData.bestPerformers.fv?.fatturato?.k },
-          { label: 'Fatturato LA/m', data: reportData.bestPerformers.la?.fatturato?.k },
-          { label: 'Iscritti Sem.', data: reportData.bestPerformers.seminari?.iscritti?.k },
-          { label: 'Presenti Sem.', data: reportData.bestPerformers.seminari?.presenti?.k },
-          { label: 'Conversione FV', data: reportData.bestPerformers.fv?.conversione?.k }
-        ];
-        
-        kData.forEach(item => {
-          if (item.data) {
-            ctx.fillStyle = colors.muted;
-            ctx.font = '12px Arial';
-            ctx.fillText(`${item.label}:`, 70, lineY);
-            ctx.fillStyle = colors.text;
-            ctx.font = 'bold 12px Arial';
-            const val = typeof item.data.valore === 'number' && item.data.valore > 1000 ? 
-              `€${item.data.valore.toLocaleString('it-IT')}` : 
-              item.label.includes('%') ? `${item.data.valore}%` : item.data.valore;
-            ctx.fillText(`${item.data.nome} - ${val}`, 180, lineY);
-            lineY += lineH - 5;
-          }
-        });
-        
-        // Colonna Networker
-        lineY = innerY + 5;
-        ctx.fillStyle = '#059669';
-        ctx.font = 'bold 14px Arial';
-        ctx.fillText('⭐ TOP NETWORKER', W/2 + 30, lineY);
-        lineY += lineH;
-        
-        const nwData = [
-          { label: 'Fatturato FV', data: reportData.bestPerformers.fv?.fatturato?.nw },
-          { label: 'Fatturato LA/m', data: reportData.bestPerformers.la?.fatturato?.nw },
-          { label: 'Iscritti Sem.', data: reportData.bestPerformers.seminari?.iscritti?.nw },
-          { label: 'Presenti Sem.', data: reportData.bestPerformers.seminari?.presenti?.nw },
-          { label: 'Velocità 1° LA', data: reportData.bestPerformers.tracker?.primaLA?.nw }
-        ];
-        
-        nwData.forEach(item => {
-          if (item.data) {
-            ctx.fillStyle = colors.muted;
-            ctx.font = '12px Arial';
-            ctx.fillText(`${item.label}:`, W/2 + 30, lineY);
-            ctx.fillStyle = colors.text;
-            ctx.font = 'bold 12px Arial';
-            const val = typeof item.data.valore === 'number' && item.data.valore > 1000 ? 
-              `€${item.data.valore.toLocaleString('it-IT')}` : 
-              item.label.includes('Velocità') ? `${item.data.valore}g` : item.data.valore;
-            ctx.fillText(`${item.data.nome} - ${val}`, W/2 + 140, lineY);
-            lineY += lineH - 5;
-          }
-        });
-        
-        y = cardY + 300;
-      }
+      // Background
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, W, H);
       
-      // ═══ TOTALI ═══
-      const totY = y;
-      ctx.fillStyle = colors.primary;
-      ctx.beginPath();
-      ctx.roundRect(40, totY, W - 80, 100, 12);
+      // Border
+      ctx.strokeStyle = '#2AAA8A';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(20, 20, W - 40, H - 40);
+      
+      // Header
+      ctx.fillStyle = '#2AAA8A';
+      roundRect(40, 40, W - 80, 80, 10);
       ctx.fill();
       
       ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 16px Arial';
+      ctx.font = 'bold 32px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText('📊 TOTALI PERIODO', W/2, totY + 25);
+      const titoli = {
+        generale: '📊 REPORT AGGREGATO',
+        fv: '☀️ REPORT FOTOVOLTAICO',
+        la: '⚡ REPORT LUCE AMICA',
+        seminari: '🎓 REPORT SEMINARI',
+        best: '🏆 TOP PERFORMERS'
+      };
+      ctx.fillText(titoli[tipo] || titoli.generale, W/2, 90);
+      ctx.font = '14px Arial';
+      ctx.fillText(`📅 ${periodo}`, W/2, 112);
       
-      const totW = (W - 120) / 4;
-      const totals = [
-        { label: 'Contratti', value: (reportData.pilastri.fv?.totale || 0) + (reportData.pilastri.energy?.totale || 0) },
-        { label: 'Fatturato', value: `€${((reportData.fatturato?.totale?.fatturato || 0)/1000000).toFixed(2)}M` },
-        { label: 'Punti', value: (reportData.fatturato?.totale?.punti || 0).toLocaleString('it-IT') },
-        { label: 'IVD Attivi', value: reportData.trackerCoaching?.ivdConContratti || 0 }
-      ];
+      let y = 150;
+      ctx.textAlign = 'left';
       
-      totals.forEach((t, i) => {
-        ctx.font = 'bold 24px Arial';
-        ctx.fillText(t.value.toString(), 80 + totW/2 + i * totW, totY + 60);
-        ctx.font = '11px Arial';
-        ctx.fillText(t.label, 80 + totW/2 + i * totW, totY + 80);
-      });
+      // ═══ FOTOVOLTAICO ═══
+      if ((tipo === 'generale' || tipo === 'fv') && reportData.pilastri.fv) {
+        const fv = reportData.pilastri.fv;
+        
+        // Card background
+        ctx.fillStyle = '#F0FDF4';
+        roundRect(50, y, W - 100, 140, 12);
+        ctx.fill();
+        ctx.strokeStyle = '#BBF7D0';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Barra laterale
+        ctx.fillStyle = '#15803D';
+        ctx.fillRect(50, y, 8, 140);
+        
+        // Titolo
+        ctx.fillStyle = '#15803D';
+        ctx.font = 'bold 22px Arial';
+        ctx.fillText('☀️ FOTOVOLTAICO', 80, y + 35);
+        
+        // Stats
+        ctx.font = 'bold 36px Arial';
+        ctx.fillStyle = '#1F2937';
+        ctx.fillText(fv.funnel.inseriti.toString(), 80, y + 85);
+        ctx.font = '12px Arial';
+        ctx.fillStyle = '#6B7280';
+        ctx.fillText('Inseriti', 80, y + 105);
+        
+        ctx.font = 'bold 36px Arial';
+        ctx.fillStyle = '#15803D';
+        ctx.fillText(fv.funnel.positivi.toString(), 220, y + 85);
+        ctx.font = '12px Arial';
+        ctx.fillStyle = '#6B7280';
+        ctx.fillText('Positivi', 220, y + 105);
+        
+        ctx.font = 'bold 36px Arial';
+        ctx.fillStyle = '#10B981';
+        ctx.fillText(`${fv.funnel.pctPositivi}%`, 360, y + 85);
+        ctx.font = '12px Arial';
+        ctx.fillStyle = '#6B7280';
+        ctx.fillText('Conversione', 360, y + 105);
+        
+        ctx.font = 'bold 36px Arial';
+        ctx.fillStyle = '#DC2626';
+        ctx.fillText(fv.funnel.negativi.toString(), 520, y + 85);
+        ctx.font = '12px Arial';
+        ctx.fillStyle = '#6B7280';
+        ctx.fillText('Persi', 520, y + 105);
+        
+        // Fatturato
+        if (reportData.fatturato?.fv) {
+          ctx.font = 'bold 36px Arial';
+          ctx.fillStyle = '#15803D';
+          ctx.fillText(`€${(reportData.fatturato.fv.effettivi.totale/1000).toFixed(0)}K`, 680, y + 85);
+          ctx.font = '12px Arial';
+          ctx.fillStyle = '#6B7280';
+          ctx.fillText('Fatturato', 680, y + 105);
+        }
+        
+        // Best performer
+        if (reportData.bestPerformers?.fv?.fatturato?.k) {
+          ctx.font = '13px Arial';
+          ctx.fillStyle = '#6B7280';
+          ctx.fillText(`🏆 Top K: ${reportData.bestPerformers.fv.fatturato.k.nome}`, 850, y + 85);
+        }
+        
+        y += 160;
+      }
+      
+      // ═══ LUCE AMICA ═══
+      if ((tipo === 'generale' || tipo === 'la') && reportData.pilastri.energy) {
+        const la = reportData.pilastri.energy;
+        
+        ctx.fillStyle = '#FFFBEB';
+        roundRect(50, y, W - 100, 140, 12);
+        ctx.fill();
+        ctx.strokeStyle = '#FCD34D';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        ctx.fillStyle = '#B45309';
+        ctx.fillRect(50, y, 8, 140);
+        
+        ctx.fillStyle = '#B45309';
+        ctx.font = 'bold 22px Arial';
+        ctx.fillText('⚡ LUCE AMICA', 80, y + 35);
+        
+        ctx.font = 'bold 36px Arial';
+        ctx.fillStyle = '#1F2937';
+        ctx.fillText(la.funnel.inseriti.toString(), 80, y + 85);
+        ctx.font = '12px Arial';
+        ctx.fillStyle = '#6B7280';
+        ctx.fillText('Inseriti', 80, y + 105);
+        
+        ctx.font = 'bold 36px Arial';
+        ctx.fillStyle = '#10B981';
+        ctx.fillText(la.funnel.accettati.toString(), 220, y + 85);
+        ctx.font = '12px Arial';
+        ctx.fillStyle = '#6B7280';
+        ctx.fillText('Accettati', 220, y + 105);
+        
+        ctx.font = 'bold 36px Arial';
+        ctx.fillStyle = '#B45309';
+        ctx.fillText(`${la.funnel.pctAccettati}%`, 360, y + 85);
+        ctx.font = '12px Arial';
+        ctx.fillStyle = '#6B7280';
+        ctx.fillText('Accettazione', 360, y + 105);
+        
+        ctx.font = 'bold 36px Arial';
+        ctx.fillStyle = '#DC2626';
+        ctx.fillText(la.funnel.persi.toString(), 520, y + 85);
+        ctx.font = '12px Arial';
+        ctx.fillStyle = '#6B7280';
+        ctx.fillText('Cessati', 520, y + 105);
+        
+        if (reportData.fatturato?.la) {
+          ctx.font = 'bold 36px Arial';
+          ctx.fillStyle = '#B45309';
+          ctx.fillText(`€${Math.round(reportData.fatturato.la.accettati.totale/12/1000)}K/m`, 680, y + 85);
+          ctx.font = '12px Arial';
+          ctx.fillStyle = '#6B7280';
+          ctx.fillText('Fatt. Mensile', 680, y + 105);
+        }
+        
+        if (reportData.bestPerformers?.la?.fatturato?.k) {
+          ctx.font = '13px Arial';
+          ctx.fillStyle = '#6B7280';
+          ctx.fillText(`🏆 Top K: ${reportData.bestPerformers.la.fatturato.k.nome}`, 850, y + 85);
+        }
+        
+        y += 160;
+      }
+      
+      // ═══ SEMINARI ═══
+      if ((tipo === 'generale' || tipo === 'seminari') && reportData.pilastri.collaboratori) {
+        const sem = reportData.pilastri.collaboratori;
+        
+        ctx.fillStyle = '#F5F3FF';
+        roundRect(50, y, W - 100, 140, 12);
+        ctx.fill();
+        ctx.strokeStyle = '#C4B5FD';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        ctx.fillStyle = '#7C3AED';
+        ctx.fillRect(50, y, 8, 140);
+        
+        ctx.fillStyle = '#7C3AED';
+        ctx.font = 'bold 22px Arial';
+        ctx.fillText('🎓 SEMINARI & COLLABORATORI', 80, y + 35);
+        
+        ctx.font = 'bold 36px Arial';
+        ctx.fillStyle = '#1F2937';
+        ctx.fillText(sem.funnel.iscritti.toString(), 80, y + 85);
+        ctx.font = '12px Arial';
+        ctx.fillStyle = '#6B7280';
+        ctx.fillText('Iscritti', 80, y + 105);
+        
+        ctx.font = 'bold 36px Arial';
+        ctx.fillStyle = '#10B981';
+        ctx.fillText(sem.funnel.presenti.toString(), 220, y + 85);
+        ctx.font = '12px Arial';
+        ctx.fillStyle = '#6B7280';
+        ctx.fillText('Presenti', 220, y + 105);
+        
+        ctx.font = 'bold 36px Arial';
+        ctx.fillStyle = '#7C3AED';
+        ctx.fillText(`${sem.funnel.pctPresenti}%`, 360, y + 85);
+        ctx.font = '12px Arial';
+        ctx.fillStyle = '#6B7280';
+        ctx.fillText('Presenza', 360, y + 105);
+        
+        ctx.font = 'bold 36px Arial';
+        ctx.fillStyle = '#F59E0B';
+        ctx.fillText(sem.funnel.attivati.toString(), 520, y + 85);
+        ctx.font = '12px Arial';
+        ctx.fillStyle = '#6B7280';
+        ctx.fillText('Attivati', 520, y + 105);
+        
+        ctx.font = 'bold 36px Arial';
+        ctx.fillStyle = '#15803D';
+        ctx.fillText(`${sem.funnel.pctAttivati}%`, 680, y + 85);
+        ctx.font = '12px Arial';
+        ctx.fillStyle = '#6B7280';
+        ctx.fillText('Conv. Attiv.', 680, y + 105);
+        
+        y += 160;
+      }
+      
+      // ═══ ALERT ═══
+      if (tipo === 'generale' && reportData.alertDaAttivare && reportData.alertDaAttivare.totale > 0) {
+        const alert = reportData.alertDaAttivare;
+        
+        ctx.fillStyle = '#FEF2F2';
+        roundRect(50, y, W - 100, 140, 12);
+        ctx.fill();
+        ctx.strokeStyle = '#FECACA';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        ctx.fillStyle = '#DC2626';
+        ctx.fillRect(50, y, 8, 140);
+        
+        ctx.fillStyle = '#DC2626';
+        ctx.font = 'bold 22px Arial';
+        ctx.fillText(`🚨 ALERT DA ATTIVARE (${alert.totale} totali)`, 80, y + 35);
+        
+        // Box semaforo
+        const boxes = [
+          { label: '0-30g', count: alert.verde.length, color: '#10B981' },
+          { label: '31-60g', count: alert.giallo.length, color: '#F59E0B' },
+          { label: '61-150g', count: alert.rosso.filter(a => a.giorni <= 150).length, color: '#EF4444' },
+          { label: '>150g', count: alert.rosso.filter(a => a.giorni > 150).length, color: '#6B7280' }
+        ];
+        
+        boxes.forEach((box, i) => {
+          const bx = 80 + i * 200;
+          ctx.fillStyle = box.color;
+          ctx.font = 'bold 42px Arial';
+          ctx.fillText(box.count.toString(), bx, y + 90);
+          ctx.font = '12px Arial';
+          ctx.fillStyle = '#6B7280';
+          ctx.fillText(box.label, bx, y + 110);
+        });
+        
+        y += 160;
+      }
+      
+      // ═══ BEST PERFORMERS ═══
+      if ((tipo === 'generale' || tipo === 'best') && reportData.bestPerformers) {
+        ctx.fillStyle = '#FEF3C7';
+        roundRect(50, y, W - 100, 220, 12);
+        ctx.fill();
+        ctx.strokeStyle = '#FCD34D';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        ctx.fillStyle = '#B45309';
+        ctx.fillRect(50, y, 8, 220);
+        
+        ctx.fillStyle = '#B45309';
+        ctx.font = 'bold 22px Arial';
+        ctx.fillText('🏆 TOP PERFORMERS', 80, y + 35);
+        
+        // K Manager
+        ctx.fillStyle = '#92400E';
+        ctx.font = 'bold 14px Arial';
+        ctx.fillText('👑 TOP K MANAGER', 80, y + 65);
+        
+        let lineY = y + 85;
+        const kItems = [
+          { label: 'Fatturato FV', data: reportData.bestPerformers.fv?.fatturato?.k },
+          { label: 'Fatturato LA', data: reportData.bestPerformers.la?.fatturato?.k },
+          { label: 'Iscritti Sem.', data: reportData.bestPerformers.seminari?.iscritti?.k },
+        ];
+        
+        kItems.forEach(item => {
+          if (item.data) {
+            ctx.font = '12px Arial';
+            ctx.fillStyle = '#6B7280';
+            ctx.fillText(`${item.label}: `, 80, lineY);
+            ctx.fillStyle = '#1F2937';
+            ctx.font = 'bold 12px Arial';
+            const val = typeof item.data.valore === 'number' && item.data.valore > 100 ? 
+              `€${item.data.valore.toLocaleString('it-IT')}` : item.data.valore;
+            ctx.fillText(`${item.data.nome} (${val})`, 180, lineY);
+            lineY += 22;
+          }
+        });
+        
+        // Networker
+        ctx.fillStyle = '#059669';
+        ctx.font = 'bold 14px Arial';
+        ctx.fillText('⭐ TOP NETWORKER', W/2 + 30, y + 65);
+        
+        lineY = y + 85;
+        const nwItems = [
+          { label: 'Fatturato FV', data: reportData.bestPerformers.fv?.fatturato?.nw },
+          { label: 'Fatturato LA', data: reportData.bestPerformers.la?.fatturato?.nw },
+          { label: 'Iscritti Sem.', data: reportData.bestPerformers.seminari?.iscritti?.nw },
+        ];
+        
+        nwItems.forEach(item => {
+          if (item.data) {
+            ctx.font = '12px Arial';
+            ctx.fillStyle = '#6B7280';
+            ctx.fillText(`${item.label}: `, W/2 + 30, lineY);
+            ctx.fillStyle = '#1F2937';
+            ctx.font = 'bold 12px Arial';
+            const val = typeof item.data.valore === 'number' && item.data.valore > 100 ? 
+              `€${item.data.valore.toLocaleString('it-IT')}` : item.data.valore;
+            ctx.fillText(`${item.data.nome} (${val})`, W/2 + 130, lineY);
+            lineY += 22;
+          }
+        });
+        
+        y += 240;
+      }
+      
+      // ═══ TOTALI ═══
+      if (tipo === 'generale') {
+        ctx.fillStyle = '#2AAA8A';
+        roundRect(50, y, W - 100, 90, 12);
+        ctx.fill();
+        
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('📊 TOTALI PERIODO', W/2, y + 25);
+        
+        const totContratti = (reportData.pilastri.fv?.totale || 0) + (reportData.pilastri.energy?.totale || 0);
+        const totFatt = reportData.fatturato?.totale?.fatturato || 0;
+        const totPunti = reportData.fatturato?.totale?.punti || 0;
+        
+        ctx.font = 'bold 28px Arial';
+        ctx.fillText(`${totContratti} Contratti`, W/4, y + 60);
+        ctx.fillText(`€${(totFatt/1000000).toFixed(2)}M Fatturato`, W/2, y + 60);
+        ctx.fillText(`${totPunti.toLocaleString('it-IT')} Punti`, W*3/4, y + 60);
+      }
+      
+      // Footer
+      ctx.fillStyle = '#9CA3AF';
+      ctx.font = '12px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(`Leader Ranking v14.0 • ${new Date().toLocaleDateString('it-IT')} ${new Date().toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'})}`, W/2, H - 30);
+      
+      // Download
+      const link = document.createElement('a');
+      link.download = `report_${tipo}_${periodo.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      
+    } catch (err) {
+      console.error('Errore generazione PNG:', err);
+      alert('Errore nella generazione del report: ' + err.message);
     }
-    
-    // Footer
-    ctx.fillStyle = colors.muted;
-    ctx.font = '12px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v14.0 • Generato il ${new Date().toLocaleDateString('it-IT')} alle ${new Date().toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'})}`, W/2, H - 25);
-    
-    // Download
-    const link = document.createElement('a');
-    const tipoLabel = tipo === 'generale' ? 'aggregato' : tipo;
-    link.download = `report_${tipoLabel}_${periodo.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
   };
   
   // ═══════════════════════════════════════════════════════════════════════════
@@ -3450,12 +3474,19 @@ export default function Home() {
   const downloadPowerPoint = async () => {
     if (!reportData || !reportData.pilastri) return alert('Nessun report da esportare');
     
-    // Carica pptxgenjs dinamicamente
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
-    document.head.appendChild(script);
-    
-    script.onload = () => {
+    try {
+      // Carica pptxgenjs dinamicamente
+      if (typeof PptxGenJS === 'undefined') {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
+        document.head.appendChild(script);
+        
+        await new Promise((resolve, reject) => {
+          script.onload = resolve;
+          script.onerror = () => reject(new Error('Impossibile caricare la libreria PowerPoint'));
+        });
+      }
+      
       const pptx = new PptxGenJS();
       pptx.layout = 'LAYOUT_16x9';
       pptx.author = 'Leader Ranking';
@@ -3672,8 +3703,12 @@ export default function Home() {
       slide.addText(`Report generato il ${new Date().toLocaleDateString('it-IT')}`, { x: 0.5, y: 4.5, w: 9, h: 0.3, fontSize: 12, color: '9CA3AF', align: 'center' });
       
       // Salva
-      pptx.writeFile({ fileName: `LeaderRanking_${periodo.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.pptx` });
-    };
+      pptx.writeFile({ fileName: `LeaderRanking_${periodo.replace(/[^a-zA-Z0-9]/g, '_')}.pptx` });
+      
+    } catch (err) {
+      console.error('Errore generazione PowerPoint:', err);
+      alert('Errore nella generazione del PowerPoint: ' + err.message);
+    }
   };
 
   // ═══════════════════════════════════════════════════════════════════════════════
