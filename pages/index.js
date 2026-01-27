@@ -1012,8 +1012,13 @@ export default function Home() {
       
       ivdData.forEach(row => {
         const nomeIvd = row['IVD'] || row['Cliente'] || '';
+        const codiceIvd = row['Codice IVD'] || '';
         const dataAttStr = row['Data Inserimento'] || '';
         const networker = row['Nome Primo Networker'] || ''; // Chi lo ha formato
+        const prodotto = row['Prodotto'] || '';
+        
+        // Salta i rinnovi - conta solo nuove attivazioni
+        if (prodotto.toLowerCase().includes('rinnovo')) return;
         
         if (nomeIvd && dataAttStr) {
           try {
@@ -1025,6 +1030,7 @@ export default function Home() {
             
             const tracker = {
               nome: nomeIvd,
+              codice: codiceIvd,
               dataAttivazione: dataAttStr.split(' ')[0],
               networker: networker, // Chi lo ha formato/sponsorizzato
               primaLA: null,
@@ -1126,8 +1132,46 @@ export default function Home() {
         }
       });
       
-      // Ordina per data attivazione (più recenti prima)
-      trackerCoaching.sort((a, b) => new Date(b.dataAttivazione) - new Date(a.dataAttivazione));
+      // Conta contratti totali per ogni IVD e calcola giorni da attivazione
+      const oggi = new Date();
+      trackerCoaching.forEach(tracker => {
+        // Conta LA totali
+        tracker.totaleLA = laData.filter(la => {
+          const intermediario = la['Nome Intermediario'] || '';
+          return confrontaNomi(intermediario, tracker.nome);
+        }).length;
+        
+        // Conta FV totali
+        tracker.totaleFV = fvData.filter(fv => {
+          const intermediario = fv['Nome Intermediario'] || '';
+          return confrontaNomi(intermediario, tracker.nome);
+        }).length;
+        
+        // Conta Seminari invitati
+        tracker.totaleSeminari = semData.filter(sem => {
+          const intermediario = sem['Nome Intermediario'] || '';
+          return confrontaNomi(intermediario, tracker.nome);
+        }).length;
+        
+        // Conta IVD portati (chi ha come superiore questo IVD)
+        tracker.totaleIVDPortati = ivdData.filter(ivd => {
+          const superiore = ivd['Superiore di Struttura'] || '';
+          const codiceIvd = ivd['Codice IVD'] || '';
+          // Match per nome o codice
+          return superiore.includes(tracker.nome.split(' ')[0]) || 
+                 (tracker.codice && superiore.includes(tracker.codice));
+        }).length;
+        
+        // Produttività totale (per ordinamento)
+        tracker.produttivitaTotale = tracker.totaleLA + tracker.totaleFV + tracker.totaleSeminari + tracker.totaleIVDPortati;
+        
+        // Giorni da attivazione
+        const dataAtt = new Date(tracker.dataAttivazione);
+        tracker.giorniDaAttivazione = Math.floor((oggi - dataAtt) / (1000 * 60 * 60 * 24));
+      });
+      
+      // ORDINAMENTO: per produttività totale (chi ha fatto di più in cima)
+      trackerCoaching.sort((a, b) => b.produttivitaTotale - a.produttivitaTotale);
       
       // Calcola medie
       const conLA = trackerCoaching.filter(t => t.giorniLA !== null);
@@ -1135,9 +1179,16 @@ export default function Home() {
       const conIscr = trackerCoaching.filter(t => t.giorniIscritto !== null);
       const conAtt = trackerCoaching.filter(t => t.giorniAttivato !== null);
       
+      // Calcola statistiche aggiuntive
+      const ivdConContratti = trackerCoaching.filter(t => t.totaleLA > 0 || t.totaleFV > 0).length;
+      const ivdInattivi = trackerCoaching.filter(t => t.totaleLA === 0 && t.totaleFV === 0).length;
+      
       result.trackerCoaching = {
-        lista: trackerCoaching.slice(0, 50), // Limita a 50
+        lista: trackerCoaching, // TUTTI, non limitato a 50
         totale: trackerCoaching.length,
+        ivdConContratti,
+        ivdInattivi,
+        pctInattivi: Math.round(ivdInattivi / trackerCoaching.length * 100) || 0,
         medie: {
           la: conLA.length > 0 ? Math.round(conLA.reduce((s, t) => s + t.giorniLA, 0) / conLA.length) : null,
           fv: conFV.length > 0 ? Math.round(conFV.reduce((s, t) => s + t.giorniFV, 0) / conFV.length) : null,
@@ -1149,6 +1200,17 @@ export default function Home() {
           fv: Math.round(conFV.length / trackerCoaching.length * 100) || 0,
           iscritto: Math.round(conIscr.length / trackerCoaching.length * 100) || 0,
           attivato: Math.round(conAtt.length / trackerCoaching.length * 100) || 0
+        },
+        // TOP 3 per velocità
+        top3VelocitaLA: conLA.sort((a, b) => a.giorniLA - b.giorniLA).slice(0, 3),
+        top3VelocitaFV: conFV.sort((a, b) => a.giorniFV - b.giorniFV).slice(0, 3),
+        // Fasce produttività
+        fasceProduttivita: {
+          zero: trackerCoaching.filter(t => t.produttivitaTotale === 0).length,
+          bassa: trackerCoaching.filter(t => t.produttivitaTotale >= 1 && t.produttivitaTotale <= 5).length,
+          media: trackerCoaching.filter(t => t.produttivitaTotale >= 6 && t.produttivitaTotale <= 20).length,
+          alta: trackerCoaching.filter(t => t.produttivitaTotale >= 21 && t.produttivitaTotale <= 50).length,
+          top: trackerCoaching.filter(t => t.produttivitaTotale > 50).length
         }
       };
     }
@@ -1458,6 +1520,141 @@ export default function Home() {
       fatturato.coerenza.la.pilastroAccettati === fatturato.coerenza.la.fatturatoAccettatiPunti;
     
     result.fatturato = fatturato;
+    
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // 📊 HEATMAP PER GUADAGNO FV, GUADAGNO LA E PUNTI
+    // ═══════════════════════════════════════════════════════════════════════════════
+    const calcHeatmapFatturato = (data, tipo) => {
+      const mesi = Array(12).fill(0);
+      const giorniPerMese = {};
+      const orariPerMese = {};
+      const settimanePerMese = {};
+      const anniTrovati = {};
+      const mesiConDati = new Set();
+      const valoriPerMese = Array(12).fill(0); // Fatturato o punti
+      
+      data.forEach(row => {
+        const dateStr = row['Inserimento'] || row['Data'] || row['Data Inserimento'] || '';
+        let valore = 0;
+        
+        if (tipo === 'guadagnoFV') {
+          const prodotto = row['Prodotto'] || '';
+          const match = matchProdottoFV(prodotto);
+          valore = match ? match.prezzo : 0;
+        } else if (tipo === 'guadagnoLA') {
+          const prodotto = row['Prodotto'] || '';
+          const fascia = getFasciaConsumoLA(prodotto);
+          valore = fascia ? fascia.kwhMedi * fascia.prezzoKwh : 559;
+        } else if (tipo === 'puntiFV') {
+          const prodotto = row['Prodotto'] || '';
+          const match = matchProdottoFV(prodotto);
+          valore = match ? match.punti : 0;
+        } else if (tipo === 'puntiLA') {
+          const prodotto = row['Prodotto'] || '';
+          valore = prodotto.toUpperCase().includes('20 IG') ? 20 : 15;
+        }
+        
+        if (dateStr) {
+          try {
+            const d = new Date(dateStr.replace(' ', 'T'));
+            if (!isNaN(d.getTime())) {
+              const year = d.getFullYear();
+              const month = d.getMonth();
+              const day = d.getDate();
+              const hour = d.getHours();
+              const weekNum = Math.ceil(day / 7);
+              
+              mesi[month]++;
+              valoriPerMese[month] += valore;
+              mesiConDati.add(month);
+              anniTrovati[year] = (anniTrovati[year] || 0) + 1;
+              
+              if (!giorniPerMese[month]) giorniPerMese[month] = Array(31).fill(0);
+              if (day >= 1 && day <= 31) giorniPerMese[month][day - 1] += valore;
+              
+              if (!orariPerMese[month]) orariPerMese[month] = { notte: 0, mattinaPrima: 0, mattina: 0, pranzo: 0, pomeriggio: 0, sera: 0, notturno: 0 };
+              if (hour < 6) orariPerMese[month].notte += valore;
+              else if (hour < 9) orariPerMese[month].mattinaPrima += valore;
+              else if (hour < 12) orariPerMese[month].mattina += valore;
+              else if (hour < 15) orariPerMese[month].pranzo += valore;
+              else if (hour < 18) orariPerMese[month].pomeriggio += valore;
+              else if (hour < 21) orariPerMese[month].sera += valore;
+              else orariPerMese[month].notturno += valore;
+              
+              if (!settimanePerMese[month]) settimanePerMese[month] = Array(5).fill(0);
+              if (weekNum >= 1 && weekNum <= 5) settimanePerMese[month][weekNum - 1] += valore;
+            }
+          } catch (e) {}
+        }
+      });
+      
+      let annoPrincipale = new Date().getFullYear();
+      let maxConteggio = 0;
+      Object.entries(anniTrovati).forEach(([anno, conteggio]) => {
+        if (conteggio > maxConteggio) { maxConteggio = conteggio; annoPrincipale = parseInt(anno); }
+      });
+      
+      return { mesi: valoriPerMese, conteggi: mesi, giorniPerMese, orariPerMese, settimanePerMese, anno: annoPrincipale, mesiConDati: Array.from(mesiConDati).sort((a,b) => a-b) };
+    };
+    
+    // Calcola heatmap per guadagni e punti (solo INSERITI)
+    if (reportCSVs.fv?.data?.length > 0) {
+      result.heatmapMesi.guadagnoFV = calcHeatmapFatturato(reportCSVs.fv.data, 'guadagnoFV');
+      result.heatmapMesi.puntiFV = calcHeatmapFatturato(reportCSVs.fv.data, 'puntiFV');
+    }
+    if (reportCSVs.energy?.data?.length > 0) {
+      result.heatmapMesi.guadagnoLA = calcHeatmapFatturato(reportCSVs.energy.data, 'guadagnoLA');
+      result.heatmapMesi.puntiLA = calcHeatmapFatturato(reportCSVs.energy.data, 'puntiLA');
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // 🎯 EXECUTIVE SUMMARY - KPI per CDA
+    // ═══════════════════════════════════════════════════════════════════════════════
+    result.executiveSummary = {
+      // KPI macro
+      fatturatoTotaleInseriti: (fatturato.fv.inseriti.totale || 0) + (fatturato.la.inseriti.totale || 0),
+      fatturatoTotaleEffettivi: (fatturato.fv.effettivi.totale || 0) + (fatturato.la.attiviEffettivi.totale || 0),
+      contrattiTotali: (result.pilastri.fv?.totale || 0) + (result.pilastri.energy?.totale || 0),
+      puntiTotaliInseriti: (fatturato.fv.inseriti.punti || 0) + (fatturato.la.inseriti.punti || 0),
+      puntiTotaliEffettivi: (fatturato.fv.effettivi.punti || 0) + (fatturato.la.accettatiPunti.punti || 0),
+      ivdTotali: result.pilastri.collaboratori?.totaleAttivati || 0,
+      
+      // Conversion rates
+      conversioneFV: result.pilastri.fv?.funnel?.pctPositivi || 0,
+      conversioneLA: result.pilastri.energy?.funnel?.pctAccettati || 0,
+      noShowSeminari: result.pilastri.collaboratori ? 
+        Math.round((result.pilastri.collaboratori.iscritti - result.pilastri.collaboratori.presenti) / result.pilastri.collaboratori.iscritti * 100) : 0,
+      
+      // Churn
+      churnLA: result.pilastri.energy?.funnel?.accettati > 0 ? 
+        Math.round((result.pilastri.energy.funnel.accettati - result.pilastri.energy.funnel.inFornitura) / result.pilastri.energy.funnel.accettati * 100) : 0,
+      
+      // IVD inattivi
+      ivdInattivi: result.trackerCoaching?.ivdInattivi || 0,
+      pctIvdInattivi: result.trackerCoaching?.pctInattivi || 0,
+      
+      // Perdite
+      fatturatoPersoFV: fatturato.fv.persi.totale || 0,
+      fatturatoLavorazioneFV: fatturato.fv.lavorazione.totale || 0,
+      
+      // Revenue per IVD
+      revenuePerIVD: result.pilastri.collaboratori?.totaleAttivati > 0 ? 
+        Math.round(((fatturato.fv.inseriti.totale || 0) + (fatturato.la.inseriti.totale || 0)) / result.pilastri.collaboratori.totaleAttivati) : 0,
+      
+      // AOV
+      aovFV: fatturato.fv.inseriti.contratti > 0 ? Math.round(fatturato.fv.inseriti.totale / fatturato.fv.inseriti.contratti) : 0,
+      aovLA: fatturato.la.inseriti.contratti > 0 ? Math.round(fatturato.la.inseriti.totale / fatturato.la.inseriti.contratti) : 0,
+      
+      // Semafori salute (🟢 >target, 🟡 warning, 🔴 alert)
+      semafori: {
+        convFV: (result.pilastri.fv?.funnel?.pctPositivi || 0) >= 60 ? 'verde' : (result.pilastri.fv?.funnel?.pctPositivi || 0) >= 40 ? 'giallo' : 'rosso',
+        convLA: (result.pilastri.energy?.funnel?.pctAccettati || 0) >= 85 ? 'verde' : (result.pilastri.energy?.funnel?.pctAccettati || 0) >= 70 ? 'giallo' : 'rosso',
+        noShow: result.pilastri.collaboratori ? 
+          ((result.pilastri.collaboratori.iscritti - result.pilastri.collaboratori.presenti) / result.pilastri.collaboratori.iscritti * 100) <= 25 ? 'verde' : 
+          ((result.pilastri.collaboratori.iscritti - result.pilastri.collaboratori.presenti) / result.pilastri.collaboratori.iscritti * 100) <= 35 ? 'giallo' : 'rosso' : 'grigio',
+        ivdInattivi: (result.trackerCoaching?.pctInattivi || 0) <= 15 ? 'verde' : (result.trackerCoaching?.pctInattivi || 0) <= 25 ? 'giallo' : 'rosso'
+      }
+    };
     
     if (Object.keys(result.pilastri).length === 0) return null;
     
@@ -2634,6 +2831,429 @@ export default function Home() {
   };
 
   // ═══════════════════════════════════════════════════════════════════════════════
+  // 🎯 EXECUTIVE SUMMARY COMPONENT - Prima cosa che vede il CDA
+  // ═══════════════════════════════════════════════════════════════════════════════
+  const ExecutiveSummaryComponent = ({ data }) => {
+    if (!data) return null;
+    
+    const getSemaforoEmoji = (semaforo) => {
+      if (semaforo === 'verde') return '🟢';
+      if (semaforo === 'giallo') return '🟡';
+      if (semaforo === 'rosso') return '🔴';
+      return '⚪';
+    };
+
+    return (
+      <div style={{ 
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)', 
+        borderRadius: 24, 
+        padding: 28,
+        marginBottom: 24,
+        position: 'relative',
+        overflow: 'hidden',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+      }}>
+        {/* Effetto glow */}
+        <div style={{
+          position: 'absolute',
+          top: -100,
+          right: -100,
+          width: 300,
+          height: 300,
+          background: 'radial-gradient(circle, rgba(42,170,138,0.15) 0%, transparent 70%)',
+          pointerEvents: 'none'
+        }} />
+        
+        {/* Header */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: 24,
+          position: 'relative',
+          zIndex: 1
+        }}>
+          <div>
+            <h2 style={{ 
+              color: '#FFFFFF', 
+              fontSize: 22, 
+              margin: 0, 
+              fontWeight: 800,
+              letterSpacing: '-0.5px'
+            }}>
+              📊 Executive Summary
+            </h2>
+            <p style={{ color: '#64748B', fontSize: 12, margin: '4px 0 0' }}>
+              Dashboard KPI per il Consiglio di Amministrazione
+            </p>
+          </div>
+          
+          {/* Semaforo salute */}
+          <div style={{ 
+            display: 'flex', 
+            gap: 8,
+            background: 'rgba(255,255,255,0.05)',
+            padding: '8px 16px',
+            borderRadius: 12,
+            backdropFilter: 'blur(10px)'
+          }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 18 }}>{getSemaforoEmoji(data.semafori?.convFV)}</div>
+              <div style={{ fontSize: 8, color: '#94A3B8', marginTop: 2 }}>FV</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 18 }}>{getSemaforoEmoji(data.semafori?.convLA)}</div>
+              <div style={{ fontSize: 8, color: '#94A3B8', marginTop: 2 }}>LA</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 18 }}>{getSemaforoEmoji(data.semafori?.noShow)}</div>
+              <div style={{ fontSize: 8, color: '#94A3B8', marginTop: 2 }}>SEM</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 18 }}>{getSemaforoEmoji(data.semafori?.ivdInattivi)}</div>
+              <div style={{ fontSize: 8, color: '#94A3B8', marginTop: 2 }}>IVD</div>
+            </div>
+          </div>
+        </div>
+        
+        {/* 4 KPI Macro Cards */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(4, 1fr)', 
+          gap: 16,
+          marginBottom: 24,
+          position: 'relative',
+          zIndex: 1
+        }}>
+          {/* Fatturato */}
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(16,185,129,0.05) 100%)',
+            border: '1px solid rgba(16,185,129,0.2)',
+            borderRadius: 16,
+            padding: 20,
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <div style={{ position: 'absolute', top: 12, right: 12, fontSize: 28, opacity: 0.3 }}>💰</div>
+            <div style={{ fontSize: 11, color: '#10B981', fontWeight: 600, marginBottom: 4 }}>FATTURATO INSERITI</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', letterSpacing: '-1px' }}>
+              €{((data.fatturatoTotaleInseriti || 0) / 1000000).toFixed(2)}M
+            </div>
+            <div style={{ fontSize: 10, color: '#64748B', marginTop: 4 }}>
+              Effettivi: €{((data.fatturatoTotaleEffettivi || 0) / 1000000).toFixed(2)}M
+            </div>
+          </div>
+          
+          {/* Contratti */}
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(59,130,246,0.05) 100%)',
+            border: '1px solid rgba(59,130,246,0.2)',
+            borderRadius: 16,
+            padding: 20,
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <div style={{ position: 'absolute', top: 12, right: 12, fontSize: 28, opacity: 0.3 }}>📄</div>
+            <div style={{ fontSize: 11, color: '#3B82F6', fontWeight: 600, marginBottom: 4 }}>CONTRATTI TOTALI</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', letterSpacing: '-1px' }}>
+              {(data.contrattiTotali || 0).toLocaleString('it-IT')}
+            </div>
+            <div style={{ fontSize: 10, color: '#64748B', marginTop: 4 }}>
+              Punti: {(data.puntiTotaliInseriti || 0).toLocaleString('it-IT')}
+            </div>
+          </div>
+          
+          {/* Rete */}
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(249,115,22,0.15) 0%, rgba(249,115,22,0.05) 100%)',
+            border: '1px solid rgba(249,115,22,0.2)',
+            borderRadius: 16,
+            padding: 20,
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <div style={{ position: 'absolute', top: 12, right: 12, fontSize: 28, opacity: 0.3 }}>👥</div>
+            <div style={{ fontSize: 11, color: '#F97316', fontWeight: 600, marginBottom: 4 }}>RETE VENDITA</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', letterSpacing: '-1px' }}>
+              {data.ivdTotali || 0} IVD
+            </div>
+            <div style={{ fontSize: 10, color: '#64748B', marginTop: 4 }}>
+              €{(data.revenuePerIVD || 0).toLocaleString('it-IT')}/IVD
+            </div>
+          </div>
+          
+          {/* Conversione */}
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(168,85,247,0.15) 0%, rgba(168,85,247,0.05) 100%)',
+            border: '1px solid rgba(168,85,247,0.2)',
+            borderRadius: 16,
+            padding: 20,
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <div style={{ position: 'absolute', top: 12, right: 12, fontSize: 28, opacity: 0.3 }}>📈</div>
+            <div style={{ fontSize: 11, color: '#A855F7', fontWeight: 600, marginBottom: 4 }}>CONVERSION AVG</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', letterSpacing: '-1px' }}>
+              {Math.round(((data.conversioneFV || 0) + (data.conversioneLA || 0)) / 2)}%
+            </div>
+            <div style={{ fontSize: 10, color: '#64748B', marginTop: 4 }}>
+              FV {data.conversioneFV || 0}% | LA {data.conversioneLA || 0}%
+            </div>
+          </div>
+        </div>
+        
+        {/* Alert Bar */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: 12,
+          position: 'relative',
+          zIndex: 1
+        }}>
+          <div style={{
+            background: (data.conversioneFV || 0) >= 50 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+            border: `1px solid ${(data.conversioneFV || 0) >= 50 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+            borderRadius: 10,
+            padding: '10px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10
+          }}>
+            <span style={{ fontSize: 20 }}>{(data.conversioneFV || 0) >= 50 ? '✅' : '⚠️'}</span>
+            <div>
+              <div style={{ fontSize: 10, color: '#94A3B8' }}>Perdita FV</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#FFF' }}>
+                €{((data.fatturatoPersoFV || 0) / 1000).toFixed(0)}K
+              </div>
+            </div>
+          </div>
+          
+          <div style={{
+            background: (data.noShowSeminari || 0) <= 30 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+            border: `1px solid ${(data.noShowSeminari || 0) <= 30 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+            borderRadius: 10,
+            padding: '10px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10
+          }}>
+            <span style={{ fontSize: 20 }}>{(data.noShowSeminari || 0) <= 30 ? '✅' : '⚠️'}</span>
+            <div>
+              <div style={{ fontSize: 10, color: '#94A3B8' }}>No-Show</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#FFF' }}>{data.noShowSeminari || 0}%</div>
+            </div>
+          </div>
+          
+          <div style={{
+            background: (data.churnLA || 0) <= 15 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+            border: `1px solid ${(data.churnLA || 0) <= 15 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+            borderRadius: 10,
+            padding: '10px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10
+          }}>
+            <span style={{ fontSize: 20 }}>{(data.churnLA || 0) <= 15 ? '✅' : '⚠️'}</span>
+            <div>
+              <div style={{ fontSize: 10, color: '#94A3B8' }}>Churn LA</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#FFF' }}>{data.churnLA || 0}%</div>
+            </div>
+          </div>
+          
+          <div style={{
+            background: (data.pctIvdInattivi || 0) <= 20 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+            border: `1px solid ${(data.pctIvdInattivi || 0) <= 20 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+            borderRadius: 10,
+            padding: '10px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10
+          }}>
+            <span style={{ fontSize: 20 }}>{(data.pctIvdInattivi || 0) <= 20 ? '✅' : '⚠️'}</span>
+            <div>
+              <div style={{ fontSize: 10, color: '#94A3B8' }}>IVD Inattivi</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#FFF' }}>
+                {data.ivdInattivi || 0} ({data.pctIvdInattivi || 0}%)
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // 📈 FUNNEL ANALYSIS COMPONENT - Visualizzazione perdite
+  // ═══════════════════════════════════════════════════════════════════════════════
+  const FunnelAnalysisComponent = ({ fv, la, fatturato }) => {
+    if (!fv && !la) return null;
+
+    const FunnelStep = ({ label, value, subValue, color, percentage, isLast }) => (
+      <div style={{ marginBottom: isLast ? 0 : 6 }}>
+        <div style={{
+          background: `linear-gradient(135deg, ${color}15 0%, ${color}08 100%)`,
+          border: `1px solid ${color}30`,
+          borderRadius: 12,
+          padding: '12px 16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div>
+            <div style={{ fontSize: 11, color: '#64748B', marginBottom: 2 }}>{label}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color }}>{value}</div>
+            {subValue && <div style={{ fontSize: 10, color: '#94A3B8' }}>{subValue}</div>}
+          </div>
+          <div style={{ fontSize: 24, fontWeight: 800, color, opacity: 0.25 }}>{percentage}%</div>
+        </div>
+        {!isLast && (
+          <div style={{ textAlign: 'center', color: '#CBD5E1', fontSize: 14, padding: '4px 0' }}>↓</div>
+        )}
+      </div>
+    );
+
+    return (
+      <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 24, border: '1px solid #E2E8F0', marginBottom: 20 }}>
+        <h3 style={{ color: '#1E293B', fontSize: 18, margin: '0 0 20px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+          📊 Funnel Analysis
+          <span style={{ fontSize: 12, color: '#94A3B8', fontWeight: 400 }}>Conversion per stage</span>
+        </h3>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+          {/* FV Funnel */}
+          {fv && (
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#2AAA8A', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                ☀️ Fotovoltaico
+                <span style={{ fontSize: 10, background: '#2AAA8A20', padding: '2px 8px', borderRadius: 10, color: '#2AAA8A' }}>
+                  {fv.funnel.pctPositivi}% win rate
+                </span>
+              </div>
+              <FunnelStep label="Inseriti" value={fv.funnel.inseriti} subValue={`€${((fatturato?.fv?.inseriti?.totale || 0) / 1000).toFixed(0)}K`} color="#3B82F6" percentage={100} />
+              <FunnelStep label="Positivi" value={fv.funnel.positivi} subValue={`€${((fatturato?.fv?.effettivi?.totale || 0) / 1000).toFixed(0)}K`} color="#10B981" percentage={fv.funnel.pctPositivi} />
+              <FunnelStep label="In Lavorazione" value={fv.funnel.lavorazione} subValue={`€${((fatturato?.fv?.lavorazione?.totale || 0) / 1000).toFixed(0)}K`} color="#F59E0B" percentage={Math.round(fv.funnel.lavorazione / fv.funnel.inseriti * 100)} isLast />
+              <div style={{ marginTop: 10, padding: '8px 12px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 11, color: '#DC2626' }}>❌ Persi: {fv.funnel.negativi}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#DC2626' }}>-€{((fatturato?.fv?.persi?.totale || 0) / 1000).toFixed(0)}K</span>
+              </div>
+            </div>
+          )}
+          
+          {/* LA Funnel */}
+          {la && (
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#F59E0B', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                ⚡ Luce Amica
+                <span style={{ fontSize: 10, background: '#F59E0B20', padding: '2px 8px', borderRadius: 10, color: '#F59E0B' }}>
+                  {la.funnel.pctAccettati}% acceptance
+                </span>
+              </div>
+              <FunnelStep label="Inseriti" value={la.funnel.inseriti} subValue={`${(fatturato?.la?.inseriti?.punti || 0).toLocaleString('it-IT')} punti`} color="#3B82F6" percentage={100} />
+              <FunnelStep label="Accettati" value={la.funnel.accettati} subValue={`${(fatturato?.la?.accettatiPunti?.punti || 0).toLocaleString('it-IT')} punti`} color="#10B981" percentage={la.funnel.pctAccettati} />
+              <FunnelStep label="In Fornitura" value={la.funnel.inFornitura} subValue={`€${((fatturato?.la?.attiviEffettivi?.totale || 0) / 1000).toFixed(0)}K/anno`} color="#8B5CF6" percentage={la.funnel.pctFornitura} isLast />
+              <div style={{ marginTop: 10, padding: '8px 12px', background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 11, color: '#B45309' }}>📉 Cessati: {la.funnel.accettati - la.funnel.inFornitura}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#B45309' }}>{la.funnel.accettati > 0 ? Math.round((la.funnel.accettati - la.funnel.inFornitura) / la.funnel.accettati * 100) : 0}% churn</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // 👥 RETE PERFORMANCE COMPONENT - Distribuzione produttività IVD
+  // ═══════════════════════════════════════════════════════════════════════════════
+  const RetePerformanceComponent = ({ tracker }) => {
+    if (!tracker) return null;
+    
+    const fasce = tracker.fasceProduttivita || { zero: 0, bassa: 0, media: 0, alta: 0, top: 0 };
+    const totale = tracker.totale || 1;
+    const maxFascia = Math.max(fasce.zero, fasce.bassa, fasce.media, fasce.alta, fasce.top, 1);
+
+    const BarChart = ({ label, value, color, emoji }) => (
+      <div style={{ marginBottom: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+          <span style={{ fontSize: 11, color: '#64748B' }}>{emoji} {label}</span>
+          <span style={{ fontSize: 11, fontWeight: 600, color }}>{value} ({Math.round(value/totale*100)}%)</span>
+        </div>
+        <div style={{ height: 6, background: '#F1F5F9', borderRadius: 3, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${(value / maxFascia) * 100}%`, background: `linear-gradient(90deg, ${color}, ${color}88)`, borderRadius: 3, transition: 'width 0.5s ease' }} />
+        </div>
+      </div>
+    );
+
+    return (
+      <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 24, border: '1px solid #E2E8F0', marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+          <div>
+            <h3 style={{ color: '#1E293B', fontSize: 18, margin: 0, fontWeight: 700 }}>👥 Performance Rete Vendita</h3>
+            <p style={{ color: '#94A3B8', fontSize: 12, margin: '4px 0 0' }}>Distribuzione produttività IVD ({tracker.totale} totali)</p>
+          </div>
+          <div style={{ display: 'flex', gap: 16 }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 20, fontWeight: 800, color: '#10B981' }}>{tracker.ivdConContratti || 0}</div>
+              <div style={{ fontSize: 9, color: '#94A3B8' }}>Produttivi</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 20, fontWeight: 800, color: '#EF4444' }}>{tracker.ivdInattivi || 0}</div>
+              <div style={{ fontSize: 9, color: '#94A3B8' }}>Inattivi</div>
+            </div>
+          </div>
+        </div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 12 }}>📊 Distribuzione per Fascia</div>
+            <BarChart label="0 contratti" value={fasce.zero} color="#EF4444" emoji="🔴" />
+            <BarChart label="1-5 contratti" value={fasce.bassa} color="#F59E0B" emoji="🟡" />
+            <BarChart label="6-20 contratti" value={fasce.media} color="#3B82F6" emoji="🔵" />
+            <BarChart label="21-50 contratti" value={fasce.alta} color="#10B981" emoji="🟢" />
+            <BarChart label="50+ contratti" value={fasce.top} color="#8B5CF6" emoji="⭐" />
+          </div>
+          
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 12 }}>⏱️ Tempo Medio al Primo Contratto</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                <div style={{ fontSize: 9, color: '#15803D', marginBottom: 2 }}>Prima LA</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#15803D' }}>{tracker.medie?.la !== null ? tracker.medie.la : '-'}</div>
+                <div style={{ fontSize: 9, color: '#22C55E' }}>giorni</div>
+              </div>
+              <div style={{ background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                <div style={{ fontSize: 9, color: '#B45309', marginBottom: 2 }}>Primo FV</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#B45309' }}>{tracker.medie?.fv !== null ? tracker.medie.fv : '-'}</div>
+                <div style={{ fontSize: 9, color: '#F59E0B' }}>giorni</div>
+              </div>
+              <div style={{ background: '#EDE9FE', border: '1px solid #C4B5FD', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                <div style={{ fontSize: 9, color: '#6D28D9', marginBottom: 2 }}>Primo Iscritto</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#6D28D9' }}>{tracker.medie?.iscritto !== null ? tracker.medie.iscritto : '-'}</div>
+                <div style={{ fontSize: 9, color: '#8B5CF6' }}>giorni</div>
+              </div>
+              <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                <div style={{ fontSize: 9, color: '#DC2626', marginBottom: 2 }}>Primo Attivato</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#DC2626' }}>{tracker.medie?.attivato !== null ? tracker.medie.attivato : '-'}</div>
+                <div style={{ fontSize: 9, color: '#EF4444' }}>giorni</div>
+              </div>
+            </div>
+            
+            <div style={{ marginTop: 12 }}>
+              <div style={{ fontSize: 10, color: '#64748B', marginBottom: 6 }}>% IVD che hanno completato:</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <span style={{ background: '#DCFCE7', color: '#15803D', padding: '3px 8px', borderRadius: 12, fontSize: 9, fontWeight: 600 }}>LA: {tracker.completamento?.la || 0}%</span>
+                <span style={{ background: '#FEF3C7', color: '#B45309', padding: '3px 8px', borderRadius: 12, fontSize: 9, fontWeight: 600 }}>FV: {tracker.completamento?.fv || 0}%</span>
+                <span style={{ background: '#EDE9FE', color: '#6D28D9', padding: '3px 8px', borderRadius: 12, fontSize: 9, fontWeight: 600 }}>Iscritto: {tracker.completamento?.iscritto || 0}%</span>
+                <span style={{ background: '#FEF2F2', color: '#DC2626', padding: '3px 8px', borderRadius: 12, fontSize: 9, fontWeight: 600 }}>Attivato: {tracker.completamento?.attivato || 0}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════════
   // COMPONENTE REPORT RESULTS - Layout completo con tutti i pilastri
   // ═══════════════════════════════════════════════════════════════════════════════
   const ReportResultsComponent = ({ reportData }) => {
@@ -2646,6 +3266,23 @@ export default function Home() {
     
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        
+        {/* 🎯 EXECUTIVE SUMMARY - PRIMA DI TUTTO */}
+        {reportData.executiveSummary && (
+          <ExecutiveSummaryComponent data={reportData.executiveSummary} />
+        )}
+        
+        {/* 📈 FUNNEL ANALYSIS */}
+        <FunnelAnalysisComponent 
+          fv={reportData.pilastri.fv} 
+          la={reportData.pilastri.energy} 
+          fatturato={reportData.fatturato}
+        />
+        
+        {/* 👥 RETE PERFORMANCE */}
+        {reportData.trackerCoaching && (
+          <RetePerformanceComponent tracker={reportData.trackerCoaching} />
+        )}
         
         {/* CALENDARIO CON DRILL-DOWN */}
         {Object.keys(reportData.heatmapMesi).length > 0 && (
@@ -2679,11 +3316,15 @@ export default function Home() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 15 }}>
                   {Object.entries(reportData.heatmapMesi).map(([type, heatData]) => {
                     const info = { 
-                      fv: { emoji: '☀️', label: 'Fotovoltaico', color: '#2AAA8A' }, 
-                      energy: { emoji: '⚡', label: 'Luce Amica', color: '#FFD700' }, 
-                      consultings: { emoji: '🎓', label: 'Seminari', color: '#9C27B0' },
-                      presenti: { emoji: '✅', label: 'Presenti', color: '#4CAF50' },
-                      ivd: { emoji: '🟠', label: 'Attivati', color: '#FF9800' } 
+                      fv: { emoji: '☀️', label: 'Fotovoltaico', color: '#2AAA8A', unit: '', isCurrency: false }, 
+                      energy: { emoji: '⚡', label: 'Luce Amica', color: '#FFD700', unit: '', isCurrency: false }, 
+                      consultings: { emoji: '🎓', label: 'Seminari', color: '#9C27B0', unit: '', isCurrency: false },
+                      presenti: { emoji: '✅', label: 'Presenti', color: '#4CAF50', unit: '', isCurrency: false },
+                      ivd: { emoji: '👥', label: 'Attivati', color: '#FF9800', unit: '', isCurrency: false },
+                      guadagnoFV: { emoji: '💰', label: 'Guadagno FV', color: '#2AAA8A', unit: '€', isCurrency: true },
+                      guadagnoLA: { emoji: '💵', label: 'Guadagno LA', color: '#FFD700', unit: '€', isCurrency: true },
+                      puntiFV: { emoji: '⭐', label: 'Punti FV', color: '#9C27B0', unit: 'pt', isCurrency: false },
+                      puntiLA: { emoji: '🏆', label: 'Punti LA', color: '#FF9800', unit: 'pt', isCurrency: false }
                     }[type];
                     if (!info) return null;
                     const mesiNomi = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
@@ -2730,16 +3371,29 @@ export default function Home() {
                     const mesiDaMostrare = heatData.mesiConDati || heatData.mesi.map((v, i) => v > 0 ? i : -1).filter(i => i >= 0);
                     const numMesiAttivi = mesiDaMostrare.length;
                     
+                    // Formatta valore in base al tipo
+                    const formatValue = (val) => {
+                      if (info.isCurrency) return `€${(val/1000).toFixed(0)}K`;
+                      if (info.unit === 'pt') return `${val.toLocaleString('it-IT')}`;
+                      return val.toLocaleString('it-IT');
+                    };
+                    
+                    const formatTotale = (val) => {
+                      if (info.isCurrency) return `€${val.toLocaleString('it-IT')}`;
+                      if (info.unit === 'pt') return `${val.toLocaleString('it-IT')} pt`;
+                      return val.toLocaleString('it-IT');
+                    };
+                    
                     return (
                       <div key={type} style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, border: '1px solid #E8E8E8' }}>
                         {/* Header con stats e anno */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                           <div>
-                            <div style={{ fontSize: 13, color: info.color, fontWeight: 600 }}>{info.emoji} {info.label}</div>
+                            <div style={{ fontSize: 14, color: info.color, fontWeight: 700 }}>{info.emoji} {info.label}</div>
                             <div style={{ fontSize: 9, color: '#999' }}>Anno {annoDati} • {numMesiAttivi} mesi caricati</div>
                           </div>
                           <div style={{ display: 'flex', gap: 8, fontSize: 9, color: '#666' }}>
-                            <span title="Media mensile">📊 {media}/mese</span>
+                            <span title="Media mensile">📊 {info.isCurrency ? `€${Math.round(media/1000)}K` : media}/mese</span>
                             <span title="Miglior mese">🏆 {bestMese}</span>
                             <span title="Miglior orario">🕐 {bestOrario}</span>
                           </div>
@@ -2753,10 +3407,10 @@ export default function Home() {
                             return (
                               <div 
                                 key={meseIdx} 
-                                onClick={() => val > 0 && setHeatmapDrilldown({ type, mese: meseIdx, label: mesiNomi[meseIdx], data: heatData, anno: annoDati })}
+                                onClick={() => val > 0 && setHeatmapDrilldown({ type, mese: meseIdx, label: mesiNomi[meseIdx], data: heatData, anno: annoDati, info })}
                                 style={{ 
-                                  height: 46, 
-                                  borderRadius: 6, 
+                                  height: 52, 
+                                  borderRadius: 8, 
                                   background: bgColor, 
                                   display: 'flex', 
                                   flexDirection: 'column', 
@@ -2770,7 +3424,7 @@ export default function Home() {
                                 onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
                               >
                                 <span style={{ fontSize: 9, color: val === 0 ? '#AAA' : '#FFF', fontWeight: 600 }}>{mesiNomi[meseIdx]}</span>
-                                {val > 0 && <span style={{ fontSize: 13, fontWeight: 700, color: '#FFF' }}>{val}</span>}
+                                {val > 0 && <span style={{ fontSize: 12, fontWeight: 700, color: '#FFF' }}>{formatValue(val)}</span>}
                                 {bestHourPerMonth[meseIdx] && <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.8)' }}>{bestHourPerMonth[meseIdx]}</span>}
                               </div>
                             );
@@ -2778,7 +3432,7 @@ export default function Home() {
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
                           <span style={{ fontSize: 10, color: '#999' }}>Clicca un mese per dettagli</span>
-                          <span style={{ fontSize: 12, color: '#666' }}>Totale: <strong style={{ color: info.color }}>{heatData.mesi.reduce((a,b) => a+b, 0)}</strong></span>
+                          <span style={{ fontSize: 13, color: '#666', fontWeight: 600 }}>Totale: <strong style={{ color: info.color, fontSize: 15 }}>{formatTotale(totale)}</strong></span>
                         </div>
                       </div>
                     );
