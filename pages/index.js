@@ -2206,7 +2206,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v14.0 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v14.1 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -3175,11 +3175,11 @@ export default function Home() {
       ctx.fillStyle = '#666';
       ctx.fillText('Accettazione', 250, y + 110);
       
-      if (reportData.fatturato?.la) {
+      if (reportData.fatturato?.la?.accettati) {
         ctx.fillStyle = '#B45309';
         ctx.font = 'bold 36px Arial';
         ctx.textAlign = 'right';
-        ctx.fillText('€' + Math.round(reportData.fatturato.la.accettati.totale/12).toLocaleString('it-IT') + '/m', W - 70, y + 70);
+        ctx.fillText('€' + Math.round((reportData.fatturato.la.accettati.totale || 0)/12).toLocaleString('it-IT') + '/m', W - 70, y + 70);
         ctx.font = '16px Arial';
         ctx.fillStyle = '#666';
         ctx.fillText('Fatturato Mensile', W - 70, y + 95);
@@ -3372,8 +3372,8 @@ export default function Home() {
         slide.addText('Luce Amica', { x: 3.6, y: 1.5, w: 2.7, h: 0.3, fontSize: 14, bold: true, color: 'B45309' });
         slide.addText(reportData.pilastri.energy.funnel.accettati + ' Accettati', { x: 3.6, y: 1.9, w: 2.7, h: 0.4, fontSize: 24, bold: true, color: 'B45309' });
         slide.addText(reportData.pilastri.energy.funnel.pctAccettati + '% accettazione', { x: 3.6, y: 2.4, w: 2.7, h: 0.3, fontSize: 12, color: '6B7280' });
-        if (reportData.fatturato?.la) {
-          slide.addText('€' + Math.round(reportData.fatturato.la.accettati.totale/12).toLocaleString('it-IT') + '/mese', { x: 3.6, y: 2.7, w: 2.7, h: 0.3, fontSize: 16, bold: true, color: 'B45309' });
+        if (reportData.fatturato?.la?.accettati) {
+          slide.addText('€' + Math.round((reportData.fatturato.la.accettati.totale || 0)/12).toLocaleString('it-IT') + '/mese', { x: 3.6, y: 2.7, w: 2.7, h: 0.3, fontSize: 16, bold: true, color: 'B45309' });
         }
       }
       
@@ -3451,10 +3451,11 @@ export default function Home() {
           slide.addText(item.label, { x: 0.4 + i * 2.4, y: 2.3, w: 2.2, h: 0.3, fontSize: 12, color: '6B7280', align: 'center' });
         });
         
-        if (reportData.fatturato?.la) {
+        if (reportData.fatturato?.la?.accettati) {
           slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, { x: 0.4, y: 3.0, w: 9.2, h: 1.2, fill: { color: 'B45309' } });
           slide.addText('Fatturato Generato', { x: 0.5, y: 3.1, w: 9, h: 0.3, fontSize: 14, bold: true, color: 'FFFFFF' });
-          slide.addText('€' + Math.round(reportData.fatturato.la.accettati.totale).toLocaleString('it-IT') + '/anno | €' + Math.round(reportData.fatturato.la.accettati.totale/12).toLocaleString('it-IT') + '/mese', { x: 0.5, y: 3.5, w: 9, h: 0.4, fontSize: 18, color: 'FFFFFF' });
+          const totLA = reportData.fatturato.la.accettati.totale || 0;
+          slide.addText('€' + Math.round(totLA).toLocaleString('it-IT') + '/anno | €' + Math.round(totLA/12).toLocaleString('it-IT') + '/mese', { x: 0.5, y: 3.5, w: 9, h: 0.4, fontSize: 18, color: 'FFFFFF' });
         }
       }
       
@@ -5643,7 +5644,7 @@ export default function Home() {
         </div>
         
         {/* Footer versione */}
-        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v14.0</p>
+        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v14.1</p>
       </div>
     </div></>);
 
@@ -5837,7 +5838,7 @@ export default function Home() {
           </div>
         )}
       </main>
-      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v14.0 • Leader Ranking</footer>
+      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v14.1 • Leader Ranking</footer>
     </div></>);
 
   // PREVIEW
