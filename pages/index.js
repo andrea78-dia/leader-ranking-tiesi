@@ -1345,9 +1345,9 @@ export default function Home() {
       },
       la: { 
         inseriti: { totale: 0, punti: 0, kwh: 0, contratti: 0 },
-        // PUNTI: basati su Stato NWG Spa = Accettato (anche se poi cessa, pagano!)
+        // PUNTI: basati su Stato Contratto = Accettato (anche se poi cessa, pagano!)
         accettatiPunti: { totale: 0, punti: 0, kwh: 0, contratti: 0 },
-        // FATTURATO: basati su Stato NWG Energia = Attivo/In fornitura (effettivi ricorrenti)
+        // FATTURATO: basati su Stato Fornitura = Attivo/In fornitura (effettivi ricorrenti)
         attiviEffettivi: { totale: 0, punti: 0, kwh: 0, contratti: 0 },
         perK: {}, perNW: {},
         perMese: {} // Fatturato per mese
@@ -1494,7 +1494,7 @@ export default function Home() {
         }
         
         // ═══════════════════════════════════════════════════════════════════
-        // PUNTI LA: Stato NWG Spa = Accettato (anche se poi cessa, PAGANO!)
+        // PUNTI LA: Stato Contratto = Accettato (anche se poi cessa, PAGANO!)
         // ═══════════════════════════════════════════════════════════════════
         const statoToCheckPunti = hasStatoSpa ? statoSpa : statoGenerico;
         const catStatoPunti = categorizeStato(statoToCheckPunti, STATO_MAP_LA_SPA);
@@ -1529,7 +1529,7 @@ export default function Home() {
         }
         
         // ═══════════════════════════════════════════════════════════════════
-        // FATTURATO LA: Stato NWG Energia = Attivo/In fornitura (EFFETTIVI!)
+        // FATTURATO LA: Stato Fornitura = Attivo/In fornitura (EFFETTIVI!)
         // ═══════════════════════════════════════════════════════════════════
         const catStatoFatturato = categorizeStato(statoEnergia, STATO_MAP_LA_ENERGIA);
         const isAttivoFatturato = catStatoFatturato === 'positivo';
@@ -1811,13 +1811,11 @@ export default function Home() {
       
       // SEMINARI
       seminari: {
-        iscritti: result.pilastri.collaboratori?.iscritti || 0,
-        presenti: result.pilastri.collaboratori?.presenti || 0,
-        assenti: (result.pilastri.collaboratori?.iscritti || 0) - (result.pilastri.collaboratori?.presenti || 0),
-        pctPresenti: result.pilastri.collaboratori?.iscritti > 0 ? 
-          Math.round((result.pilastri.collaboratori.presenti / result.pilastri.collaboratori.iscritti) * 100) : 0,
-        pctAssenti: result.pilastri.collaboratori?.iscritti > 0 ? 
-          Math.round(((result.pilastri.collaboratori.iscritti - result.pilastri.collaboratori.presenti) / result.pilastri.collaboratori.iscritti) * 100) : 0
+        iscritti: result.pilastri.collaboratori?.funnel?.iscritti || 0,
+        presenti: result.pilastri.collaboratori?.funnel?.presenti || 0,
+        assenti: result.pilastri.collaboratori?.funnel?.assenti || 0,
+        pctPresenti: result.pilastri.collaboratori?.funnel?.pctPresenti || 0,
+        pctAssenti: result.pilastri.collaboratori?.funnel?.pctAssenti || 0
       },
       
       // NUOVI IVD (281)
@@ -1850,9 +1848,8 @@ export default function Home() {
         laCessati: (result.pilastri.energy?.funnel?.accettati || 0) - (result.pilastri.energy?.funnel?.inFornitura || 0),
         laPctCessati: result.pilastri.energy?.funnel?.accettati > 0 ? 
           Math.round(((result.pilastri.energy.funnel.accettati - result.pilastri.energy.funnel.inFornitura) / result.pilastri.energy.funnel.accettati) * 100) : 0,
-        seminariAssenti: (result.pilastri.collaboratori?.iscritti || 0) - (result.pilastri.collaboratori?.presenti || 0),
-        seminariPctAssenti: result.pilastri.collaboratori?.iscritti > 0 ? 
-          Math.round(((result.pilastri.collaboratori.iscritti - result.pilastri.collaboratori.presenti) / result.pilastri.collaboratori.iscritti) * 100) : 0,
+        seminariAssenti: result.pilastri.collaboratori?.funnel?.assenti || 0,
+        seminariPctAssenti: result.pilastri.collaboratori?.funnel?.pctAssenti || 0,
         ivdInattivi: result.trackerCoaching?.ivdInattivi || 0,
         ivdPctInattivi: result.trackerCoaching?.pctInattivi || 0
       },
@@ -1861,9 +1858,8 @@ export default function Home() {
       semafori: {
         fv: (result.pilastri.fv?.funnel?.pctPositivi || 0) >= 60 ? 'verde' : (result.pilastri.fv?.funnel?.pctPositivi || 0) >= 40 ? 'giallo' : 'rosso',
         la: (result.pilastri.energy?.funnel?.pctAccettati || 0) >= 85 ? 'verde' : (result.pilastri.energy?.funnel?.pctAccettati || 0) >= 70 ? 'giallo' : 'rosso',
-        seminari: result.pilastri.collaboratori?.iscritti > 0 ? 
-          (((result.pilastri.collaboratori.iscritti - result.pilastri.collaboratori.presenti) / result.pilastri.collaboratori.iscritti * 100) <= 25 ? 'verde' : 
-          ((result.pilastri.collaboratori.iscritti - result.pilastri.collaboratori.presenti) / result.pilastri.collaboratori.iscritti * 100) <= 35 ? 'giallo' : 'rosso') : 'grigio',
+        seminari: (result.pilastri.collaboratori?.funnel?.pctAssenti || 0) <= 25 ? 'verde' : 
+          (result.pilastri.collaboratori?.funnel?.pctAssenti || 0) <= 35 ? 'giallo' : 'rosso',
         ivd: (result.trackerCoaching?.pctInattivi || 0) <= 15 ? 'verde' : (result.trackerCoaching?.pctInattivi || 0) <= 25 ? 'giallo' : 'rosso'
       }
     };
@@ -2206,7 +2202,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v14.1 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v14.2 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -2224,7 +2220,7 @@ export default function Home() {
     }
   };
 
-  // Genera PNG per slide NWG (16:9) - VERSIONE WOW
+  // Genera PNG per slide (16:9) - VERSIONE WOW
   const generateSlidePNG = (mode = 'full') => {
     const stats = getDashboardStats();
     if (!stats.top3.length) return null;
@@ -2234,7 +2230,7 @@ export default function Home() {
     const W = 1920, H = 1080;
     canvas.width = W; canvas.height = H;
     
-    // Sfondo verde teal NWG
+    // Sfondo verde teal
     ctx.fillStyle = '#2AAA8A';
     ctx.fillRect(0, 0, W, H);
     
@@ -2697,7 +2693,7 @@ export default function Home() {
     const H = Math.max(1080, estimatedH);
     canvas.width = W; canvas.height = H;
     
-    // Background - ELEGANTE con sfumatura verde NWG
+    // Background - ELEGANTE con sfumatura verde corporate
     const bg = ctx.createLinearGradient(0, 0, 0, H); 
     bg.addColorStop(0, '#FFFFFF'); 
     bg.addColorStop(0.3, 'rgba(42,170,138,0.03)'); 
@@ -2829,7 +2825,7 @@ export default function Home() {
     const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d'), W = 1080, H = 1080;
     canvas.width = W; canvas.height = H;
     
-    // Background - ELEGANTE con sfumatura verde NWG (come NW)
+    // Background - ELEGANTE con sfumatura verde corporate (come NW)
     const bg = ctx.createLinearGradient(0, 0, 0, H); 
     bg.addColorStop(0, '#FFFFFF'); 
     bg.addColorStop(0.3, 'rgba(42,170,138,0.03)'); 
@@ -4677,7 +4673,7 @@ export default function Home() {
             <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, marginBottom: 20 }}>
               <div style={{ fontSize: 12, color: '#666', marginBottom: 10, fontWeight: 600 }}>📋 DETTAGLIO STATI</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {/* NWG SPA - Raggruppati per colore */}
+                {/* CONTRATTO - Raggruppati per colore */}
                 {(() => {
                   const positivi = reportData.pilastri.energy.statiNwgSpa.filter(([s]) => STATO_MAP_LA_SPA[s] === 'positivo');
                   const lavorabili = reportData.pilastri.energy.statiNwgSpa.filter(([s]) => STATO_MAP_LA_SPA[s] === 'lavorabile');
@@ -4686,7 +4682,7 @@ export default function Home() {
                     {/* POSITIVI */}
                     {positivi.length > 0 && (
                       <div style={{ background: 'rgba(76,175,80,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(76,175,80,0.3)' }}>
-                        <div style={{ fontSize: 11, color: '#4CAF50', fontWeight: 600, marginBottom: 8 }}>🟢 NWG SPA - POSITIVI ({positivi.reduce((s,[,c]) => s+c, 0)})</div>
+                        <div style={{ fontSize: 11, color: '#4CAF50', fontWeight: 600, marginBottom: 8 }}>🟢 CONTRATTO - POSITIVI ({positivi.reduce((s,[,c]) => s+c, 0)})</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {positivi.map(([stato, count], i) => (
                             <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #4CAF50' }}>
@@ -4699,7 +4695,7 @@ export default function Home() {
                     {/* LAVORABILI */}
                     {lavorabili.length > 0 && (
                       <div style={{ background: 'rgba(255,215,0,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(255,215,0,0.3)' }}>
-                        <div style={{ fontSize: 11, color: '#FF8F00', fontWeight: 600, marginBottom: 8 }}>🟡 NWG SPA - LAVORABILI ({lavorabili.reduce((s,[,c]) => s+c, 0)})</div>
+                        <div style={{ fontSize: 11, color: '#FF8F00', fontWeight: 600, marginBottom: 8 }}>🟡 CONTRATTO - LAVORABILI ({lavorabili.reduce((s,[,c]) => s+c, 0)})</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {lavorabili.map(([stato, count], i) => (
                             <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #FFD700' }}>
@@ -4712,7 +4708,7 @@ export default function Home() {
                     {/* NEGATIVI */}
                     {negativi.length > 0 && (
                       <div style={{ background: 'rgba(229,57,53,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(229,57,53,0.3)' }}>
-                        <div style={{ fontSize: 11, color: '#E53935', fontWeight: 600, marginBottom: 8 }}>🔴 NWG SPA - NEGATIVI ({negativi.reduce((s,[,c]) => s+c, 0)})</div>
+                        <div style={{ fontSize: 11, color: '#E53935', fontWeight: 600, marginBottom: 8 }}>🔴 CONTRATTO - NEGATIVI ({negativi.reduce((s,[,c]) => s+c, 0)})</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {negativi.map(([stato, count], i) => (
                             <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #E53935' }}>
@@ -4725,7 +4721,7 @@ export default function Home() {
                   </>);
                 })()}
                 
-                {/* NWG ENERGIA - Raggruppati per colore */}
+                {/* FORNITURA - Raggruppati per colore */}
                 {(() => {
                   const attivi = reportData.pilastri.energy.statiNwgEnergia.filter(([s]) => {
                     const cat = STATO_MAP_LA_ENERGIA[s] || STATO_MAP_LA_ENERGIA[s?.toUpperCase()];
@@ -4742,7 +4738,7 @@ export default function Home() {
                   return (<>
                     {attivi.length > 0 && (
                       <div style={{ background: 'rgba(76,175,80,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(76,175,80,0.3)' }}>
-                        <div style={{ fontSize: 11, color: '#4CAF50', fontWeight: 600, marginBottom: 8 }}>🟢 NWG ENERGIA - ATTIVI ({attivi.reduce((s,[,c]) => s+c, 0)})</div>
+                        <div style={{ fontSize: 11, color: '#4CAF50', fontWeight: 600, marginBottom: 8 }}>🟢 FORNITURA - ATTIVI ({attivi.reduce((s,[,c]) => s+c, 0)})</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {attivi.map(([stato, count], i) => (
                             <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #4CAF50' }}>
@@ -4754,7 +4750,7 @@ export default function Home() {
                     )}
                     {daAttivare.length > 0 && (
                       <div style={{ background: 'rgba(255,215,0,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(255,215,0,0.3)' }}>
-                        <div style={{ fontSize: 11, color: '#FF8F00', fontWeight: 600, marginBottom: 8 }}>🟡 NWG ENERGIA - DA ATTIVARE ({daAttivare.reduce((s,[,c]) => s+c, 0)})</div>
+                        <div style={{ fontSize: 11, color: '#FF8F00', fontWeight: 600, marginBottom: 8 }}>🟡 FORNITURA - DA ATTIVARE ({daAttivare.reduce((s,[,c]) => s+c, 0)})</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {daAttivare.map(([stato, count], i) => (
                             <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #FFD700' }}>
@@ -4766,7 +4762,7 @@ export default function Home() {
                     )}
                     {cessati.length > 0 && (
                       <div style={{ background: 'rgba(229,57,53,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(229,57,53,0.3)' }}>
-                        <div style={{ fontSize: 11, color: '#E53935', fontWeight: 600, marginBottom: 8 }}>🔴 NWG ENERGIA - CESSATI ({cessati.reduce((s,[,c]) => s+c, 0)})</div>
+                        <div style={{ fontSize: 11, color: '#E53935', fontWeight: 600, marginBottom: 8 }}>🔴 FORNITURA - CESSATI ({cessati.reduce((s,[,c]) => s+c, 0)})</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {cessati.map(([stato, count], i) => (
                             <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #E53935' }}>
@@ -4982,7 +4978,7 @@ export default function Home() {
                 <span style={{ fontSize: 28 }}>🚨</span>
                 <div>
                   <h3 style={{ color: '#DC2626', fontSize: 18, margin: 0, fontWeight: 700 }}>Alert Da Attivare</h3>
-                  <p style={{ color: '#6B7280', fontSize: 12, margin: '4px 0 0' }}>Contratti Luce Amica in attesa attivazione NWG Energia</p>
+                  <p style={{ color: '#6B7280', fontSize: 12, margin: '4px 0 0' }}>Contratti Luce Amica in attesa attivazione fornitura</p>
                 </div>
               </div>
               <div style={{ fontSize: 12, color: '#6B7280' }}>
@@ -5330,9 +5326,9 @@ export default function Home() {
                 </span>
               </div>
               
-              {/* Riga 1: FATTURATO POTENZIALE (basato su Accettati NWG Spa) */}
+              {/* Riga 1: FATTURATO POTENZIALE (basato su Accettati Contratto) */}
               <div style={{ marginBottom: 15 }}>
-                <div style={{ fontSize: 10, color: '#B45309', fontWeight: 600, marginBottom: 8 }}>💰 FATTURATO POTENZIALE (Stato NWG Spa = Accettato)</div>
+                <div style={{ fontSize: 10, color: '#B45309', fontWeight: 600, marginBottom: 8 }}>💰 FATTURATO POTENZIALE (Stato Contratto = Accettato)</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
                   <div style={{ textAlign: 'center', padding: 12, background: '#F9FAFB', borderRadius: 10, border: '1px solid #E5E7EB' }}>
                     <div style={{ fontSize: 9, color: '#6B7280', marginBottom: 3 }}>📋 INSERITI</div>
@@ -5357,9 +5353,9 @@ export default function Home() {
                 </div>
               </div>
               
-              {/* Riga 2: FATTURATO EFFETTIVO (basato su Attivi NWG Energia - ad oggi) */}
+              {/* Riga 2: FATTURATO EFFETTIVO (basato su Attivi Fornitura - ad oggi) */}
               <div style={{ marginBottom: 15 }}>
-                <div style={{ fontSize: 10, color: '#15803D', fontWeight: 600, marginBottom: 8 }}>💰 FATTURATO EFFETTIVO AD OGGI (Stato NWG Energia = Attivo/In fornitura)</div>
+                <div style={{ fontSize: 10, color: '#15803D', fontWeight: 600, marginBottom: 8 }}>💰 FATTURATO EFFETTIVO AD OGGI (Stato Fornitura = Attivo/In fornitura)</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
                   <div style={{ textAlign: 'center', padding: 12, background: '#F0FDF4', borderRadius: 10, border: '1px solid #BBF7D0' }}>
                     <div style={{ fontSize: 9, color: '#15803D', marginBottom: 3 }}>✅ ATTIVI OGGI</div>
@@ -5384,9 +5380,9 @@ export default function Home() {
                 </div>
               </div>
               
-              {/* Riga 3: PUNTI (basati su Accettato NWG Spa - anche se poi cessa, pagano!) */}
+              {/* Riga 3: PUNTI (basati su Accettato Contratto - anche se poi cessa, pagano!) */}
               <div>
-                <div style={{ fontSize: 10, color: '#B45309', fontWeight: 600, marginBottom: 8 }}>⭐ PUNTI LA (Stato NWG Spa = Accettato) - anche se poi cessa, pagano!</div>
+                <div style={{ fontSize: 10, color: '#B45309', fontWeight: 600, marginBottom: 8 }}>⭐ PUNTI LA (Stato Contratto = Accettato) - anche se poi cessa, pagano!</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
                   <div style={{ textAlign: 'center', padding: 12, background: '#F9FAFB', borderRadius: 10, border: '1px solid #E5E7EB' }}>
                     <div style={{ fontSize: 9, color: '#6B7280', marginBottom: 3 }}>📋 INSERITI</div>
@@ -5644,7 +5640,7 @@ export default function Home() {
         </div>
         
         {/* Footer versione */}
-        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v14.1</p>
+        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v14.2</p>
       </div>
     </div></>);
 
@@ -5838,7 +5834,7 @@ export default function Home() {
           </div>
         )}
       </main>
-      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v14.1 • Leader Ranking</footer>
+      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v14.2 • Leader Ranking</footer>
     </div></>);
 
   // PREVIEW
@@ -6249,7 +6245,7 @@ export default function Home() {
                 {/* BOTTONI DOWNLOAD SLIDE */}
                 <div style={{ background: 'linear-gradient(135deg, rgba(42,170,138,0.2), rgba(42,170,138,0.05))', borderRadius: 16, padding: 20, border: '1px solid rgba(42,170,138,0.3)' }}>
                   <div style={{ fontSize: 16, color: '#2AAA8A', fontWeight: 700, marginBottom: 5 }}>📥 SCARICA PER SLIDE</div>
-                  <div style={{ fontSize: 12, color: '#666666', marginBottom: 15 }}>PNG 1920x1080 (16:9) - Sfondo verde NWG</div>
+                  <div style={{ fontSize: 12, color: '#666666', marginBottom: 15 }}>PNG 1920x1080 (16:9) - Sfondo verde corporate</div>
                   <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                     <button style={{ ...S.btn, flex: 1, minWidth: 180, padding: '14px 20px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', fontSize: 14 }} onClick={() => downloadSlidePNG('full')}>📊 Podio + Classifica</button>
                     <button style={{ ...S.btn, flex: 1, minWidth: 180, padding: '14px 20px', background: 'linear-gradient(135deg, #FFD700, #20917A)', color: '#FFFFFF', fontSize: 14 }} onClick={() => downloadSlidePNG('solo')}>🏆 Solo Podio</button>
