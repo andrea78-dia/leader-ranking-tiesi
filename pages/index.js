@@ -1608,51 +1608,149 @@ export default function Home() {
     }
     
     // ═══════════════════════════════════════════════════════════════════════════════
-    // 🎯 EXECUTIVE SUMMARY - KPI per CDA
+    // 🎯 RIEPILOGO GENERALE - KPI con termini italiani chiari
     // ═══════════════════════════════════════════════════════════════════════════════
+    
+    // Calcola incidenza nuovi IVD sul fatturato
+    let incidenzaNuoviIVD = {
+      contrattiLA: 0,
+      contrattiFV: 0,
+      fatturatoLA: 0,
+      fatturatoFV: 0,
+      puntiLA: 0,
+      puntiFV: 0
+    };
+    
+    if (result.trackerCoaching?.lista && reportCSVs.energy?.data && reportCSVs.fv?.data) {
+      const nuoviIVDNomi = result.trackerCoaching.lista.map(t => t.nome.toLowerCase().trim());
+      
+      // Conta contratti LA dei nuovi IVD
+      reportCSVs.energy.data.forEach(row => {
+        const intermediario = (row['Nome Intermediario'] || '').toLowerCase().trim();
+        if (nuoviIVDNomi.some(nome => intermediario.includes(nome) || nome.includes(intermediario))) {
+          incidenzaNuoviIVD.contrattiLA++;
+          const fascia = getFasciaConsumoLA(row['Prodotto'] || '');
+          incidenzaNuoviIVD.fatturatoLA += fascia ? fascia.kwhMedi * fascia.prezzoKwh : 559;
+          incidenzaNuoviIVD.puntiLA += fascia ? fascia.punti : 15;
+        }
+      });
+      
+      // Conta contratti FV dei nuovi IVD
+      reportCSVs.fv.data.forEach(row => {
+        const intermediario = (row['Nome Intermediario'] || '').toLowerCase().trim();
+        if (nuoviIVDNomi.some(nome => intermediario.includes(nome) || nome.includes(intermediario))) {
+          incidenzaNuoviIVD.contrattiFV++;
+          const match = matchProdottoFV(row['Prodotto'] || '');
+          if (match) {
+            incidenzaNuoviIVD.fatturatoFV += match.prezzo;
+            incidenzaNuoviIVD.puntiFV += match.punti;
+          }
+        }
+      });
+    }
+    
+    // Calcola percentuali prodotto
+    const totFatturato = (fatturato.fv.inseriti.totale || 0) + (fatturato.la.inseriti.totale || 0);
+    const totPunti = (fatturato.fv.inseriti.punti || 0) + (fatturato.la.inseriti.punti || 0);
+    const totContratti = (result.pilastri.fv?.totale || 0) + (result.pilastri.energy?.totale || 0);
+    
     result.executiveSummary = {
-      // KPI macro
-      fatturatoTotaleInseriti: (fatturato.fv.inseriti.totale || 0) + (fatturato.la.inseriti.totale || 0),
-      fatturatoTotaleEffettivi: (fatturato.fv.effettivi.totale || 0) + (fatturato.la.attiviEffettivi.totale || 0),
-      contrattiTotali: (result.pilastri.fv?.totale || 0) + (result.pilastri.energy?.totale || 0),
-      puntiTotaliInseriti: (fatturato.fv.inseriti.punti || 0) + (fatturato.la.inseriti.punti || 0),
-      puntiTotaliEffettivi: (fatturato.fv.effettivi.punti || 0) + (fatturato.la.accettatiPunti.punti || 0),
-      ivdTotali: result.pilastri.collaboratori?.totaleAttivati || 0,
+      // FATTURATO per prodotto
+      fv: {
+        fatturato: fatturato.fv.inseriti.totale || 0,
+        fatturatoEffettivo: fatturato.fv.effettivi.totale || 0,
+        contratti: result.pilastri.fv?.totale || 0,
+        punti: fatturato.fv.inseriti.punti || 0,
+        puntiEffettivi: fatturato.fv.effettivi.punti || 0,
+        pctFatturato: totFatturato > 0 ? Math.round((fatturato.fv.inseriti.totale || 0) / totFatturato * 100) : 0,
+        pctPunti: totPunti > 0 ? Math.round((fatturato.fv.inseriti.punti || 0) / totPunti * 100) : 0,
+        pctContratti: totContratti > 0 ? Math.round((result.pilastri.fv?.totale || 0) / totContratti * 100) : 0,
+        positivi: result.pilastri.fv?.funnel?.positivi || 0,
+        lavorazione: result.pilastri.fv?.funnel?.lavorazione || 0,
+        persi: result.pilastri.fv?.funnel?.negativi || 0,
+        fatturatoPerso: fatturato.fv.persi.totale || 0,
+        conversionePct: result.pilastri.fv?.funnel?.pctPositivi || 0
+      },
+      la: {
+        fatturato: fatturato.la.inseriti.totale || 0,
+        fatturatoEffettivo: fatturato.la.attiviEffettivi.totale || 0,
+        contratti: result.pilastri.energy?.totale || 0,
+        punti: fatturato.la.inseriti.punti || 0,
+        puntiEffettivi: fatturato.la.accettatiPunti.punti || 0,
+        pctFatturato: totFatturato > 0 ? Math.round((fatturato.la.inseriti.totale || 0) / totFatturato * 100) : 0,
+        pctPunti: totPunti > 0 ? Math.round((fatturato.la.inseriti.punti || 0) / totPunti * 100) : 0,
+        pctContratti: totContratti > 0 ? Math.round((result.pilastri.energy?.totale || 0) / totContratti * 100) : 0,
+        accettati: result.pilastri.energy?.funnel?.accettati || 0,
+        inFornitura: result.pilastri.energy?.funnel?.inFornitura || 0,
+        cessati: (result.pilastri.energy?.funnel?.accettati || 0) - (result.pilastri.energy?.funnel?.inFornitura || 0),
+        conversionePct: result.pilastri.energy?.funnel?.pctAccettati || 0
+      },
       
-      // Conversion rates
-      conversioneFV: result.pilastri.fv?.funnel?.pctPositivi || 0,
-      conversioneLA: result.pilastri.energy?.funnel?.pctAccettati || 0,
-      noShowSeminari: result.pilastri.collaboratori ? 
-        Math.round((result.pilastri.collaboratori.iscritti - result.pilastri.collaboratori.presenti) / result.pilastri.collaboratori.iscritti * 100) : 0,
+      // TOTALI
+      totale: {
+        fatturato: totFatturato,
+        fatturatoEffettivo: (fatturato.fv.effettivi.totale || 0) + (fatturato.la.attiviEffettivi.totale || 0),
+        contratti: totContratti,
+        punti: totPunti,
+        puntiEffettivi: (fatturato.fv.effettivi.punti || 0) + (fatturato.la.accettatiPunti.punti || 0)
+      },
       
-      // Churn
-      churnLA: result.pilastri.energy?.funnel?.accettati > 0 ? 
-        Math.round((result.pilastri.energy.funnel.accettati - result.pilastri.energy.funnel.inFornitura) / result.pilastri.energy.funnel.accettati * 100) : 0,
+      // SEMINARI
+      seminari: {
+        iscritti: result.pilastri.collaboratori?.iscritti || 0,
+        presenti: result.pilastri.collaboratori?.presenti || 0,
+        assenti: (result.pilastri.collaboratori?.iscritti || 0) - (result.pilastri.collaboratori?.presenti || 0),
+        pctPresenti: result.pilastri.collaboratori?.iscritti > 0 ? 
+          Math.round((result.pilastri.collaboratori.presenti / result.pilastri.collaboratori.iscritti) * 100) : 0,
+        pctAssenti: result.pilastri.collaboratori?.iscritti > 0 ? 
+          Math.round(((result.pilastri.collaboratori.iscritti - result.pilastri.collaboratori.presenti) / result.pilastri.collaboratori.iscritti) * 100) : 0
+      },
       
-      // IVD inattivi
-      ivdInattivi: result.trackerCoaching?.ivdInattivi || 0,
-      pctIvdInattivi: result.trackerCoaching?.pctInattivi || 0,
+      // NUOVI IVD (281)
+      nuoviIVD: {
+        totale: result.trackerCoaching?.totale || 0,
+        conContratti: result.trackerCoaching?.ivdConContratti || 0,
+        inattivi: result.trackerCoaching?.ivdInattivi || 0,
+        pctInattivi: result.trackerCoaching?.pctInattivi || 0,
+        pctAttivi: 100 - (result.trackerCoaching?.pctInattivi || 0),
+        // Incidenza sul fatturato
+        contrattiLA: incidenzaNuoviIVD.contrattiLA,
+        contrattiFV: incidenzaNuoviIVD.contrattiFV,
+        contrattiTotali: incidenzaNuoviIVD.contrattiLA + incidenzaNuoviIVD.contrattiFV,
+        fatturatoLA: incidenzaNuoviIVD.fatturatoLA,
+        fatturatoFV: incidenzaNuoviIVD.fatturatoFV,
+        fatturatoTotale: incidenzaNuoviIVD.fatturatoLA + incidenzaNuoviIVD.fatturatoFV,
+        puntiLA: incidenzaNuoviIVD.puntiLA,
+        puntiFV: incidenzaNuoviIVD.puntiFV,
+        puntiTotali: incidenzaNuoviIVD.puntiLA + incidenzaNuoviIVD.puntiFV,
+        // Percentuali incidenza
+        pctContrattiSuTotale: totContratti > 0 ? Math.round((incidenzaNuoviIVD.contrattiLA + incidenzaNuoviIVD.contrattiFV) / totContratti * 100) : 0,
+        pctFatturatoSuTotale: totFatturato > 0 ? Math.round((incidenzaNuoviIVD.fatturatoLA + incidenzaNuoviIVD.fatturatoFV) / totFatturato * 100) : 0,
+        pctPuntiSuTotale: totPunti > 0 ? Math.round((incidenzaNuoviIVD.puntiLA + incidenzaNuoviIVD.puntiFV) / totPunti * 100) : 0
+      },
       
-      // Perdite
-      fatturatoPersoFV: fatturato.fv.persi.totale || 0,
-      fatturatoLavorazioneFV: fatturato.fv.lavorazione.totale || 0,
+      // ALERT (con termini italiani)
+      alert: {
+        fvPersi: result.pilastri.fv?.funnel?.negativi || 0,
+        fvFatturatoPerso: fatturato.fv.persi.totale || 0,
+        laCessati: (result.pilastri.energy?.funnel?.accettati || 0) - (result.pilastri.energy?.funnel?.inFornitura || 0),
+        laPctCessati: result.pilastri.energy?.funnel?.accettati > 0 ? 
+          Math.round(((result.pilastri.energy.funnel.accettati - result.pilastri.energy.funnel.inFornitura) / result.pilastri.energy.funnel.accettati) * 100) : 0,
+        seminariAssenti: (result.pilastri.collaboratori?.iscritti || 0) - (result.pilastri.collaboratori?.presenti || 0),
+        seminariPctAssenti: result.pilastri.collaboratori?.iscritti > 0 ? 
+          Math.round(((result.pilastri.collaboratori.iscritti - result.pilastri.collaboratori.presenti) / result.pilastri.collaboratori.iscritti) * 100) : 0,
+        ivdInattivi: result.trackerCoaching?.ivdInattivi || 0,
+        ivdPctInattivi: result.trackerCoaching?.pctInattivi || 0
+      },
       
-      // Revenue per IVD
-      revenuePerIVD: result.pilastri.collaboratori?.totaleAttivati > 0 ? 
-        Math.round(((fatturato.fv.inseriti.totale || 0) + (fatturato.la.inseriti.totale || 0)) / result.pilastri.collaboratori.totaleAttivati) : 0,
-      
-      // AOV
-      aovFV: fatturato.fv.inseriti.contratti > 0 ? Math.round(fatturato.fv.inseriti.totale / fatturato.fv.inseriti.contratti) : 0,
-      aovLA: fatturato.la.inseriti.contratti > 0 ? Math.round(fatturato.la.inseriti.totale / fatturato.la.inseriti.contratti) : 0,
-      
-      // Semafori salute (🟢 >target, 🟡 warning, 🔴 alert)
+      // Semafori (verde/giallo/rosso)
       semafori: {
-        convFV: (result.pilastri.fv?.funnel?.pctPositivi || 0) >= 60 ? 'verde' : (result.pilastri.fv?.funnel?.pctPositivi || 0) >= 40 ? 'giallo' : 'rosso',
-        convLA: (result.pilastri.energy?.funnel?.pctAccettati || 0) >= 85 ? 'verde' : (result.pilastri.energy?.funnel?.pctAccettati || 0) >= 70 ? 'giallo' : 'rosso',
-        noShow: result.pilastri.collaboratori ? 
-          ((result.pilastri.collaboratori.iscritti - result.pilastri.collaboratori.presenti) / result.pilastri.collaboratori.iscritti * 100) <= 25 ? 'verde' : 
-          ((result.pilastri.collaboratori.iscritti - result.pilastri.collaboratori.presenti) / result.pilastri.collaboratori.iscritti * 100) <= 35 ? 'giallo' : 'rosso' : 'grigio',
-        ivdInattivi: (result.trackerCoaching?.pctInattivi || 0) <= 15 ? 'verde' : (result.trackerCoaching?.pctInattivi || 0) <= 25 ? 'giallo' : 'rosso'
+        fv: (result.pilastri.fv?.funnel?.pctPositivi || 0) >= 60 ? 'verde' : (result.pilastri.fv?.funnel?.pctPositivi || 0) >= 40 ? 'giallo' : 'rosso',
+        la: (result.pilastri.energy?.funnel?.pctAccettati || 0) >= 85 ? 'verde' : (result.pilastri.energy?.funnel?.pctAccettati || 0) >= 70 ? 'giallo' : 'rosso',
+        seminari: result.pilastri.collaboratori?.iscritti > 0 ? 
+          (((result.pilastri.collaboratori.iscritti - result.pilastri.collaboratori.presenti) / result.pilastri.collaboratori.iscritti * 100) <= 25 ? 'verde' : 
+          ((result.pilastri.collaboratori.iscritti - result.pilastri.collaboratori.presenti) / result.pilastri.collaboratori.iscritti * 100) <= 35 ? 'giallo' : 'rosso') : 'grigio',
+        ivd: (result.trackerCoaching?.pctInattivi || 0) <= 15 ? 'verde' : (result.trackerCoaching?.pctInattivi || 0) <= 25 ? 'giallo' : 'rosso'
       }
     };
     
@@ -2831,249 +2929,331 @@ export default function Home() {
   };
 
   // ═══════════════════════════════════════════════════════════════════════════════
-  // 🎯 EXECUTIVE SUMMARY COMPONENT - Prima cosa che vede il CDA
+  // 📊 RIEPILOGO GENERALE - Design coerente con dashboard
   // ═══════════════════════════════════════════════════════════════════════════════
   const ExecutiveSummaryComponent = ({ data }) => {
     if (!data) return null;
     
-    const getSemaforoEmoji = (semaforo) => {
-      if (semaforo === 'verde') return '🟢';
-      if (semaforo === 'giallo') return '🟡';
-      if (semaforo === 'rosso') return '🔴';
-      return '⚪';
+    const getSemaforoColor = (semaforo) => {
+      if (semaforo === 'verde') return '#10B981';
+      if (semaforo === 'giallo') return '#F59E0B';
+      if (semaforo === 'rosso') return '#EF4444';
+      return '#9CA3AF';
     };
 
     return (
       <div style={{ 
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)', 
-        borderRadius: 24, 
-        padding: 28,
-        marginBottom: 24,
-        position: 'relative',
-        overflow: 'hidden',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+        background: '#FFFFFF', 
+        borderRadius: 20, 
+        padding: 24,
+        marginBottom: 20,
+        border: '1px solid #E5E7EB',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
       }}>
-        {/* Effetto glow */}
-        <div style={{
-          position: 'absolute',
-          top: -100,
-          right: -100,
-          width: 300,
-          height: 300,
-          background: 'radial-gradient(circle, rgba(42,170,138,0.15) 0%, transparent 70%)',
-          pointerEvents: 'none'
-        }} />
-        
         {/* Header */}
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center', 
-          marginBottom: 24,
-          position: 'relative',
-          zIndex: 1
+          marginBottom: 20,
+          paddingBottom: 16,
+          borderBottom: '1px solid #F3F4F6'
         }}>
           <div>
-            <h2 style={{ 
-              color: '#FFFFFF', 
-              fontSize: 22, 
-              margin: 0, 
-              fontWeight: 800,
-              letterSpacing: '-0.5px'
-            }}>
-              📊 Executive Summary
+            <h2 style={{ color: '#1F2937', fontSize: 20, margin: 0, fontWeight: 700 }}>
+              📊 Riepilogo Generale
             </h2>
-            <p style={{ color: '#64748B', fontSize: 12, margin: '4px 0 0' }}>
-              Dashboard KPI per il Consiglio di Amministrazione
+            <p style={{ color: '#6B7280', fontSize: 12, margin: '4px 0 0' }}>
+              Panoramica completa risultati periodo
             </p>
           </div>
           
-          {/* Semaforo salute */}
-          <div style={{ 
-            display: 'flex', 
-            gap: 8,
-            background: 'rgba(255,255,255,0.05)',
-            padding: '8px 16px',
-            borderRadius: 12,
-            backdropFilter: 'blur(10px)'
+          {/* Semafori */}
+          <div style={{ display: 'flex', gap: 12 }}>
+            {[
+              { label: 'FV', value: data.semafori?.fv },
+              { label: 'LA', value: data.semafori?.la },
+              { label: 'SEM', value: data.semafori?.seminari },
+              { label: 'IVD', value: data.semafori?.ivd }
+            ].map((item, i) => (
+              <div key={i} style={{ 
+                textAlign: 'center',
+                padding: '6px 12px',
+                background: `${getSemaforoColor(item.value)}15`,
+                borderRadius: 8,
+                border: `1px solid ${getSemaforoColor(item.value)}30`
+              }}>
+                <div style={{ 
+                  width: 12, 
+                  height: 12, 
+                  borderRadius: '50%', 
+                  background: getSemaforoColor(item.value),
+                  margin: '0 auto 4px'
+                }} />
+                <div style={{ fontSize: 10, color: '#6B7280', fontWeight: 500 }}>{item.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Cards FV / LA / Totale */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
+          {/* FV */}
+          <div style={{
+            background: 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)',
+            border: '1px solid #BBF7D0',
+            borderRadius: 16,
+            padding: 20
           }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 18 }}>{getSemaforoEmoji(data.semafori?.convFV)}</div>
-              <div style={{ fontSize: 8, color: '#94A3B8', marginTop: 2 }}>FV</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+              <div style={{ fontSize: 14, color: '#15803D', fontWeight: 700 }}>☀️ Fotovoltaico</div>
+              <div style={{ 
+                fontSize: 10, 
+                background: '#15803D', 
+                color: '#FFF', 
+                padding: '2px 8px', 
+                borderRadius: 10 
+              }}>{data.fv?.pctFatturato || 0}% fatt.</div>
             </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 18 }}>{getSemaforoEmoji(data.semafori?.convLA)}</div>
-              <div style={{ fontSize: 8, color: '#94A3B8', marginTop: 2 }}>LA</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: '#166534', marginBottom: 4 }}>
+              €{((data.fv?.fatturato || 0) / 1000000).toFixed(2)}M
             </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 18 }}>{getSemaforoEmoji(data.semafori?.noShow)}</div>
-              <div style={{ fontSize: 8, color: '#94A3B8', marginTop: 2 }}>SEM</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
+              <div>
+                <div style={{ fontSize: 10, color: '#6B7280' }}>Contratti</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#1F2937' }}>{data.fv?.contratti || 0}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: '#6B7280' }}>Punti</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#1F2937' }}>{(data.fv?.punti || 0).toLocaleString('it-IT')}</div>
+              </div>
             </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 18 }}>{getSemaforoEmoji(data.semafori?.ivdInattivi)}</div>
-              <div style={{ fontSize: 8, color: '#94A3B8', marginTop: 2 }}>IVD</div>
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #BBF7D0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                <span style={{ color: '#15803D' }}>✓ Positivi: {data.fv?.positivi || 0}</span>
+                <span style={{ color: '#DC2626' }}>✗ Persi: {data.fv?.persi || 0}</span>
+              </div>
+              <div style={{ fontSize: 11, color: '#6B7280', marginTop: 4 }}>
+                Conversione: <strong style={{ color: '#15803D' }}>{data.fv?.conversionePct || 0}%</strong>
+              </div>
+            </div>
+          </div>
+          
+          {/* LA */}
+          <div style={{
+            background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)',
+            border: '1px solid #FCD34D',
+            borderRadius: 16,
+            padding: 20
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+              <div style={{ fontSize: 14, color: '#B45309', fontWeight: 700 }}>⚡ Luce Amica</div>
+              <div style={{ 
+                fontSize: 10, 
+                background: '#B45309', 
+                color: '#FFF', 
+                padding: '2px 8px', 
+                borderRadius: 10 
+              }}>{data.la?.pctFatturato || 0}% fatt.</div>
+            </div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: '#92400E', marginBottom: 4 }}>
+              €{((data.la?.fatturato || 0) / 1000000).toFixed(2)}M
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
+              <div>
+                <div style={{ fontSize: 10, color: '#6B7280' }}>Contratti</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#1F2937' }}>{data.la?.contratti || 0}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: '#6B7280' }}>Punti</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#1F2937' }}>{(data.la?.punti || 0).toLocaleString('it-IT')}</div>
+              </div>
+            </div>
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #FCD34D' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                <span style={{ color: '#15803D' }}>✓ Accettati: {data.la?.accettati || 0}</span>
+                <span style={{ color: '#DC2626' }}>✗ Cessati: {data.la?.cessati || 0}</span>
+              </div>
+              <div style={{ fontSize: 11, color: '#6B7280', marginTop: 4 }}>
+                Accettazione: <strong style={{ color: '#B45309' }}>{data.la?.conversionePct || 0}%</strong>
+              </div>
+            </div>
+          </div>
+          
+          {/* TOTALE */}
+          <div style={{
+            background: 'linear-gradient(135deg, #2AAA8A 0%, #20917A 100%)',
+            borderRadius: 16,
+            padding: 20,
+            color: '#FFF'
+          }}>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, opacity: 0.9 }}>📊 Totale</div>
+            <div style={{ fontSize: 32, fontWeight: 800, marginBottom: 4 }}>
+              €{((data.totale?.fatturato || 0) / 1000000).toFixed(2)}M
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 12 }}>
+              Effettivo: €{((data.totale?.fatturatoEffettivo || 0) / 1000000).toFixed(2)}M
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 8, padding: 10, textAlign: 'center' }}>
+                <div style={{ fontSize: 10, opacity: 0.8 }}>Contratti</div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>{data.totale?.contratti || 0}</div>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 8, padding: 10, textAlign: 'center' }}>
+                <div style={{ fontSize: 10, opacity: 0.8 }}>Punti</div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>{(data.totale?.punti || 0).toLocaleString('it-IT')}</div>
+              </div>
             </div>
           </div>
         </div>
         
-        {/* 4 KPI Macro Cards */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(4, 1fr)', 
-          gap: 16,
-          marginBottom: 24,
-          position: 'relative',
-          zIndex: 1
-        }}>
-          {/* Fatturato */}
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(16,185,129,0.05) 100%)',
-            border: '1px solid rgba(16,185,129,0.2)',
-            borderRadius: 16,
-            padding: 20,
-            position: 'relative',
-            overflow: 'hidden'
-          }}>
-            <div style={{ position: 'absolute', top: 12, right: 12, fontSize: 28, opacity: 0.3 }}>💰</div>
-            <div style={{ fontSize: 11, color: '#10B981', fontWeight: 600, marginBottom: 4 }}>FATTURATO INSERITI</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', letterSpacing: '-1px' }}>
-              €{((data.fatturatoTotaleInseriti || 0) / 1000000).toFixed(2)}M
+        {/* Riga info: Seminari + Nuovi IVD + Alert */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          {/* Seminari */}
+          <div style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#6B7280', marginBottom: 10 }}>🎓 Seminari</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 10, color: '#9CA3AF' }}>Iscritti</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#1F2937' }}>{data.seminari?.iscritti || 0}</div>
+              </div>
+              <div style={{ fontSize: 20, color: '#D1D5DB' }}>→</div>
+              <div>
+                <div style={{ fontSize: 10, color: '#10B981' }}>Presenti</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#10B981' }}>{data.seminari?.presenti || 0}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: '#EF4444' }}>Assenti</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#EF4444' }}>{data.seminari?.assenti || 0}</div>
+              </div>
             </div>
-            <div style={{ fontSize: 10, color: '#64748B', marginTop: 4 }}>
-              Effettivi: €{((data.fatturatoTotaleEffettivi || 0) / 1000000).toFixed(2)}M
+            <div style={{ fontSize: 11, color: '#6B7280', marginTop: 8 }}>
+              Tasso presenza: <strong>{data.seminari?.pctPresenti || 0}%</strong>
             </div>
           </div>
           
-          {/* Contratti */}
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(59,130,246,0.05) 100%)',
-            border: '1px solid rgba(59,130,246,0.2)',
-            borderRadius: 16,
-            padding: 20,
-            position: 'relative',
-            overflow: 'hidden'
-          }}>
-            <div style={{ position: 'absolute', top: 12, right: 12, fontSize: 28, opacity: 0.3 }}>📄</div>
-            <div style={{ fontSize: 11, color: '#3B82F6', fontWeight: 600, marginBottom: 4 }}>CONTRATTI TOTALI</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', letterSpacing: '-1px' }}>
-              {(data.contrattiTotali || 0).toLocaleString('it-IT')}
+          {/* Nuovi IVD */}
+          <div style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#6B7280', marginBottom: 10 }}>👥 Nuovi IVD Attivati</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 10, color: '#9CA3AF' }}>Totale</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#1F2937' }}>{data.nuoviIVD?.totale || 0}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: '#10B981' }}>Attivi</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#10B981' }}>{data.nuoviIVD?.conContratti || 0}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: '#EF4444' }}>Inattivi</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#EF4444' }}>{data.nuoviIVD?.inattivi || 0}</div>
+              </div>
             </div>
-            <div style={{ fontSize: 10, color: '#64748B', marginTop: 4 }}>
-              Punti: {(data.puntiTotaliInseriti || 0).toLocaleString('it-IT')}
-            </div>
-          </div>
-          
-          {/* Rete */}
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(249,115,22,0.15) 0%, rgba(249,115,22,0.05) 100%)',
-            border: '1px solid rgba(249,115,22,0.2)',
-            borderRadius: 16,
-            padding: 20,
-            position: 'relative',
-            overflow: 'hidden'
-          }}>
-            <div style={{ position: 'absolute', top: 12, right: 12, fontSize: 28, opacity: 0.3 }}>👥</div>
-            <div style={{ fontSize: 11, color: '#F97316', fontWeight: 600, marginBottom: 4 }}>RETE VENDITA</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', letterSpacing: '-1px' }}>
-              {data.ivdTotali || 0} IVD
-            </div>
-            <div style={{ fontSize: 10, color: '#64748B', marginTop: 4 }}>
-              €{(data.revenuePerIVD || 0).toLocaleString('it-IT')}/IVD
+            <div style={{ fontSize: 11, color: '#6B7280', marginTop: 8 }}>
+              Hanno prodotto: <strong>{data.nuoviIVD?.pctAttivi || 0}%</strong>
             </div>
           </div>
           
-          {/* Conversione */}
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(168,85,247,0.15) 0%, rgba(168,85,247,0.05) 100%)',
-            border: '1px solid rgba(168,85,247,0.2)',
-            borderRadius: 16,
-            padding: 20,
-            position: 'relative',
-            overflow: 'hidden'
-          }}>
-            <div style={{ position: 'absolute', top: 12, right: 12, fontSize: 28, opacity: 0.3 }}>📈</div>
-            <div style={{ fontSize: 11, color: '#A855F7', fontWeight: 600, marginBottom: 4 }}>CONVERSION AVG</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', letterSpacing: '-1px' }}>
-              {Math.round(((data.conversioneFV || 0) + (data.conversioneLA || 0)) / 2)}%
-            </div>
-            <div style={{ fontSize: 10, color: '#64748B', marginTop: 4 }}>
-              FV {data.conversioneFV || 0}% | LA {data.conversioneLA || 0}%
+          {/* Incidenza Nuovi IVD */}
+          <div style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#6B7280', marginBottom: 10 }}>📈 Incidenza Nuovi IVD</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 10, color: '#9CA3AF' }}>Contratti</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#3B82F6' }}>{data.nuoviIVD?.contrattiTotali || 0}</div>
+                <div style={{ fontSize: 9, color: '#6B7280' }}>{data.nuoviIVD?.pctContrattiSuTotale || 0}%</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 10, color: '#9CA3AF' }}>Fatturato</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#10B981' }}>€{((data.nuoviIVD?.fatturatoTotale || 0) / 1000).toFixed(0)}K</div>
+                <div style={{ fontSize: 9, color: '#6B7280' }}>{data.nuoviIVD?.pctFatturatoSuTotale || 0}%</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 10, color: '#9CA3AF' }}>Punti</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#F59E0B' }}>{(data.nuoviIVD?.puntiTotali || 0).toLocaleString('it-IT')}</div>
+                <div style={{ fontSize: 9, color: '#6B7280' }}>{data.nuoviIVD?.pctPuntiSuTotale || 0}%</div>
+              </div>
             </div>
           </div>
         </div>
         
         {/* Alert Bar */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 12,
-          position: 'relative',
-          zIndex: 1
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(4, 1fr)', 
+          gap: 12, 
+          marginTop: 16,
+          paddingTop: 16,
+          borderTop: '1px solid #F3F4F6'
         }}>
           <div style={{
-            background: (data.conversioneFV || 0) >= 50 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-            border: `1px solid ${(data.conversioneFV || 0) >= 50 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+            background: (data.fv?.conversionePct || 0) >= 50 ? '#F0FDF4' : '#FEF2F2',
+            border: `1px solid ${(data.fv?.conversionePct || 0) >= 50 ? '#BBF7D0' : '#FECACA'}`,
             borderRadius: 10,
             padding: '10px 14px',
             display: 'flex',
             alignItems: 'center',
             gap: 10
           }}>
-            <span style={{ fontSize: 20 }}>{(data.conversioneFV || 0) >= 50 ? '✅' : '⚠️'}</span>
+            <span style={{ fontSize: 18 }}>{(data.fv?.conversionePct || 0) >= 50 ? '✅' : '⚠️'}</span>
             <div>
-              <div style={{ fontSize: 10, color: '#94A3B8' }}>Perdita FV</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#FFF' }}>
-                €{((data.fatturatoPersoFV || 0) / 1000).toFixed(0)}K
+              <div style={{ fontSize: 10, color: '#6B7280' }}>FV Persi</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#1F2937' }}>
+                {data.alert?.fvPersi || 0} (-€{((data.alert?.fvFatturatoPerso || 0) / 1000).toFixed(0)}K)
               </div>
             </div>
           </div>
           
           <div style={{
-            background: (data.noShowSeminari || 0) <= 30 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-            border: `1px solid ${(data.noShowSeminari || 0) <= 30 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+            background: (data.alert?.laPctCessati || 0) <= 15 ? '#F0FDF4' : '#FEF2F2',
+            border: `1px solid ${(data.alert?.laPctCessati || 0) <= 15 ? '#BBF7D0' : '#FECACA'}`,
             borderRadius: 10,
             padding: '10px 14px',
             display: 'flex',
             alignItems: 'center',
             gap: 10
           }}>
-            <span style={{ fontSize: 20 }}>{(data.noShowSeminari || 0) <= 30 ? '✅' : '⚠️'}</span>
+            <span style={{ fontSize: 18 }}>{(data.alert?.laPctCessati || 0) <= 15 ? '✅' : '⚠️'}</span>
             <div>
-              <div style={{ fontSize: 10, color: '#94A3B8' }}>No-Show</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#FFF' }}>{data.noShowSeminari || 0}%</div>
+              <div style={{ fontSize: 10, color: '#6B7280' }}>LA Cessati</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#1F2937' }}>
+                {data.alert?.laCessati || 0} ({data.alert?.laPctCessati || 0}%)
+              </div>
             </div>
           </div>
           
           <div style={{
-            background: (data.churnLA || 0) <= 15 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-            border: `1px solid ${(data.churnLA || 0) <= 15 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+            background: (data.alert?.seminariPctAssenti || 0) <= 30 ? '#F0FDF4' : '#FFFBEB',
+            border: `1px solid ${(data.alert?.seminariPctAssenti || 0) <= 30 ? '#BBF7D0' : '#FCD34D'}`,
             borderRadius: 10,
             padding: '10px 14px',
             display: 'flex',
             alignItems: 'center',
             gap: 10
           }}>
-            <span style={{ fontSize: 20 }}>{(data.churnLA || 0) <= 15 ? '✅' : '⚠️'}</span>
+            <span style={{ fontSize: 18 }}>{(data.alert?.seminariPctAssenti || 0) <= 30 ? '✅' : '⚠️'}</span>
             <div>
-              <div style={{ fontSize: 10, color: '#94A3B8' }}>Churn LA</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#FFF' }}>{data.churnLA || 0}%</div>
+              <div style={{ fontSize: 10, color: '#6B7280' }}>Assenti Seminari</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#1F2937' }}>
+                {data.alert?.seminariAssenti || 0} ({data.alert?.seminariPctAssenti || 0}%)
+              </div>
             </div>
           </div>
           
           <div style={{
-            background: (data.pctIvdInattivi || 0) <= 20 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-            border: `1px solid ${(data.pctIvdInattivi || 0) <= 20 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+            background: (data.alert?.ivdPctInattivi || 0) <= 20 ? '#F0FDF4' : '#FEF2F2',
+            border: `1px solid ${(data.alert?.ivdPctInattivi || 0) <= 20 ? '#BBF7D0' : '#FECACA'}`,
             borderRadius: 10,
             padding: '10px 14px',
             display: 'flex',
             alignItems: 'center',
             gap: 10
           }}>
-            <span style={{ fontSize: 20 }}>{(data.pctIvdInattivi || 0) <= 20 ? '✅' : '⚠️'}</span>
+            <span style={{ fontSize: 18 }}>{(data.alert?.ivdPctInattivi || 0) <= 20 ? '✅' : '⚠️'}</span>
             <div>
-              <div style={{ fontSize: 10, color: '#94A3B8' }}>IVD Inattivi</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#FFF' }}>
-                {data.ivdInattivi || 0} ({data.pctIvdInattivi || 0}%)
+              <div style={{ fontSize: 10, color: '#6B7280' }}>IVD Inattivi</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#1F2937' }}>
+                {data.alert?.ivdInattivi || 0} ({data.alert?.ivdPctInattivi || 0}%)
               </div>
             </div>
           </div>
@@ -3083,77 +3263,123 @@ export default function Home() {
   };
 
   // ═══════════════════════════════════════════════════════════════════════════════
-  // 📈 FUNNEL ANALYSIS COMPONENT - Visualizzazione perdite
+  // 📈 FUNNEL ANALYSIS COMPONENT - Design coerente
   // ═══════════════════════════════════════════════════════════════════════════════
   const FunnelAnalysisComponent = ({ fv, la, fatturato }) => {
     if (!fv && !la) return null;
 
     const FunnelStep = ({ label, value, subValue, color, percentage, isLast }) => (
-      <div style={{ marginBottom: isLast ? 0 : 6 }}>
+      <div style={{ marginBottom: isLast ? 0 : 4 }}>
         <div style={{
-          background: `linear-gradient(135deg, ${color}15 0%, ${color}08 100%)`,
-          border: `1px solid ${color}30`,
-          borderRadius: 12,
-          padding: '12px 16px',
+          background: `${color}08`,
+          border: `1px solid ${color}25`,
+          borderRadius: 10,
+          padding: '12px 14px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
           <div>
-            <div style={{ fontSize: 11, color: '#64748B', marginBottom: 2 }}>{label}</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color }}>{value}</div>
-            {subValue && <div style={{ fontSize: 10, color: '#94A3B8' }}>{subValue}</div>}
+            <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 2 }}>{label}</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color }}>{value}</div>
+            {subValue && <div style={{ fontSize: 10, color: '#9CA3AF' }}>{subValue}</div>}
           </div>
-          <div style={{ fontSize: 24, fontWeight: 800, color, opacity: 0.25 }}>{percentage}%</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color, opacity: 0.2 }}>{percentage}%</div>
         </div>
         {!isLast && (
-          <div style={{ textAlign: 'center', color: '#CBD5E1', fontSize: 14, padding: '4px 0' }}>↓</div>
+          <div style={{ textAlign: 'center', color: '#D1D5DB', fontSize: 12, padding: '2px 0' }}>↓</div>
         )}
       </div>
     );
 
     return (
-      <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 24, border: '1px solid #E2E8F0', marginBottom: 20 }}>
-        <h3 style={{ color: '#1E293B', fontSize: 18, margin: '0 0 20px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-          📊 Funnel Analysis
-          <span style={{ fontSize: 12, color: '#94A3B8', fontWeight: 400 }}>Conversion per stage</span>
+      <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 24, border: '1px solid #E5E7EB', marginBottom: 20 }}>
+        <h3 style={{ color: '#1F2937', fontSize: 18, margin: '0 0 20px', fontWeight: 700 }}>
+          📊 Analisi Conversioni
+          <span style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 400, marginLeft: 8 }}>Passaggi di stato</span>
         </h3>
         
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
           {/* FV Funnel */}
           {fv && (
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#2AAA8A', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-                ☀️ Fotovoltaico
-                <span style={{ fontSize: 10, background: '#2AAA8A20', padding: '2px 8px', borderRadius: 10, color: '#2AAA8A' }}>
-                  {fv.funnel.pctPositivi}% win rate
+            <div style={{ background: '#F9FAFB', borderRadius: 16, padding: 16 }}>
+              <div style={{ 
+                fontSize: 14, 
+                fontWeight: 700, 
+                color: '#15803D', 
+                marginBottom: 12, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between' 
+              }}>
+                <span>☀️ Fotovoltaico</span>
+                <span style={{ 
+                  fontSize: 11, 
+                  background: '#15803D', 
+                  color: '#FFF',
+                  padding: '3px 10px', 
+                  borderRadius: 10 
+                }}>
+                  {fv.funnel.pctPositivi}% conversione
                 </span>
               </div>
               <FunnelStep label="Inseriti" value={fv.funnel.inseriti} subValue={`€${((fatturato?.fv?.inseriti?.totale || 0) / 1000).toFixed(0)}K`} color="#3B82F6" percentage={100} />
-              <FunnelStep label="Positivi" value={fv.funnel.positivi} subValue={`€${((fatturato?.fv?.effettivi?.totale || 0) / 1000).toFixed(0)}K`} color="#10B981" percentage={fv.funnel.pctPositivi} />
-              <FunnelStep label="In Lavorazione" value={fv.funnel.lavorazione} subValue={`€${((fatturato?.fv?.lavorazione?.totale || 0) / 1000).toFixed(0)}K`} color="#F59E0B" percentage={Math.round(fv.funnel.lavorazione / fv.funnel.inseriti * 100)} isLast />
-              <div style={{ marginTop: 10, padding: '8px 12px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 11, color: '#DC2626' }}>❌ Persi: {fv.funnel.negativi}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#DC2626' }}>-€{((fatturato?.fv?.persi?.totale || 0) / 1000).toFixed(0)}K</span>
+              <FunnelStep label="Positivi" value={fv.funnel.positivi} subValue={`€${((fatturato?.fv?.effettivi?.totale || 0) / 1000).toFixed(0)}K effettivo`} color="#10B981" percentage={fv.funnel.pctPositivi} />
+              <FunnelStep label="In Lavorazione" value={fv.funnel.lavorazione} subValue={`€${((fatturato?.fv?.lavorazione?.totale || 0) / 1000).toFixed(0)}K da sbloccare`} color="#F59E0B" percentage={fv.funnel.inseriti > 0 ? Math.round(fv.funnel.lavorazione / fv.funnel.inseriti * 100) : 0} isLast />
+              <div style={{ 
+                marginTop: 10, 
+                padding: '10px 12px', 
+                background: '#FEF2F2', 
+                border: '1px solid #FECACA', 
+                borderRadius: 8, 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center' 
+              }}>
+                <span style={{ fontSize: 12, color: '#DC2626', fontWeight: 600 }}>❌ Persi: {fv.funnel.negativi}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#DC2626' }}>-€{((fatturato?.fv?.persi?.totale || 0) / 1000).toFixed(0)}K</span>
               </div>
             </div>
           )}
           
           {/* LA Funnel */}
           {la && (
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#F59E0B', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-                ⚡ Luce Amica
-                <span style={{ fontSize: 10, background: '#F59E0B20', padding: '2px 8px', borderRadius: 10, color: '#F59E0B' }}>
-                  {la.funnel.pctAccettati}% acceptance
+            <div style={{ background: '#F9FAFB', borderRadius: 16, padding: 16 }}>
+              <div style={{ 
+                fontSize: 14, 
+                fontWeight: 700, 
+                color: '#B45309', 
+                marginBottom: 12, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between' 
+              }}>
+                <span>⚡ Luce Amica</span>
+                <span style={{ 
+                  fontSize: 11, 
+                  background: '#B45309', 
+                  color: '#FFF',
+                  padding: '3px 10px', 
+                  borderRadius: 10 
+                }}>
+                  {la.funnel.pctAccettati}% accettazione
                 </span>
               </div>
               <FunnelStep label="Inseriti" value={la.funnel.inseriti} subValue={`${(fatturato?.la?.inseriti?.punti || 0).toLocaleString('it-IT')} punti`} color="#3B82F6" percentage={100} />
               <FunnelStep label="Accettati" value={la.funnel.accettati} subValue={`${(fatturato?.la?.accettatiPunti?.punti || 0).toLocaleString('it-IT')} punti`} color="#10B981" percentage={la.funnel.pctAccettati} />
               <FunnelStep label="In Fornitura" value={la.funnel.inFornitura} subValue={`€${((fatturato?.la?.attiviEffettivi?.totale || 0) / 1000).toFixed(0)}K/anno`} color="#8B5CF6" percentage={la.funnel.pctFornitura} isLast />
-              <div style={{ marginTop: 10, padding: '8px 12px', background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 11, color: '#B45309' }}>📉 Cessati: {la.funnel.accettati - la.funnel.inFornitura}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#B45309' }}>{la.funnel.accettati > 0 ? Math.round((la.funnel.accettati - la.funnel.inFornitura) / la.funnel.accettati * 100) : 0}% churn</span>
+              <div style={{ 
+                marginTop: 10, 
+                padding: '10px 12px', 
+                background: '#FFFBEB', 
+                border: '1px solid #FCD34D', 
+                borderRadius: 8, 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center' 
+              }}>
+                <span style={{ fontSize: 12, color: '#B45309', fontWeight: 600 }}>📉 Cessati: {la.funnel.accettati - la.funnel.inFornitura}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#B45309' }}>{la.funnel.accettati > 0 ? Math.round((la.funnel.accettati - la.funnel.inFornitura) / la.funnel.accettati * 100) : 0}%</span>
               </div>
             </div>
           )}
@@ -3284,15 +3510,18 @@ export default function Home() {
           <RetePerformanceComponent tracker={reportData.trackerCoaching} />
         )}
         
-        {/* CALENDARIO CON DRILL-DOWN */}
+        {/* CALENDARIO CON DRILL-DOWN - GRIGLIA 3x3 */}
         {Object.keys(reportData.heatmapMesi).length > 0 && (
-          <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-              <h3 style={{ color: '#2AAA8A', fontSize: 16, margin: 0, fontWeight: 700 }}>🗓️ CALENDARIO ATTIVITÀ</h3>
+          <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 24, border: '1px solid #E5E7EB' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div>
+                <h3 style={{ color: '#1F2937', fontSize: 18, margin: 0, fontWeight: 700 }}>🗓️ Calendario Attività</h3>
+                <p style={{ color: '#6B7280', fontSize: 12, margin: '4px 0 0' }}>Clicca un box per vedere il dettaglio mensile</p>
+              </div>
               {heatmapDrilldown && (
                 <button 
                   onClick={() => setHeatmapDrilldown(null)}
-                  style={{ padding: '6px 12px', background: '#F5F5F5', border: '1px solid #E0E0E0', borderRadius: 6, fontSize: 11, cursor: 'pointer', color: '#666' }}
+                  style={{ padding: '8px 16px', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 8, fontSize: 12, cursor: 'pointer', color: '#374151', fontWeight: 500 }}
                 >
                   ← Torna ai mesi
                 </button>
@@ -3300,139 +3529,112 @@ export default function Home() {
             </div>
             
             {!heatmapDrilldown ? (
-              /* VISTA MESI - Cliccabile */
+              /* VISTA MESI - Griglia 3x3 uniforme */
               <>
-                {/* LEGENDA COLORI + SPIEGAZIONE ORARI */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
-                  <div style={{ fontSize: 10, color: '#888', fontStyle: 'italic' }}>
-                    💡 Il numero piccolo sotto indica la <strong>fascia oraria più produttiva</strong> (es. 09-12 = mattina)
-                  </div>
-                  <div style={{ display: 'flex', gap: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#4CAF50' }} /><span style={{ fontSize: 10, color: '#666' }}>Caldo</span></div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FFD700' }} /><span style={{ fontSize: 10, color: '#666' }}>Tiepido</span></div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FF8F00' }} /><span style={{ fontSize: 10, color: '#666' }}>Freddo</span></div>
-                  </div>
+                {/* LEGENDA */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 16, marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 14, height: 14, borderRadius: 4, background: '#10B981' }} /><span style={{ fontSize: 11, color: '#6B7280' }}>Alto</span></div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 14, height: 14, borderRadius: 4, background: '#F59E0B' }} /><span style={{ fontSize: 11, color: '#6B7280' }}>Medio</span></div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 14, height: 14, borderRadius: 4, background: '#EF4444' }} /><span style={{ fontSize: 11, color: '#6B7280' }}>Basso</span></div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 15 }}>
-                  {Object.entries(reportData.heatmapMesi).map(([type, heatData]) => {
-                    const info = { 
-                      fv: { emoji: '☀️', label: 'Fotovoltaico', color: '#2AAA8A', unit: '', isCurrency: false }, 
-                      energy: { emoji: '⚡', label: 'Luce Amica', color: '#FFD700', unit: '', isCurrency: false }, 
-                      consultings: { emoji: '🎓', label: 'Seminari', color: '#9C27B0', unit: '', isCurrency: false },
-                      presenti: { emoji: '✅', label: 'Presenti', color: '#4CAF50', unit: '', isCurrency: false },
-                      ivd: { emoji: '👥', label: 'Attivati', color: '#FF9800', unit: '', isCurrency: false },
-                      guadagnoFV: { emoji: '💰', label: 'Guadagno FV', color: '#2AAA8A', unit: '€', isCurrency: true },
-                      guadagnoLA: { emoji: '💵', label: 'Guadagno LA', color: '#FFD700', unit: '€', isCurrency: true },
-                      puntiFV: { emoji: '⭐', label: 'Punti FV', color: '#9C27B0', unit: 'pt', isCurrency: false },
-                      puntiLA: { emoji: '🏆', label: 'Punti LA', color: '#FF9800', unit: 'pt', isCurrency: false }
-                    }[type];
-                    if (!info) return null;
+                
+                {/* GRIGLIA 3x3 UNIFORME */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                  {[
+                    { key: 'fv', emoji: '☀️', label: 'Fotovoltaico', color: '#15803D', bgColor: '#F0FDF4', borderColor: '#BBF7D0' },
+                    { key: 'energy', emoji: '⚡', label: 'Luce Amica', color: '#B45309', bgColor: '#FFFBEB', borderColor: '#FCD34D' },
+                    { key: 'consultings', emoji: '🎓', label: 'Seminari', color: '#7C3AED', bgColor: '#F5F3FF', borderColor: '#C4B5FD' },
+                    { key: 'presenti', emoji: '✅', label: 'Presenti', color: '#059669', bgColor: '#ECFDF5', borderColor: '#A7F3D0' },
+                    { key: 'ivd', emoji: '👥', label: 'Attivati', color: '#EA580C', bgColor: '#FFF7ED', borderColor: '#FDBA74' },
+                    { key: 'guadagnoFV', emoji: '💰', label: 'Guadagno FV', color: '#15803D', bgColor: '#F0FDF4', borderColor: '#BBF7D0', isCurrency: true },
+                    { key: 'guadagnoLA', emoji: '💵', label: 'Guadagno LA', color: '#B45309', bgColor: '#FFFBEB', borderColor: '#FCD34D', isCurrency: true },
+                    { key: 'puntiFV', emoji: '⭐', label: 'Punti FV', color: '#7C3AED', bgColor: '#F5F3FF', borderColor: '#C4B5FD', unit: 'pt' },
+                    { key: 'puntiLA', emoji: '🏆', label: 'Punti LA', color: '#EA580C', bgColor: '#FFF7ED', borderColor: '#FDBA74', unit: 'pt' }
+                  ].map(item => {
+                    const heatData = reportData.heatmapMesi[item.key];
+                    if (!heatData) return null;
+                    
                     const mesiNomi = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-                    const maxMese = Math.max(...heatData.mesi, 1);
                     const totale = heatData.mesi.reduce((a,b) => a+b, 0);
+                    const maxMese = Math.max(...heatData.mesi, 1);
                     const mesiConDati = heatData.mesi.filter(v => v > 0).length;
                     const media = mesiConDati > 0 ? Math.round(totale / mesiConDati) : 0;
-                    
-                    // Miglior mese
                     const bestMeseIdx = heatData.mesi.indexOf(Math.max(...heatData.mesi));
-                    const bestMese = heatData.mesi[bestMeseIdx] > 0 ? mesiNomi[bestMeseIdx] : '-';
-                    
-                    // Miglior orario dell'anno (somma tutti i mesi)
-                    const orariLabels = ['00-06', '06-09', '09-12', '12-15', '15-18', '18-21', '21-24'];
-                    const orariKeys = ['notte', 'mattinaPrima', 'mattina', 'pranzo', 'pomeriggio', 'sera', 'notturno'];
-                    const totaliOrari = { notte: 0, mattinaPrima: 0, mattina: 0, pranzo: 0, pomeriggio: 0, sera: 0, notturno: 0 };
-                    Object.values(heatData.orariPerMese || {}).forEach(orari => {
-                      orariKeys.forEach(key => { totaliOrari[key] += orari[key] || 0; });
-                    });
-                    let bestOrarioIdx = 2; // default mattina
-                    let maxOrarioVal = 0;
-                    orariKeys.forEach((key, idx) => {
-                      if (totaliOrari[key] > maxOrarioVal) { maxOrarioVal = totaliOrari[key]; bestOrarioIdx = idx; }
-                    });
-                    const bestOrario = maxOrarioVal > 0 ? orariLabels[bestOrarioIdx] : '-';
-                    
-                    // Calcola best hour per ogni mese
-                    const bestHourPerMonth = {};
-                    mesiNomi.forEach((_, i) => {
-                      const orari = heatData.orariPerMese?.[i];
-                      if (orari) {
-                        let maxVal = 0, bestIdx = 2;
-                        orariKeys.forEach((key, idx) => {
-                          if (orari[key] > maxVal) { maxVal = orari[key]; bestIdx = idx; }
-                        });
-                        if (maxVal > 0) bestHourPerMonth[i] = orariLabels[bestIdx];
-                      }
-                    });
-                    
-                    // Anno dai dati (non corrente!)
                     const annoDati = heatData.anno || new Date().getFullYear();
                     
-                    // Filtra solo mesi con dati
-                    const mesiDaMostrare = heatData.mesiConDati || heatData.mesi.map((v, i) => v > 0 ? i : -1).filter(i => i >= 0);
-                    const numMesiAttivi = mesiDaMostrare.length;
-                    
-                    // Formatta valore in base al tipo
                     const formatValue = (val) => {
-                      if (info.isCurrency) return `€${(val/1000).toFixed(0)}K`;
-                      if (info.unit === 'pt') return `${val.toLocaleString('it-IT')}`;
-                      return val.toLocaleString('it-IT');
+                      if (item.isCurrency) return `€${(val/1000).toFixed(0)}K`;
+                      if (item.unit === 'pt') return val >= 1000 ? `${(val/1000).toFixed(1)}K` : val;
+                      return val;
                     };
                     
                     const formatTotale = (val) => {
-                      if (info.isCurrency) return `€${val.toLocaleString('it-IT')}`;
-                      if (info.unit === 'pt') return `${val.toLocaleString('it-IT')} pt`;
+                      if (item.isCurrency) return `€${val.toLocaleString('it-IT')}`;
+                      if (item.unit === 'pt') return `${val.toLocaleString('it-IT')} pt`;
                       return val.toLocaleString('it-IT');
                     };
                     
                     return (
-                      <div key={type} style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, border: '1px solid #E8E8E8' }}>
-                        {/* Header con stats e anno */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                          <div>
-                            <div style={{ fontSize: 14, color: info.color, fontWeight: 700 }}>{info.emoji} {info.label}</div>
-                            <div style={{ fontSize: 9, color: '#999' }}>Anno {annoDati} • {numMesiAttivi} mesi caricati</div>
+                      <div key={item.key} style={{ 
+                        background: item.bgColor, 
+                        borderRadius: 16, 
+                        padding: 16, 
+                        border: `2px solid ${item.borderColor}`,
+                        transition: 'all 0.2s ease'
+                      }}>
+                        {/* Header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 20 }}>{item.emoji}</span>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: item.color }}>{item.label}</span>
                           </div>
-                          <div style={{ display: 'flex', gap: 8, fontSize: 9, color: '#666' }}>
-                            <span title="Media mensile">📊 {info.isCurrency ? `€${Math.round(media/1000)}K` : media}/mese</span>
-                            <span title="Miglior mese">🏆 {bestMese}</span>
-                            <span title="Miglior orario">🕐 {bestOrario}</span>
+                          <div style={{ 
+                            fontSize: 10, 
+                            background: item.color, 
+                            color: '#FFF', 
+                            padding: '2px 8px', 
+                            borderRadius: 10,
+                            fontWeight: 600
+                          }}>
+                            {media}{item.isCurrency ? '€K' : item.unit || ''}/mese
                           </div>
                         </div>
-                        {/* Griglia DINAMICA - solo mesi con dati */}
-                        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(numMesiAttivi, 6)}, 1fr)`, gap: 4 }}>
-                          {mesiDaMostrare.map((meseIdx) => {
-                            const val = heatData.mesi[meseIdx];
+                        
+                        {/* Mini calendario - 2 righe x 6 colonne */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4, marginBottom: 12 }}>
+                          {mesiNomi.map((nome, idx) => {
+                            const val = heatData.mesi[idx];
                             const intensity = val / maxMese;
-                            const bgColor = val === 0 ? '#F0F0F0' : intensity > 0.7 ? '#4CAF50' : intensity > 0.3 ? '#FFD700' : '#FF8F00';
+                            const bgColor = val === 0 ? '#E5E7EB' : intensity > 0.7 ? '#10B981' : intensity > 0.3 ? '#F59E0B' : '#EF4444';
                             return (
                               <div 
-                                key={meseIdx} 
-                                onClick={() => val > 0 && setHeatmapDrilldown({ type, mese: meseIdx, label: mesiNomi[meseIdx], data: heatData, anno: annoDati, info })}
+                                key={idx}
+                                onClick={() => val > 0 && setHeatmapDrilldown({ type: item.key, mese: idx, label: nome, data: heatData, anno: annoDati, info: item })}
                                 style={{ 
-                                  height: 52, 
-                                  borderRadius: 8, 
+                                  height: 44,
+                                  borderRadius: 6, 
                                   background: bgColor, 
                                   display: 'flex', 
                                   flexDirection: 'column', 
                                   alignItems: 'center', 
                                   justifyContent: 'center',
                                   cursor: val > 0 ? 'pointer' : 'default',
-                                  transition: 'all 0.2s ease',
-                                  border: val > 0 ? '2px solid transparent' : 'none'
+                                  transition: 'transform 0.15s ease'
                                 }}
-                                onMouseOver={e => { if (val > 0) e.currentTarget.style.transform = 'scale(1.05)'; }}
+                                onMouseOver={e => { if (val > 0) e.currentTarget.style.transform = 'scale(1.08)'; }}
                                 onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
                               >
-                                <span style={{ fontSize: 9, color: val === 0 ? '#AAA' : '#FFF', fontWeight: 600 }}>{mesiNomi[meseIdx]}</span>
-                                {val > 0 && <span style={{ fontSize: 12, fontWeight: 700, color: '#FFF' }}>{formatValue(val)}</span>}
-                                {bestHourPerMonth[meseIdx] && <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.8)' }}>{bestHourPerMonth[meseIdx]}</span>}
+                                <span style={{ fontSize: 8, color: val === 0 ? '#9CA3AF' : '#FFF', fontWeight: 600 }}>{nome}</span>
+                                {val > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: '#FFF' }}>{formatValue(val)}</span>}
                               </div>
                             );
                           })}
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                          <span style={{ fontSize: 10, color: '#999' }}>Clicca un mese per dettagli</span>
-                          <span style={{ fontSize: 13, color: '#666', fontWeight: 600 }}>Totale: <strong style={{ color: info.color, fontSize: 15 }}>{formatTotale(totale)}</strong></span>
+                        
+                        {/* Footer con totale */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 10, color: '#6B7280' }}>🏆 Best: {mesiNomi[bestMeseIdx]}</span>
+                          <span style={{ fontSize: 14, fontWeight: 800, color: item.color }}>{formatTotale(totale)}</span>
                         </div>
                       </div>
                     );
@@ -3632,24 +3834,41 @@ export default function Home() {
               })()}
             </div>
             
-            {/* CLASSIFICHE */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+            {/* CLASSIFICHE CON 4 COLONNE */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
               {[
-                { title: 'K MANAGER', emoji: '👑', data: reportData.pilastri.fv.classifiche.k, color: '#FFD700' },
-                { title: 'NETWORKER', emoji: '⭐', data: reportData.pilastri.fv.classifiche.nw, color: '#2AAA8A' },
-                { title: 'SDP', emoji: '🔵', data: reportData.pilastri.fv.classifiche.sdp, color: '#2196F3' }
+                { title: 'K MANAGER', emoji: '👑', data: reportData.pilastri.fv.classifiche.k, color: '#B45309' },
+                { title: 'NETWORKER', emoji: '⭐', data: reportData.pilastri.fv.classifiche.nw, color: '#15803D' },
+                { title: 'SDP', emoji: '🔵', data: reportData.pilastri.fv.classifiche.sdp, color: '#2563EB' }
               ].map(({ title, emoji, data, color }) => (
-                <div key={title} style={{ background: '#FAFAFA', borderRadius: 12, padding: 12, border: '1px solid #E8E8E8' }}>
-                  <div style={{ fontSize: 12, color: color, fontWeight: 600, marginBottom: 8 }}>{emoji} {title}</div>
-                  <div style={{ maxHeight: 180, overflowY: 'auto', paddingRight: 10 }}>
+                <div key={title} style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
+                  <div style={{ fontSize: 13, color: color, fontWeight: 700, marginBottom: 12 }}>{emoji} {title}</div>
+                  {/* Header 4 colonne */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 40px)', gap: 4, marginBottom: 8, paddingBottom: 8, borderBottom: '2px solid #E5E7EB' }}>
+                    <span style={{ fontSize: 9, color: '#9CA3AF', fontWeight: 600 }}>Nome</span>
+                    <span style={{ fontSize: 9, color: '#3B82F6', fontWeight: 600, textAlign: 'center' }}>Ins</span>
+                    <span style={{ fontSize: 9, color: '#10B981', fontWeight: 600, textAlign: 'center' }}>Pos</span>
+                    <span style={{ fontSize: 9, color: '#F59E0B', fontWeight: 600, textAlign: 'center' }}>Lav</span>
+                    <span style={{ fontSize: 9, color: '#EF4444', fontWeight: 600, textAlign: 'center' }}>Per</span>
+                  </div>
+                  <div style={{ maxHeight: 200, overflowY: 'auto' }}>
                     {data.slice(0, 10).map(([name, stats], i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #F0F0F0', fontSize: 11 }}>
-                        <span style={{ color: '#333', fontWeight: i < 3 ? 600 : 400 }}>{i+1}° {name}</span>
-                        <div style={{ display: 'flex', gap: 10, minWidth: 70, justifyContent: 'flex-end' }}>
-                          <span style={{ color: '#4CAF50', fontWeight: 600 }}>{stats.positivo || 0}</span>
-                          <span style={{ color: '#FFD700' }}>{stats.lavorazione || 0}</span>
-                          <span style={{ color: '#E53935' }}>{stats.negativo || 0}</span>
-                        </div>
+                      <div key={i} style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: '1fr repeat(4, 40px)', 
+                        gap: 4, 
+                        padding: '6px 0', 
+                        borderBottom: '1px solid #F3F4F6', 
+                        fontSize: 11,
+                        background: i < 3 ? `${color}08` : 'transparent'
+                      }}>
+                        <span style={{ color: '#1F2937', fontWeight: i < 3 ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {i < 3 ? ['🥇','🥈','🥉'][i] : `${i+1}°`} {name.length > 15 ? name.substring(0,15) + '...' : name}
+                        </span>
+                        <span style={{ color: '#3B82F6', fontWeight: 600, textAlign: 'center' }}>{stats.total || 0}</span>
+                        <span style={{ color: '#10B981', fontWeight: 600, textAlign: 'center' }}>{stats.positivo || 0}</span>
+                        <span style={{ color: '#F59E0B', fontWeight: 600, textAlign: 'center' }}>{stats.lavorazione || 0}</span>
+                        <span style={{ color: '#EF4444', fontWeight: 600, textAlign: 'center' }}>{stats.negativo || 0}</span>
                       </div>
                     ))}
                   </div>
@@ -3799,24 +4018,41 @@ export default function Home() {
               </div>
             </div>
             
-            {/* CLASSIFICHE LA - CON 3 COLONNE COME FV */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+            {/* CLASSIFICHE LA - CON 4 COLONNE */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
               {[
-                { title: 'K MANAGER', emoji: '👑', data: reportData.pilastri.energy.classifiche.k, color: '#FFD700' },
-                { title: 'NETWORKER', emoji: '⭐', data: reportData.pilastri.energy.classifiche.nw, color: '#2AAA8A' },
-                { title: 'SDP', emoji: '🔵', data: reportData.pilastri.energy.classifiche.sdp, color: '#2196F3' }
+                { title: 'K MANAGER', emoji: '👑', data: reportData.pilastri.energy.classifiche.k, color: '#B45309' },
+                { title: 'NETWORKER', emoji: '⭐', data: reportData.pilastri.energy.classifiche.nw, color: '#15803D' },
+                { title: 'SDP', emoji: '🔵', data: reportData.pilastri.energy.classifiche.sdp, color: '#2563EB' }
               ].map(({ title, emoji, data, color }) => (
-                <div key={title} style={{ background: '#FAFAFA', borderRadius: 12, padding: 12, border: '1px solid #E8E8E8' }}>
-                  <div style={{ fontSize: 12, color: color, fontWeight: 600, marginBottom: 8 }}>{emoji} {title}</div>
-                  <div style={{ maxHeight: 180, overflowY: 'auto', paddingRight: 10 }}>
+                <div key={title} style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
+                  <div style={{ fontSize: 13, color: color, fontWeight: 700, marginBottom: 12 }}>{emoji} {title}</div>
+                  {/* Header 4 colonne */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 40px)', gap: 4, marginBottom: 8, paddingBottom: 8, borderBottom: '2px solid #E5E7EB' }}>
+                    <span style={{ fontSize: 9, color: '#9CA3AF', fontWeight: 600 }}>Nome</span>
+                    <span style={{ fontSize: 9, color: '#3B82F6', fontWeight: 600, textAlign: 'center' }}>Ins</span>
+                    <span style={{ fontSize: 9, color: '#10B981', fontWeight: 600, textAlign: 'center' }}>Acc</span>
+                    <span style={{ fontSize: 9, color: '#F59E0B', fontWeight: 600, textAlign: 'center' }}>Lav</span>
+                    <span style={{ fontSize: 9, color: '#EF4444', fontWeight: 600, textAlign: 'center' }}>Per</span>
+                  </div>
+                  <div style={{ maxHeight: 200, overflowY: 'auto' }}>
                     {data.slice(0, 10).map(([name, stats], i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #F0F0F0', fontSize: 11 }}>
-                        <span style={{ color: '#333', fontWeight: i < 3 ? 600 : 400 }}>{i+1}° {name}</span>
-                        <div style={{ display: 'flex', gap: 10, minWidth: 70, justifyContent: 'flex-end' }}>
-                          <span style={{ color: '#4CAF50', fontWeight: 600 }}>{stats.positivo || 0}</span>
-                          <span style={{ color: '#FFD700' }}>{stats.lavorabile || 0}</span>
-                          <span style={{ color: '#E53935' }}>{stats.meno || 0}</span>
-                        </div>
+                      <div key={i} style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: '1fr repeat(4, 40px)', 
+                        gap: 4, 
+                        padding: '6px 0', 
+                        borderBottom: '1px solid #F3F4F6', 
+                        fontSize: 11,
+                        background: i < 3 ? `${color}08` : 'transparent'
+                      }}>
+                        <span style={{ color: '#1F2937', fontWeight: i < 3 ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {i < 3 ? ['🥇','🥈','🥉'][i] : `${i+1}°`} {name.length > 15 ? name.substring(0,15) + '...' : name}
+                        </span>
+                        <span style={{ color: '#3B82F6', fontWeight: 600, textAlign: 'center' }}>{stats.total || 0}</span>
+                        <span style={{ color: '#10B981', fontWeight: 600, textAlign: 'center' }}>{stats.positivo || 0}</span>
+                        <span style={{ color: '#F59E0B', fontWeight: 600, textAlign: 'center' }}>{stats.lavorabile || 0}</span>
+                        <span style={{ color: '#EF4444', fontWeight: 600, textAlign: 'center' }}>{stats.meno || 0}</span>
                       </div>
                     ))}
                   </div>
@@ -3951,117 +4187,144 @@ export default function Home() {
           </div>
         )}
         
-        {/* ALERT + TRACKER COACHING - Layout 2 colonne */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 20 }}>
-          {/* ALERT DA ATTIVARE - Con funnel + 3 liste separate */}
-          {reportData.alertDaAttivare && reportData.alertDaAttivare.totale > 0 && (
-            <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
-                <span style={{ fontSize: 24 }}>🚨</span>
+        {/* ALERT DA ATTIVARE - FULL WIDTH, PIÙ SPAZIOSO */}
+        {reportData.alertDaAttivare && reportData.alertDaAttivare.totale > 0 && (
+          <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 24, border: '1px solid #E5E7EB' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: 28 }}>🚨</span>
                 <div>
-                  <h3 style={{ color: '#E53935', fontSize: 16, margin: 0, fontWeight: 700 }}>ALERT DA ATTIVARE</h3>
-                  <p style={{ color: '#666', fontSize: 11, margin: 0 }}>Luce Amica in attesa NWG Energia (max 150g)</p>
+                  <h3 style={{ color: '#DC2626', fontSize: 18, margin: 0, fontWeight: 700 }}>Alert Da Attivare</h3>
+                  <p style={{ color: '#6B7280', fontSize: 12, margin: '4px 0 0' }}>Contratti Luce Amica in attesa attivazione NWG Energia</p>
+                </div>
+              </div>
+              <div style={{ fontSize: 12, color: '#6B7280' }}>
+                Totale: <strong style={{ color: '#DC2626', fontSize: 16 }}>{reportData.alertDaAttivare.totale}</strong>
+              </div>
+            </div>
+            
+            {/* FUNNEL NUMERI - PIÙ GRANDE E SPAZIOSO */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(4, 1fr)', 
+              gap: 16, 
+              marginBottom: 24, 
+              padding: 20, 
+              background: 'linear-gradient(135deg, #F0FDF4 0%, #FFFBEB 50%, #FEF2F2 100%)', 
+              borderRadius: 16 
+            }}>
+              <div style={{ textAlign: 'center', padding: 16, background: '#FFFFFF', borderRadius: 12, border: '2px solid #BBF7D0' }}>
+                <div style={{ fontSize: 36, fontWeight: 800, color: '#15803D' }}>{reportData.alertDaAttivare.verde.length}</div>
+                <div style={{ fontSize: 12, color: '#15803D', fontWeight: 600, marginTop: 4 }}>🟢 0-30 giorni</div>
+                <div style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Da sollecitare</div>
+              </div>
+              <div style={{ textAlign: 'center', padding: 16, background: '#FFFFFF', borderRadius: 12, border: '2px solid #FCD34D' }}>
+                <div style={{ fontSize: 36, fontWeight: 800, color: '#B45309' }}>{reportData.alertDaAttivare.giallo.length}</div>
+                <div style={{ fontSize: 12, color: '#B45309', fontWeight: 600, marginTop: 4 }}>🟡 31-60 giorni</div>
+                <div style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Urgente</div>
+              </div>
+              <div style={{ textAlign: 'center', padding: 16, background: '#FFFFFF', borderRadius: 12, border: '2px solid #FECACA' }}>
+                <div style={{ fontSize: 36, fontWeight: 800, color: '#DC2626' }}>{reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150).length}</div>
+                <div style={{ fontSize: 12, color: '#DC2626', fontWeight: 600, marginTop: 4 }}>🔴 61-150 giorni</div>
+                <div style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Critico</div>
+              </div>
+              <div style={{ textAlign: 'center', padding: 16, background: '#FFFFFF', borderRadius: 12, border: '2px solid #D1D5DB' }}>
+                <div style={{ fontSize: 36, fontWeight: 800, color: '#6B7280' }}>{reportData.alertDaAttivare.rosso.filter(a => a.giorni > 150).length}</div>
+                <div style={{ fontSize: 12, color: '#6B7280', fontWeight: 600, marginTop: 4 }}>⚫ Oltre 150g</div>
+                <div style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Da riformulare</div>
+              </div>
+            </div>
+            
+            {/* 3 LISTE AFFIANCATE */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+              {/* VERDE 0-30g */}
+              <div style={{ background: '#F0FDF4', borderRadius: 12, padding: 16, border: '1px solid #BBF7D0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <span style={{ fontSize: 13, color: '#15803D', fontWeight: 700 }}>🟢 VERDE (0-30g): {reportData.alertDaAttivare.verde.length}</span>
+                  <button onClick={() => {
+                    const csv = 'Cliente;Intermediario;Giorni\n' + reportData.alertDaAttivare.verde.map(a => `${a.cliente};${a.intermediario};${a.giorni}`).join('\n');
+                    const blob = new Blob([csv], {type: 'text/csv'}); const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a'); link.href = url; link.download = 'alert_verde_0-30g.csv'; link.click();
+                  }} style={{ padding: '6px 12px', background: '#15803D', color: '#FFF', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>📥 CSV</button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, fontSize: 10, color: '#6B7280', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #BBF7D0' }}>
+                  <span style={{ fontWeight: 600 }}>Cliente</span>
+                  <span style={{ fontWeight: 600 }}>Intermediario</span>
+                  <span style={{ fontWeight: 600, textAlign: 'right' }}>Giorni</span>
+                </div>
+                <div style={{ maxHeight: 180, overflowY: 'auto' }}>
+                  {reportData.alertDaAttivare.verde.slice(0,8).map((a,i) => (
+                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, padding: '8px 4px', fontSize: 11, background: i % 2 === 0 ? 'transparent' : '#FFFFFF', borderRadius: 4 }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1F2937' }}>{a.cliente}</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#6B7280' }}>{a.intermediario}</span>
+                      <span style={{ textAlign: 'right', color: '#15803D', fontWeight: 700 }}>{a.giorni}g</span>
+                    </div>
+                  ))}
+                  {reportData.alertDaAttivare.verde.length > 8 && <div style={{ color: '#6B7280', fontStyle: 'italic', padding: '8px 4px', fontSize: 10 }}>...e altri {reportData.alertDaAttivare.verde.length - 8}</div>}
                 </div>
               </div>
               
-              {/* FUNNEL NUMERI */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, marginBottom: 20, padding: 15, background: 'linear-gradient(90deg, rgba(76,175,80,0.1), rgba(255,215,0,0.1), rgba(229,57,53,0.1))', borderRadius: 12 }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 32, fontWeight: 800, color: '#4CAF50' }}>{reportData.alertDaAttivare.verde.length}</div>
-                  <div style={{ fontSize: 10, color: '#4CAF50' }}>🟢 0-30g</div>
+              {/* GIALLO 31-60g */}
+              <div style={{ background: '#FFFBEB', borderRadius: 12, padding: 16, border: '1px solid #FCD34D' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <span style={{ fontSize: 13, color: '#B45309', fontWeight: 700 }}>🟡 GIALLO (31-60g): {reportData.alertDaAttivare.giallo.length}</span>
+                  <button onClick={() => {
+                    const csv = 'Cliente;Intermediario;Giorni\n' + reportData.alertDaAttivare.giallo.map(a => `${a.cliente};${a.intermediario};${a.giorni}`).join('\n');
+                    const blob = new Blob([csv], {type: 'text/csv'}); const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a'); link.href = url; link.download = 'alert_giallo_31-60g.csv'; link.click();
+                  }} style={{ padding: '6px 12px', background: '#B45309', color: '#FFF', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>📥 CSV</button>
                 </div>
-                <span style={{ fontSize: 20, color: '#CCC' }}>→</span>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 32, fontWeight: 800, color: '#FF8F00' }}>{reportData.alertDaAttivare.giallo.length}</div>
-                  <div style={{ fontSize: 10, color: '#FF8F00' }}>🟡 31-60g</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, fontSize: 10, color: '#6B7280', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #FCD34D' }}>
+                  <span style={{ fontWeight: 600 }}>Cliente</span>
+                  <span style={{ fontWeight: 600 }}>Intermediario</span>
+                  <span style={{ fontWeight: 600, textAlign: 'right' }}>Giorni</span>
                 </div>
-                <span style={{ fontSize: 20, color: '#CCC' }}>→</span>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 32, fontWeight: 800, color: '#E53935' }}>{reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150).length}</div>
-                  <div style={{ fontSize: 10, color: '#E53935' }}>🔴 61-150g</div>
-                </div>
-                <span style={{ fontSize: 20, color: '#CCC' }}>→</span>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 32, fontWeight: 800, color: '#666' }}>{reportData.alertDaAttivare.rosso.filter(a => a.giorni > 150).length}</div>
-                  <div style={{ fontSize: 10, color: '#666' }}>⚫ Persi</div>
+                <div style={{ maxHeight: 180, overflowY: 'auto' }}>
+                  {reportData.alertDaAttivare.giallo.slice(0,8).map((a,i) => (
+                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, padding: '8px 4px', fontSize: 11, background: i % 2 === 0 ? 'transparent' : '#FFFFFF', borderRadius: 4 }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1F2937' }}>{a.cliente}</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#6B7280' }}>{a.intermediario}</span>
+                      <span style={{ textAlign: 'right', color: '#B45309', fontWeight: 700 }}>{a.giorni}g</span>
+                    </div>
+                  ))}
+                  {reportData.alertDaAttivare.giallo.length > 8 && <div style={{ color: '#6B7280', fontStyle: 'italic', padding: '8px 4px', fontSize: 10 }}>...e altri {reportData.alertDaAttivare.giallo.length - 8}</div>}
                 </div>
               </div>
               
-              {/* 3 SEZIONI SEPARATE SCARICABILI */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {/* VERDE 0-30g */}
-                <div style={{ background: 'rgba(76,175,80,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(76,175,80,0.3)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <span style={{ fontSize: 12, color: '#4CAF50', fontWeight: 600 }}>🟢 VERDE (0-30g): {reportData.alertDaAttivare.verde.length}</span>
-                    <button onClick={() => {
-                      const csv = 'Cliente;Intermediario;Giorni\n' + reportData.alertDaAttivare.verde.map(a => `${a.cliente};${a.intermediario};${a.giorni}`).join('\n');
-                      const blob = new Blob([csv], {type: 'text/csv'}); const url = URL.createObjectURL(blob);
-                      const link = document.createElement('a'); link.href = url; link.download = 'alert_verde_0-30g.csv'; link.click();
-                    }} style={{ padding: '4px 8px', background: '#4CAF50', color: '#FFF', border: 'none', borderRadius: 4, fontSize: 10, cursor: 'pointer' }}>📥 CSV</button>
-                  </div>
-                  {/* Header */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, fontSize: 9, color: '#666', marginBottom: 4, padding: '0 4px' }}>
-                    <span>Cliente</span><span>Intermediario</span><span style={{ textAlign: 'right' }}>Giorni</span>
-                  </div>
-                  <div style={{ maxHeight: 100, overflowY: 'auto', fontSize: 10, paddingRight: 8 }}>
-                    {reportData.alertDaAttivare.verde.slice(0,6).map((a,i) => (
-                      <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 60px', gap: 8, padding: '4px', color: '#333', background: i % 2 === 0 ? 'transparent' : 'rgba(76,175,80,0.05)', borderRadius: 4 }}>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.cliente}</span>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#666' }}>{a.intermediario}</span>
-                        <span style={{ textAlign: 'right', color: '#4CAF50', fontWeight: 600 }}>{a.giorni}g</span>
-                      </div>
-                    ))}
-                    {reportData.alertDaAttivare.verde.length > 6 && <div style={{ color: '#999', fontStyle: 'italic', padding: '4px' }}>...e altri {reportData.alertDaAttivare.verde.length - 6}</div>}
-                  </div>
+              {/* ROSSO 61-150g */}
+              <div style={{ background: '#FEF2F2', borderRadius: 12, padding: 16, border: '1px solid #FECACA' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <span style={{ fontSize: 13, color: '#DC2626', fontWeight: 700 }}>🔴 ROSSO (61-150g): {reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150).length}</span>
+                  <button onClick={() => {
+                    const filtered = reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150);
+                    const csv = 'Cliente;Intermediario;Giorni\n' + filtered.map(a => `${a.cliente};${a.intermediario};${a.giorni}`).join('\n');
+                    const blob = new Blob([csv], {type: 'text/csv'}); const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a'); link.href = url; link.download = 'alert_rosso_61-150g.csv'; link.click();
+                  }} style={{ padding: '6px 12px', background: '#DC2626', color: '#FFF', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>📥 CSV</button>
                 </div>
-                
-                {/* GIALLO 31-60g */}
-                <div style={{ background: 'rgba(255,215,0,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(255,215,0,0.3)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <span style={{ fontSize: 12, color: '#FF8F00', fontWeight: 600 }}>🟡 GIALLO (31-60g): {reportData.alertDaAttivare.giallo.length}</span>
-                    <button onClick={() => {
-                      const csv = 'Cliente;Intermediario;Giorni\n' + reportData.alertDaAttivare.giallo.map(a => `${a.cliente};${a.intermediario};${a.giorni}`).join('\n');
-                      const blob = new Blob([csv], {type: 'text/csv'}); const url = URL.createObjectURL(blob);
-                      const link = document.createElement('a'); link.href = url; link.download = 'alert_giallo_31-60g.csv'; link.click();
-                    }} style={{ padding: '4px 8px', background: '#FFD700', color: '#333', border: 'none', borderRadius: 4, fontSize: 10, cursor: 'pointer' }}>📥 CSV</button>
-                  </div>
-                  {/* Header */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, fontSize: 9, color: '#666', marginBottom: 4, padding: '0 4px' }}>
-                    <span>Cliente</span><span>Intermediario</span><span style={{ textAlign: 'right' }}>Giorni</span>
-                  </div>
-                  <div style={{ maxHeight: 100, overflowY: 'auto', fontSize: 10, paddingRight: 8 }}>
-                    {reportData.alertDaAttivare.giallo.slice(0,6).map((a,i) => (
-                      <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, padding: '4px', color: '#333', background: i % 2 === 0 ? 'transparent' : 'rgba(255,215,0,0.05)', borderRadius: 4 }}>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.cliente}</span>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#666' }}>{a.intermediario}</span>
-                        <span style={{ textAlign: 'right', color: '#FF8F00', fontWeight: 600 }}>{a.giorni}g</span>
-                      </div>
-                    ))}
-                    {reportData.alertDaAttivare.giallo.length > 6 && <div style={{ color: '#999', fontStyle: 'italic', padding: '4px' }}>...e altri {reportData.alertDaAttivare.giallo.length - 6}</div>}
-                  </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, fontSize: 10, color: '#6B7280', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #FECACA' }}>
+                  <span style={{ fontWeight: 600 }}>Cliente</span>
+                  <span style={{ fontWeight: 600 }}>Intermediario</span>
+                  <span style={{ fontWeight: 600, textAlign: 'right' }}>Giorni</span>
                 </div>
-                
-                {/* ROSSO 61-150g */}
-                <div style={{ background: 'rgba(229,57,53,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(229,57,53,0.3)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <span style={{ fontSize: 12, color: '#E53935', fontWeight: 600 }}>🔴 ROSSO (61-150g): {reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150).length}</span>
-                    <button onClick={() => {
-                      const filtered = reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150);
-                      const csv = 'Cliente;Intermediario;Giorni\n' + filtered.map(a => `${a.cliente};${a.intermediario};${a.giorni}`).join('\n');
-                      const blob = new Blob([csv], {type: 'text/csv'}); const url = URL.createObjectURL(blob);
-                      const link = document.createElement('a'); link.href = url; link.download = 'alert_rosso_61-150g.csv'; link.click();
-                    }} style={{ padding: '4px 8px', background: '#E53935', color: '#FFF', border: 'none', borderRadius: 4, fontSize: 10, cursor: 'pointer' }}>📥 CSV</button>
-                  </div>
-                  {/* Header */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, fontSize: 9, color: '#666', marginBottom: 4, padding: '0 4px' }}>
-                    <span>Cliente</span><span>Intermediario</span><span style={{ textAlign: 'right' }}>Giorni</span>
-                  </div>
-                  <div style={{ maxHeight: 100, overflowY: 'auto', fontSize: 10, paddingRight: 8 }}>
-                    {reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150).slice(0,6).map((a,i) => (
-                      <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, padding: '4px', color: '#333', background: i % 2 === 0 ? 'transparent' : 'rgba(229,57,53,0.05)', borderRadius: 4 }}>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.cliente}</span>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#666' }}>{a.intermediario}</span>
-                        <span style={{ textAlign: 'right', color: '#E53935', fontWeight: 600 }}>{a.giorni}g</span>
+                <div style={{ maxHeight: 180, overflowY: 'auto' }}>
+                  {reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150).slice(0,8).map((a,i) => (
+                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, padding: '8px 4px', fontSize: 11, background: i % 2 === 0 ? 'transparent' : '#FFFFFF', borderRadius: 4 }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1F2937' }}>{a.cliente}</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#6B7280' }}>{a.intermediario}</span>
+                      <span style={{ textAlign: 'right', color: '#DC2626', fontWeight: 700 }}>{a.giorni}g</span>
+                    </div>
+                  ))}
+                  {reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150).length > 8 && <div style={{ color: '#6B7280', fontStyle: 'italic', padding: '8px 4px', fontSize: 10 }}>...e altri {reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150).length - 8}</div>}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* TRACKER COACHING - FULL WIDTH, PIÙ SPAZIOSO */}
+        {reportData.trackerCoaching && reportData.trackerCoaching.lista && (
+          <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 24, border: '1px solid #E5E7EB' }}>
                       </div>
                     ))}
                     {reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150).length > 6 && <div style={{ color: '#999', fontStyle: 'italic', padding: '4px' }}>...e altri {reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150).length - 6}</div>}
