@@ -627,6 +627,10 @@ export default function Home() {
   };
 
   const generateReportData = () => {
+    // DEBUG
+    console.log('🔍 generateReportData chiamato');
+    console.log('🔍 reportCSVs.consultings:', reportCSVs.consultings ? `${reportCSVs.consultings.data?.length} righe` : 'NULL');
+    
     const result = {
       pilastri: {},
       heatmapMesi: {},
@@ -922,51 +926,48 @@ export default function Home() {
     const collabData = { iscritti: 0, presenti: 0, attivati: 0, assenti: 0, omonimie: [], statiAttivati: null, classifiche: null };
     
     // Seminari: Iscritti e Presenti
-    // LOGICA: Se campo "Presente SI" è vuoto o NO → conta come ASSENTE
-    if (reportCSVs.consultings?.data?.length > 0) {
-      const semData = reportCSVs.consultings.data;
-      
-      // Rileva OMONIMIE (stessa persona iscritta più volte)
-      const nomiVisti = {};
-      const omonimie = [];
-      semData.forEach(row => {
-        // Colonna nome: "Cognome e Nome" oppure altre varianti
-        const nome = (row['Cognome e Nome'] || row['Nome e Cognome'] || row['Nome'] || row['Nominativo'] || '').trim().toUpperCase();
-        if (nome) {
-          if (nomiVisti[nome]) {
-            nomiVisti[nome]++;
-            if (nomiVisti[nome] === 2) omonimie.push({ nome, count: 2 });
-            else {
-              const found = omonimie.find(o => o.nome === nome);
-              if (found) found.count = nomiVisti[nome];
-            }
-          } else {
-            nomiVisti[nome] = 1;
-          }
-        }
-      });
-      collabData.omonimie = omonimie;
-      
+    const semData = reportCSVs.consultings?.data;
+    
+    console.log('🎓 SEMINARI - semData:', semData ? semData.length + ' righe' : 'NULL');
+    if (semData && semData.length > 0) {
+      console.log('🎓 SEMINARI - Prima riga colonne:', Object.keys(semData[0]));
+      console.log('🎓 SEMINARI - Prima riga Presente SI:', semData[0]['Presente SI']);
+    }
+    
+    if (semData && semData.length > 0) {
       collabData.iscritti = semData.length;
       
-      // PRESENTI: campo "Presente SI" deve essere esplicitamente SI
-      // ASSENTI: campo vuoto O valore NO O qualsiasi altro valore
+      // PRESENTI: "Presente SI" = si (case insensitive)
       collabData.presenti = semData.filter(row => {
-        const presente = (row['Presente SI'] || row['Presente'] || '').toString().trim().toUpperCase();
-        return presente === 'SI' || presente === 'SÌ' || presente === 'YES' || presente === '1';
+        const val = (row['Presente SI'] || row['Presente'] || '').toString().trim().toLowerCase();
+        return val === 'si' || val === 'sì' || val === 'yes' || val === '1';
       }).length;
       
-      // Assenti = Iscritti - Presenti (include campi vuoti e NO)
+      // Assenti = Iscritti - Presenti
       collabData.assenti = collabData.iscritti - collabData.presenti;
       
-      // Classifiche basate su tutti i dati seminario con conteggio presenti
+      console.log('🎓 SEMINARI - Iscritti:', collabData.iscritti, 'Presenti:', collabData.presenti, 'Assenti:', collabData.assenti);
+      
+      // Rileva OMONIMIE
+      const nomiVisti = {};
+      semData.forEach(row => {
+        const cognome = (row['Cognome'] || '').trim();
+        const nome = (row['Nome'] || '').trim();
+        const nomeCompleto = cognome && nome ? `${cognome} ${nome}`.toUpperCase() : '';
+        if (nomeCompleto) {
+          nomiVisti[nomeCompleto] = (nomiVisti[nomeCompleto] || 0) + 1;
+        }
+      });
+      collabData.omonimie = Object.entries(nomiVisti).filter(([,c]) => c > 1).map(([nome, count]) => ({ nome, count }));
+      
+      // Classifiche
       const kStats = {}, nwStats = {}, sdpStats = {};
       semData.forEach(row => {
         const k = row['Nome Primo K'] || '';
         const nw = row['Nome Primo Networker'] || '';
         const sdp = row['Nome Primo SDP FV'] || row['Nome Primo SDP Fv'] || row['Nome Primo SDP LA'] || row['Nome Primo SDP La'] || '';
-        const presente = (row['Presente SI'] || row['Presente'] || '').toString().trim().toUpperCase();
-        const isPresente = presente === 'SI' || presente === 'SÌ' || presente === 'YES' || presente === '1';
+        const val = (row['Presente SI'] || row['Presente'] || '').toString().trim().toLowerCase();
+        const isPresente = val === 'si' || val === 'sì' || val === 'yes' || val === '1';
         
         if (k && !k.includes('Nome Primo')) {
           if (!kStats[k]) kStats[k] = { iscritti: 0, presenti: 0, assenti: 0, attivati: 0, total: 0 };
@@ -996,10 +997,10 @@ export default function Home() {
       
       result.heatmapMesi.consultings = calcHeatmapMesi(semData);
       
-      // Heatmap solo per PRESENTI (stesso check uppercase)
+      // Heatmap solo per PRESENTI
       const presentiData = semData.filter(row => {
-        const presente = (row['Presente SI'] || row['Presente'] || '').toString().trim().toUpperCase();
-        return presente === 'SI' || presente === 'SÌ' || presente === 'YES' || presente === '1';
+        const val = (row['Presente SI'] || row['Presente'] || '').toString().trim().toLowerCase();
+        return val === 'si' || val === 'sì' || val === 'yes' || val === '1';
       });
       result.heatmapMesi.presenti = calcHeatmapMesi(presentiData);
     }
@@ -3066,648 +3067,414 @@ export default function Home() {
     }
   };
 
-  // FUNZIONE DOWNLOAD REPORT PNG
+
   // ═══════════════════════════════════════════════════════════════════════════
-  // 📊 REPORT PNG PROFESSIONALE - Design WOW per presentazioni
+  // 📷 DOWNLOAD REPORT PNG - Semplice e funzionante
   // ═══════════════════════════════════════════════════════════════════════════
   
-  const downloadReportPNG = (tipo = 'generale') => {
-    if (!reportData || !reportData.pilastri) return alert('Nessun report da scaricare');
-    
-    try {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const W = 1200, H = tipo === 'generale' ? 1600 : 1200;
-      canvas.width = W; canvas.height = H;
-      
-      const periodo = reportData.periodoRiferimento?.label || 'Periodo';
-      
-      // Helper per rettangoli arrotondati (compatibilità)
-      const roundRect = (x, y, w, h, r) => {
-        ctx.beginPath();
-        ctx.moveTo(x + r, y);
-        ctx.lineTo(x + w - r, y);
-        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-        ctx.lineTo(x + w, y + h - r);
-        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-        ctx.lineTo(x + r, y + h);
-        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-        ctx.lineTo(x, y + r);
-        ctx.quadraticCurveTo(x, y, x + r, y);
-        ctx.closePath();
-      };
-      
-      // Background
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, W, H);
-      
-      // Border
-      ctx.strokeStyle = '#2AAA8A';
-      ctx.lineWidth = 4;
-      ctx.strokeRect(20, 20, W - 40, H - 40);
-      
-      // Header
-      ctx.fillStyle = '#2AAA8A';
-      roundRect(40, 40, W - 80, 80, 10);
-      ctx.fill();
-      
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 32px Arial';
-      ctx.textAlign = 'center';
-      const titoli = {
-        generale: '📊 REPORT AGGREGATO',
-        fv: '☀️ REPORT FOTOVOLTAICO',
-        la: '⚡ REPORT LUCE AMICA',
-        seminari: '🎓 REPORT SEMINARI',
-        best: '🏆 TOP PERFORMERS'
-      };
-      ctx.fillText(titoli[tipo] || titoli.generale, W/2, 90);
-      ctx.font = '14px Arial';
-      ctx.fillText(`📅 ${periodo}`, W/2, 112);
-      
-      let y = 150;
-      ctx.textAlign = 'left';
-      
-      // ═══ FOTOVOLTAICO ═══
-      if ((tipo === 'generale' || tipo === 'fv') && reportData.pilastri.fv) {
-        const fv = reportData.pilastri.fv;
-        
-        // Card background
-        ctx.fillStyle = '#F0FDF4';
-        roundRect(50, y, W - 100, 140, 12);
-        ctx.fill();
-        ctx.strokeStyle = '#BBF7D0';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        
-        // Barra laterale
-        ctx.fillStyle = '#15803D';
-        ctx.fillRect(50, y, 8, 140);
-        
-        // Titolo
-        ctx.fillStyle = '#15803D';
-        ctx.font = 'bold 22px Arial';
-        ctx.fillText('☀️ FOTOVOLTAICO', 80, y + 35);
-        
-        // Stats
-        ctx.font = 'bold 36px Arial';
-        ctx.fillStyle = '#1F2937';
-        ctx.fillText(fv.funnel.inseriti.toString(), 80, y + 85);
-        ctx.font = '12px Arial';
-        ctx.fillStyle = '#6B7280';
-        ctx.fillText('Inseriti', 80, y + 105);
-        
-        ctx.font = 'bold 36px Arial';
-        ctx.fillStyle = '#15803D';
-        ctx.fillText(fv.funnel.positivi.toString(), 220, y + 85);
-        ctx.font = '12px Arial';
-        ctx.fillStyle = '#6B7280';
-        ctx.fillText('Positivi', 220, y + 105);
-        
-        ctx.font = 'bold 36px Arial';
-        ctx.fillStyle = '#10B981';
-        ctx.fillText(`${fv.funnel.pctPositivi}%`, 360, y + 85);
-        ctx.font = '12px Arial';
-        ctx.fillStyle = '#6B7280';
-        ctx.fillText('Conversione', 360, y + 105);
-        
-        ctx.font = 'bold 36px Arial';
-        ctx.fillStyle = '#DC2626';
-        ctx.fillText(fv.funnel.negativi.toString(), 520, y + 85);
-        ctx.font = '12px Arial';
-        ctx.fillStyle = '#6B7280';
-        ctx.fillText('Persi', 520, y + 105);
-        
-        // Fatturato
-        if (reportData.fatturato?.fv) {
-          ctx.font = 'bold 36px Arial';
-          ctx.fillStyle = '#15803D';
-          ctx.fillText(`€${(reportData.fatturato.fv.effettivi.totale/1000).toFixed(0)}K`, 680, y + 85);
-          ctx.font = '12px Arial';
-          ctx.fillStyle = '#6B7280';
-          ctx.fillText('Fatturato', 680, y + 105);
-        }
-        
-        // Best performer
-        if (reportData.bestPerformers?.fv?.fatturato?.k) {
-          ctx.font = '13px Arial';
-          ctx.fillStyle = '#6B7280';
-          ctx.fillText(`🏆 Top K: ${reportData.bestPerformers.fv.fatturato.k.nome}`, 850, y + 85);
-        }
-        
-        y += 160;
-      }
-      
-      // ═══ LUCE AMICA ═══
-      if ((tipo === 'generale' || tipo === 'la') && reportData.pilastri.energy) {
-        const la = reportData.pilastri.energy;
-        
-        ctx.fillStyle = '#FFFBEB';
-        roundRect(50, y, W - 100, 140, 12);
-        ctx.fill();
-        ctx.strokeStyle = '#FCD34D';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        
-        ctx.fillStyle = '#B45309';
-        ctx.fillRect(50, y, 8, 140);
-        
-        ctx.fillStyle = '#B45309';
-        ctx.font = 'bold 22px Arial';
-        ctx.fillText('⚡ LUCE AMICA', 80, y + 35);
-        
-        ctx.font = 'bold 36px Arial';
-        ctx.fillStyle = '#1F2937';
-        ctx.fillText(la.funnel.inseriti.toString(), 80, y + 85);
-        ctx.font = '12px Arial';
-        ctx.fillStyle = '#6B7280';
-        ctx.fillText('Inseriti', 80, y + 105);
-        
-        ctx.font = 'bold 36px Arial';
-        ctx.fillStyle = '#10B981';
-        ctx.fillText(la.funnel.accettati.toString(), 220, y + 85);
-        ctx.font = '12px Arial';
-        ctx.fillStyle = '#6B7280';
-        ctx.fillText('Accettati', 220, y + 105);
-        
-        ctx.font = 'bold 36px Arial';
-        ctx.fillStyle = '#B45309';
-        ctx.fillText(`${la.funnel.pctAccettati}%`, 360, y + 85);
-        ctx.font = '12px Arial';
-        ctx.fillStyle = '#6B7280';
-        ctx.fillText('Accettazione', 360, y + 105);
-        
-        ctx.font = 'bold 36px Arial';
-        ctx.fillStyle = '#DC2626';
-        ctx.fillText(la.funnel.persi.toString(), 520, y + 85);
-        ctx.font = '12px Arial';
-        ctx.fillStyle = '#6B7280';
-        ctx.fillText('Cessati', 520, y + 105);
-        
-        if (reportData.fatturato?.la) {
-          ctx.font = 'bold 36px Arial';
-          ctx.fillStyle = '#B45309';
-          ctx.fillText(`€${Math.round(reportData.fatturato.la.accettati.totale/12/1000)}K/m`, 680, y + 85);
-          ctx.font = '12px Arial';
-          ctx.fillStyle = '#6B7280';
-          ctx.fillText('Fatt. Mensile', 680, y + 105);
-        }
-        
-        if (reportData.bestPerformers?.la?.fatturato?.k) {
-          ctx.font = '13px Arial';
-          ctx.fillStyle = '#6B7280';
-          ctx.fillText(`🏆 Top K: ${reportData.bestPerformers.la.fatturato.k.nome}`, 850, y + 85);
-        }
-        
-        y += 160;
-      }
-      
-      // ═══ SEMINARI ═══
-      if ((tipo === 'generale' || tipo === 'seminari') && reportData.pilastri.collaboratori) {
-        const sem = reportData.pilastri.collaboratori;
-        
-        ctx.fillStyle = '#F5F3FF';
-        roundRect(50, y, W - 100, 140, 12);
-        ctx.fill();
-        ctx.strokeStyle = '#C4B5FD';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        
-        ctx.fillStyle = '#7C3AED';
-        ctx.fillRect(50, y, 8, 140);
-        
-        ctx.fillStyle = '#7C3AED';
-        ctx.font = 'bold 22px Arial';
-        ctx.fillText('🎓 SEMINARI & COLLABORATORI', 80, y + 35);
-        
-        ctx.font = 'bold 36px Arial';
-        ctx.fillStyle = '#1F2937';
-        ctx.fillText(sem.funnel.iscritti.toString(), 80, y + 85);
-        ctx.font = '12px Arial';
-        ctx.fillStyle = '#6B7280';
-        ctx.fillText('Iscritti', 80, y + 105);
-        
-        ctx.font = 'bold 36px Arial';
-        ctx.fillStyle = '#10B981';
-        ctx.fillText(sem.funnel.presenti.toString(), 220, y + 85);
-        ctx.font = '12px Arial';
-        ctx.fillStyle = '#6B7280';
-        ctx.fillText('Presenti', 220, y + 105);
-        
-        ctx.font = 'bold 36px Arial';
-        ctx.fillStyle = '#7C3AED';
-        ctx.fillText(`${sem.funnel.pctPresenti}%`, 360, y + 85);
-        ctx.font = '12px Arial';
-        ctx.fillStyle = '#6B7280';
-        ctx.fillText('Presenza', 360, y + 105);
-        
-        ctx.font = 'bold 36px Arial';
-        ctx.fillStyle = '#F59E0B';
-        ctx.fillText(sem.funnel.attivati.toString(), 520, y + 85);
-        ctx.font = '12px Arial';
-        ctx.fillStyle = '#6B7280';
-        ctx.fillText('Attivati', 520, y + 105);
-        
-        ctx.font = 'bold 36px Arial';
-        ctx.fillStyle = '#15803D';
-        ctx.fillText(`${sem.funnel.pctAttivati}%`, 680, y + 85);
-        ctx.font = '12px Arial';
-        ctx.fillStyle = '#6B7280';
-        ctx.fillText('Conv. Attiv.', 680, y + 105);
-        
-        y += 160;
-      }
-      
-      // ═══ ALERT ═══
-      if (tipo === 'generale' && reportData.alertDaAttivare && reportData.alertDaAttivare.totale > 0) {
-        const alert = reportData.alertDaAttivare;
-        
-        ctx.fillStyle = '#FEF2F2';
-        roundRect(50, y, W - 100, 140, 12);
-        ctx.fill();
-        ctx.strokeStyle = '#FECACA';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        
-        ctx.fillStyle = '#DC2626';
-        ctx.fillRect(50, y, 8, 140);
-        
-        ctx.fillStyle = '#DC2626';
-        ctx.font = 'bold 22px Arial';
-        ctx.fillText(`🚨 ALERT DA ATTIVARE (${alert.totale} totali)`, 80, y + 35);
-        
-        // Box semaforo
-        const boxes = [
-          { label: '0-30g', count: alert.verde.length, color: '#10B981' },
-          { label: '31-60g', count: alert.giallo.length, color: '#F59E0B' },
-          { label: '61-150g', count: alert.rosso.filter(a => a.giorni <= 150).length, color: '#EF4444' },
-          { label: '>150g', count: alert.rosso.filter(a => a.giorni > 150).length, color: '#6B7280' }
-        ];
-        
-        boxes.forEach((box, i) => {
-          const bx = 80 + i * 200;
-          ctx.fillStyle = box.color;
-          ctx.font = 'bold 42px Arial';
-          ctx.fillText(box.count.toString(), bx, y + 90);
-          ctx.font = '12px Arial';
-          ctx.fillStyle = '#6B7280';
-          ctx.fillText(box.label, bx, y + 110);
-        });
-        
-        y += 160;
-      }
-      
-      // ═══ BEST PERFORMERS ═══
-      if ((tipo === 'generale' || tipo === 'best') && reportData.bestPerformers) {
-        ctx.fillStyle = '#FEF3C7';
-        roundRect(50, y, W - 100, 220, 12);
-        ctx.fill();
-        ctx.strokeStyle = '#FCD34D';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        
-        ctx.fillStyle = '#B45309';
-        ctx.fillRect(50, y, 8, 220);
-        
-        ctx.fillStyle = '#B45309';
-        ctx.font = 'bold 22px Arial';
-        ctx.fillText('🏆 TOP PERFORMERS', 80, y + 35);
-        
-        // K Manager
-        ctx.fillStyle = '#92400E';
-        ctx.font = 'bold 14px Arial';
-        ctx.fillText('👑 TOP K MANAGER', 80, y + 65);
-        
-        let lineY = y + 85;
-        const kItems = [
-          { label: 'Fatturato FV', data: reportData.bestPerformers.fv?.fatturato?.k },
-          { label: 'Fatturato LA', data: reportData.bestPerformers.la?.fatturato?.k },
-          { label: 'Iscritti Sem.', data: reportData.bestPerformers.seminari?.iscritti?.k },
-        ];
-        
-        kItems.forEach(item => {
-          if (item.data) {
-            ctx.font = '12px Arial';
-            ctx.fillStyle = '#6B7280';
-            ctx.fillText(`${item.label}: `, 80, lineY);
-            ctx.fillStyle = '#1F2937';
-            ctx.font = 'bold 12px Arial';
-            const val = typeof item.data.valore === 'number' && item.data.valore > 100 ? 
-              `€${item.data.valore.toLocaleString('it-IT')}` : item.data.valore;
-            ctx.fillText(`${item.data.nome} (${val})`, 180, lineY);
-            lineY += 22;
-          }
-        });
-        
-        // Networker
-        ctx.fillStyle = '#059669';
-        ctx.font = 'bold 14px Arial';
-        ctx.fillText('⭐ TOP NETWORKER', W/2 + 30, y + 65);
-        
-        lineY = y + 85;
-        const nwItems = [
-          { label: 'Fatturato FV', data: reportData.bestPerformers.fv?.fatturato?.nw },
-          { label: 'Fatturato LA', data: reportData.bestPerformers.la?.fatturato?.nw },
-          { label: 'Iscritti Sem.', data: reportData.bestPerformers.seminari?.iscritti?.nw },
-        ];
-        
-        nwItems.forEach(item => {
-          if (item.data) {
-            ctx.font = '12px Arial';
-            ctx.fillStyle = '#6B7280';
-            ctx.fillText(`${item.label}: `, W/2 + 30, lineY);
-            ctx.fillStyle = '#1F2937';
-            ctx.font = 'bold 12px Arial';
-            const val = typeof item.data.valore === 'number' && item.data.valore > 100 ? 
-              `€${item.data.valore.toLocaleString('it-IT')}` : item.data.valore;
-            ctx.fillText(`${item.data.nome} (${val})`, W/2 + 130, lineY);
-            lineY += 22;
-          }
-        });
-        
-        y += 240;
-      }
-      
-      // ═══ TOTALI ═══
-      if (tipo === 'generale') {
-        ctx.fillStyle = '#2AAA8A';
-        roundRect(50, y, W - 100, 90, 12);
-        ctx.fill();
-        
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = 'bold 14px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('📊 TOTALI PERIODO', W/2, y + 25);
-        
-        const totContratti = (reportData.pilastri.fv?.totale || 0) + (reportData.pilastri.energy?.totale || 0);
-        const totFatt = reportData.fatturato?.totale?.fatturato || 0;
-        const totPunti = reportData.fatturato?.totale?.punti || 0;
-        
-        ctx.font = 'bold 28px Arial';
-        ctx.fillText(`${totContratti} Contratti`, W/4, y + 60);
-        ctx.fillText(`€${(totFatt/1000000).toFixed(2)}M Fatturato`, W/2, y + 60);
-        ctx.fillText(`${totPunti.toLocaleString('it-IT')} Punti`, W*3/4, y + 60);
-      }
-      
-      // Footer
-      ctx.fillStyle = '#9CA3AF';
-      ctx.font = '12px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(`Leader Ranking v14.0 • ${new Date().toLocaleDateString('it-IT')} ${new Date().toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'})}`, W/2, H - 30);
-      
-      // Download
-      const link = document.createElement('a');
-      link.download = `report_${tipo}_${periodo.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-      
-    } catch (err) {
-      console.error('Errore generazione PNG:', err);
-      alert('Errore nella generazione del report: ' + err.message);
+  const downloadReportPNG = () => {
+    if (!reportData || !reportData.pilastri) {
+      alert('Genera prima il report caricando i CSV');
+      return;
     }
+    
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const W = 1200, H = 1400;
+    canvas.width = W;
+    canvas.height = H;
+    
+    const periodo = reportData.periodoRiferimento?.label || 'Report';
+    
+    // Background bianco
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, W, H);
+    
+    // Bordo verde
+    ctx.strokeStyle = '#2AAA8A';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(10, 10, W - 20, H - 20);
+    
+    // Header verde
+    ctx.fillStyle = '#2AAA8A';
+    ctx.fillRect(30, 30, W - 60, 100);
+    
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 42px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('LEADER RANKING', W/2, 85);
+    ctx.font = '20px Arial';
+    ctx.fillText(periodo, W/2, 115);
+    
+    let y = 170;
+    
+    // === FOTOVOLTAICO ===
+    if (reportData.pilastri.fv) {
+      const fv = reportData.pilastri.fv;
+      ctx.fillStyle = '#F0FDF4';
+      ctx.fillRect(50, y, W - 100, 120);
+      ctx.strokeStyle = '#22C55E';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(50, y, W - 100, 120);
+      
+      ctx.fillStyle = '#15803D';
+      ctx.font = 'bold 24px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText('☀️ FOTOVOLTAICO', 70, y + 35);
+      
+      ctx.font = 'bold 48px Arial';
+      ctx.fillText(fv.funnel.positivi.toString(), 70, y + 90);
+      ctx.font = '16px Arial';
+      ctx.fillStyle = '#666';
+      ctx.fillText('Positivi', 70, y + 110);
+      
+      ctx.fillStyle = '#15803D';
+      ctx.font = 'bold 48px Arial';
+      ctx.fillText(fv.funnel.pctPositivi + '%', 250, y + 90);
+      ctx.font = '16px Arial';
+      ctx.fillStyle = '#666';
+      ctx.fillText('Conversione', 250, y + 110);
+      
+      if (reportData.fatturato?.fv) {
+        ctx.fillStyle = '#15803D';
+        ctx.font = 'bold 36px Arial';
+        ctx.textAlign = 'right';
+        ctx.fillText('€' + (reportData.fatturato.fv.effettivi.totale/1000000).toFixed(2) + 'M', W - 70, y + 70);
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#666';
+        ctx.fillText('Fatturato Effettivo', W - 70, y + 95);
+      }
+      
+      y += 140;
+    }
+    
+    // === LUCE AMICA ===
+    if (reportData.pilastri.energy) {
+      const la = reportData.pilastri.energy;
+      ctx.fillStyle = '#FFFBEB';
+      ctx.fillRect(50, y, W - 100, 120);
+      ctx.strokeStyle = '#F59E0B';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(50, y, W - 100, 120);
+      
+      ctx.fillStyle = '#B45309';
+      ctx.font = 'bold 24px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText('⚡ LUCE AMICA', 70, y + 35);
+      
+      ctx.font = 'bold 48px Arial';
+      ctx.fillText(la.funnel.accettati.toString(), 70, y + 90);
+      ctx.font = '16px Arial';
+      ctx.fillStyle = '#666';
+      ctx.fillText('Accettati', 70, y + 110);
+      
+      ctx.fillStyle = '#B45309';
+      ctx.font = 'bold 48px Arial';
+      ctx.fillText(la.funnel.pctAccettati + '%', 250, y + 90);
+      ctx.font = '16px Arial';
+      ctx.fillStyle = '#666';
+      ctx.fillText('Accettazione', 250, y + 110);
+      
+      if (reportData.fatturato?.la) {
+        ctx.fillStyle = '#B45309';
+        ctx.font = 'bold 36px Arial';
+        ctx.textAlign = 'right';
+        ctx.fillText('€' + Math.round(reportData.fatturato.la.accettati.totale/12).toLocaleString('it-IT') + '/m', W - 70, y + 70);
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#666';
+        ctx.fillText('Fatturato Mensile', W - 70, y + 95);
+      }
+      
+      y += 140;
+    }
+    
+    // === SEMINARI ===
+    if (reportData.pilastri.collaboratori) {
+      const sem = reportData.pilastri.collaboratori;
+      ctx.fillStyle = '#F5F3FF';
+      ctx.fillRect(50, y, W - 100, 120);
+      ctx.strokeStyle = '#8B5CF6';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(50, y, W - 100, 120);
+      
+      ctx.fillStyle = '#7C3AED';
+      ctx.font = 'bold 24px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText('🎓 SEMINARI', 70, y + 35);
+      
+      ctx.font = 'bold 48px Arial';
+      ctx.fillText(sem.funnel.iscritti.toString(), 70, y + 90);
+      ctx.font = '16px Arial';
+      ctx.fillStyle = '#666';
+      ctx.fillText('Iscritti', 70, y + 110);
+      
+      ctx.fillStyle = '#7C3AED';
+      ctx.font = 'bold 48px Arial';
+      ctx.fillText(sem.funnel.presenti.toString(), 220, y + 90);
+      ctx.font = '16px Arial';
+      ctx.fillStyle = '#666';
+      ctx.fillText('Presenti', 220, y + 110);
+      
+      ctx.fillStyle = '#7C3AED';
+      ctx.font = 'bold 48px Arial';
+      ctx.fillText(sem.funnel.pctPresenti + '%', 370, y + 90);
+      ctx.font = '16px Arial';
+      ctx.fillStyle = '#666';
+      ctx.fillText('Presenza', 370, y + 110);
+      
+      ctx.fillStyle = '#F59E0B';
+      ctx.font = 'bold 36px Arial';
+      ctx.textAlign = 'right';
+      ctx.fillText(sem.funnel.attivati.toString(), W - 70, y + 70);
+      ctx.font = '16px Arial';
+      ctx.fillStyle = '#666';
+      ctx.fillText('Attivati', W - 70, y + 95);
+      
+      y += 140;
+    }
+    
+    // === NUOVI IVD ===
+    if (reportData.trackerCoaching) {
+      const tc = reportData.trackerCoaching;
+      ctx.fillStyle = '#F0FDFA';
+      ctx.fillRect(50, y, W - 100, 120);
+      ctx.strokeStyle = '#2AAA8A';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(50, y, W - 100, 120);
+      
+      ctx.fillStyle = '#0D9488';
+      ctx.font = 'bold 24px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText('👥 NUOVI IVD', 70, y + 35);
+      
+      ctx.font = 'bold 48px Arial';
+      ctx.fillText(tc.totale.toString(), 70, y + 90);
+      ctx.font = '16px Arial';
+      ctx.fillStyle = '#666';
+      ctx.fillText('Totali', 70, y + 110);
+      
+      ctx.fillStyle = '#10B981';
+      ctx.font = 'bold 48px Arial';
+      ctx.fillText(tc.ivdConContratti.toString(), 220, y + 90);
+      ctx.font = '16px Arial';
+      ctx.fillStyle = '#666';
+      ctx.fillText('Produttivi', 220, y + 110);
+      
+      ctx.fillStyle = '#EF4444';
+      ctx.font = 'bold 36px Arial';
+      ctx.textAlign = 'right';
+      ctx.fillText(tc.pctInattivi + '%', W - 70, y + 70);
+      ctx.font = '16px Arial';
+      ctx.fillStyle = '#666';
+      ctx.fillText('Inattivi', W - 70, y + 95);
+      
+      y += 140;
+    }
+    
+    // === TOTALI ===
+    y += 20;
+    ctx.fillStyle = '#2AAA8A';
+    ctx.fillRect(50, y, W - 100, 150);
+    
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 20px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('TOTALI EFFETTIVI', W/2, y + 30);
+    
+    const totFatt = reportData.fatturato?.totale?.fatturato || 0;
+    const totPunti = reportData.fatturato?.totale?.punti || 0;
+    
+    ctx.font = 'bold 56px Arial';
+    ctx.fillText('€' + (totFatt/1000000).toFixed(2) + 'M', W/3, y + 95);
+    ctx.font = '16px Arial';
+    ctx.fillText('Fatturato', W/3, y + 120);
+    
+    ctx.font = 'bold 56px Arial';
+    ctx.fillText(totPunti.toLocaleString('it-IT'), W*2/3, y + 95);
+    ctx.font = '16px Arial';
+    ctx.fillText('Punti', W*2/3, y + 120);
+    
+    // Footer
+    ctx.fillStyle = '#9CA3AF';
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Leader Ranking • ' + new Date().toLocaleDateString('it-IT'), W/2, H - 30);
+    
+    // Download
+    const link = document.createElement('a');
+    link.download = 'LeaderRanking_' + periodo.replace(/[^a-zA-Z0-9]/g, '_') + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
   };
   
   // ═══════════════════════════════════════════════════════════════════════════
-  // 📽️ EXPORT POWERPOINT - Generazione dinamica slide
+  // 📽️ DOWNLOAD POWERPOINT - Presentazione professionale
   // ═══════════════════════════════════════════════════════════════════════════
   
   const downloadPowerPoint = async () => {
-    if (!reportData || !reportData.pilastri) return alert('Nessun report da esportare');
+    if (!reportData || !reportData.pilastri) {
+      alert('Genera prima il report caricando i CSV');
+      return;
+    }
+    
+    // Mostra loading
+    const loadingDiv = document.createElement('div');
+    loadingDiv.innerHTML = '<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999"><div style="background:white;padding:40px;border-radius:16px;text-align:center"><div style="font-size:48px;margin-bottom:16px">📽️</div><div style="font-size:18px;font-weight:600">Generazione PowerPoint...</div></div></div>';
+    document.body.appendChild(loadingDiv);
     
     try {
-      // Carica pptxgenjs dinamicamente
+      // Carica libreria pptxgenjs
       if (typeof PptxGenJS === 'undefined') {
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
-        document.head.appendChild(script);
-        
         await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
           script.onload = resolve;
-          script.onerror = () => reject(new Error('Impossibile caricare la libreria PowerPoint'));
+          script.onerror = reject;
+          document.head.appendChild(script);
         });
       }
       
       const pptx = new PptxGenJS();
       pptx.layout = 'LAYOUT_16x9';
+      pptx.title = 'Leader Ranking Report';
       pptx.author = 'Leader Ranking';
-      pptx.title = `Report ${reportData.periodoRiferimento?.label || 'Periodo'}`;
       
-      const periodo = reportData.periodoRiferimento?.label || 'Periodo';
-      const colors = { primary: '2AAA8A', fv: '15803D', la: 'B45309', seminari: '7C3AED', alert: 'DC2626', dark: '1F2937', muted: '6B7280' };
+      const periodo = reportData.periodoRiferimento?.label || 'Report';
       
-      // ═══ SLIDE 1: COPERTINA ═══
+      // SLIDE 1: COPERTINA
       let slide = pptx.addSlide();
       slide.background = { color: '1F2937' };
-      slide.addText('LEADER RANKING', { x: 0.5, y: 1.8, w: 9, h: 0.8, fontSize: 44, bold: true, color: '2AAA8A', align: 'center' });
-      slide.addText('Report Performance', { x: 0.5, y: 2.5, w: 9, h: 0.5, fontSize: 24, color: 'FFFFFF', align: 'center' });
-      slide.addShape(pptx.shapes.RECTANGLE, { x: 3.5, y: 3.2, w: 3, h: 0.05, fill: { color: '2AAA8A' } });
-      slide.addText(`📅 ${periodo}`, { x: 0.5, y: 3.5, w: 9, h: 0.5, fontSize: 20, color: 'F59E0B', align: 'center' });
-      slide.addText(`Generato il ${new Date().toLocaleDateString('it-IT')}`, { x: 0.5, y: 5, w: 9, h: 0.3, fontSize: 12, color: '9CA3AF', align: 'center' });
+      slide.addText('LEADER RANKING', { x: 0.5, y: 2.0, w: 9, h: 0.8, fontSize: 48, bold: true, color: '2AAA8A', align: 'center' });
+      slide.addText('Report Performance', { x: 0.5, y: 2.7, w: 9, h: 0.5, fontSize: 24, color: 'FFFFFF', align: 'center' });
+      slide.addText(periodo, { x: 0.5, y: 3.4, w: 9, h: 0.4, fontSize: 20, color: 'F59E0B', align: 'center' });
+      slide.addText(new Date().toLocaleDateString('it-IT'), { x: 0.5, y: 4.8, w: 9, h: 0.3, fontSize: 14, color: '9CA3AF', align: 'center' });
       
-      // ═══ SLIDE 2: RIEPILOGO GENERALE ═══
+      // SLIDE 2: RIEPILOGO
       slide = pptx.addSlide();
       slide.background = { color: 'F8FAFC' };
-      slide.addText('📊 Riepilogo Generale', { x: 0.5, y: 0.3, w: 9, h: 0.6, fontSize: 28, bold: true, color: colors.dark });
-      slide.addText(`📅 ${periodo}`, { x: 0.5, y: 0.8, w: 9, h: 0.3, fontSize: 12, color: colors.muted });
+      slide.addText('Riepilogo Generale', { x: 0.5, y: 0.3, w: 9, h: 0.6, fontSize: 32, bold: true, color: '1F2937' });
+      slide.addText(periodo, { x: 0.5, y: 0.85, w: 9, h: 0.3, fontSize: 14, color: '6B7280' });
       
       // Card FV
       if (reportData.pilastri.fv) {
-        slide.addShape(pptx.shapes.RECTANGLE, { x: 0.5, y: 1.3, w: 2.9, h: 1.8, fill: { color: 'F0FDF4' }, line: { color: 'BBF7D0', pt: 1 } });
-        slide.addText('☀️ Fotovoltaico', { x: 0.6, y: 1.4, w: 2.7, h: 0.3, fontSize: 14, bold: true, color: colors.fv });
-        slide.addText(`€${((reportData.fatturato?.fv?.effettivi?.totale || 0)/1000000).toFixed(2)}M`, { x: 0.6, y: 1.75, w: 2.7, h: 0.5, fontSize: 28, bold: true, color: colors.fv });
-        slide.addText(`${reportData.pilastri.fv.totale} contratti • ${reportData.pilastri.fv.funnel.pctPositivi}% conv.`, { x: 0.6, y: 2.3, w: 2.7, h: 0.3, fontSize: 10, color: colors.muted });
+        slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, { x: 0.4, y: 1.4, w: 2.9, h: 1.6, fill: { color: 'F0FDF4' }, line: { color: '22C55E', pt: 2 } });
+        slide.addText('Fotovoltaico', { x: 0.5, y: 1.5, w: 2.7, h: 0.3, fontSize: 14, bold: true, color: '15803D' });
+        slide.addText(reportData.pilastri.fv.funnel.positivi + ' Positivi', { x: 0.5, y: 1.9, w: 2.7, h: 0.4, fontSize: 24, bold: true, color: '15803D' });
+        slide.addText(reportData.pilastri.fv.funnel.pctPositivi + '% conversione', { x: 0.5, y: 2.4, w: 2.7, h: 0.3, fontSize: 12, color: '6B7280' });
+        if (reportData.fatturato?.fv) {
+          slide.addText('€' + (reportData.fatturato.fv.effettivi.totale/1000000).toFixed(2) + 'M', { x: 0.5, y: 2.7, w: 2.7, h: 0.3, fontSize: 16, bold: true, color: '15803D' });
+        }
       }
       
-      // Card LA
+      // Card LA  
       if (reportData.pilastri.energy) {
-        slide.addShape(pptx.shapes.RECTANGLE, { x: 3.55, y: 1.3, w: 2.9, h: 1.8, fill: { color: 'FFFBEB' }, line: { color: 'FCD34D', pt: 1 } });
-        slide.addText('⚡ Luce Amica', { x: 3.65, y: 1.4, w: 2.7, h: 0.3, fontSize: 14, bold: true, color: colors.la });
-        slide.addText(`€${((reportData.fatturato?.la?.accettati?.totale || 0)/1000000).toFixed(2)}M`, { x: 3.65, y: 1.75, w: 2.7, h: 0.5, fontSize: 28, bold: true, color: colors.la });
-        slide.addText(`${reportData.pilastri.energy.totale} contratti • ${reportData.pilastri.energy.funnel.pctAccettati}% acc.`, { x: 3.65, y: 2.3, w: 2.7, h: 0.3, fontSize: 10, color: colors.muted });
+        slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, { x: 3.5, y: 1.4, w: 2.9, h: 1.6, fill: { color: 'FFFBEB' }, line: { color: 'F59E0B', pt: 2 } });
+        slide.addText('Luce Amica', { x: 3.6, y: 1.5, w: 2.7, h: 0.3, fontSize: 14, bold: true, color: 'B45309' });
+        slide.addText(reportData.pilastri.energy.funnel.accettati + ' Accettati', { x: 3.6, y: 1.9, w: 2.7, h: 0.4, fontSize: 24, bold: true, color: 'B45309' });
+        slide.addText(reportData.pilastri.energy.funnel.pctAccettati + '% accettazione', { x: 3.6, y: 2.4, w: 2.7, h: 0.3, fontSize: 12, color: '6B7280' });
+        if (reportData.fatturato?.la) {
+          slide.addText('€' + Math.round(reportData.fatturato.la.accettati.totale/12).toLocaleString('it-IT') + '/mese', { x: 3.6, y: 2.7, w: 2.7, h: 0.3, fontSize: 16, bold: true, color: 'B45309' });
+        }
       }
       
       // Card Totale
-      slide.addShape(pptx.shapes.RECTANGLE, { x: 6.6, y: 1.3, w: 2.9, h: 1.8, fill: { color: colors.dark } });
-      slide.addText('📊 Totale', { x: 6.7, y: 1.4, w: 2.7, h: 0.3, fontSize: 14, bold: true, color: 'FFFFFF' });
-      slide.addText(`€${((reportData.fatturato?.totale?.fatturato || 0)/1000000).toFixed(2)}M`, { x: 6.7, y: 1.75, w: 2.7, h: 0.5, fontSize: 28, bold: true, color: '2AAA8A' });
-      slide.addText(`${reportData.fatturato?.totale?.punti?.toLocaleString('it-IT') || 0} punti`, { x: 6.7, y: 2.3, w: 2.7, h: 0.3, fontSize: 10, color: 'D1D5DB' });
+      slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, { x: 6.6, y: 1.4, w: 2.9, h: 1.6, fill: { color: '2AAA8A' } });
+      slide.addText('Totale Effettivo', { x: 6.7, y: 1.5, w: 2.7, h: 0.3, fontSize: 14, bold: true, color: 'FFFFFF' });
+      slide.addText('€' + ((reportData.fatturato?.totale?.fatturato || 0)/1000000).toFixed(2) + 'M', { x: 6.7, y: 1.9, w: 2.7, h: 0.4, fontSize: 24, bold: true, color: 'FFFFFF' });
+      slide.addText((reportData.fatturato?.totale?.punti || 0).toLocaleString('it-IT') + ' punti', { x: 6.7, y: 2.4, w: 2.7, h: 0.3, fontSize: 14, color: 'D1FAE5' });
       
       // Seminari e IVD
       if (reportData.pilastri.collaboratori) {
-        slide.addShape(pptx.shapes.RECTANGLE, { x: 0.5, y: 3.3, w: 4.4, h: 1.2, fill: { color: 'FFFFFF' }, line: { color: 'E5E7EB', pt: 1 } });
-        slide.addText('🎓 Seminari', { x: 0.6, y: 3.4, w: 4.2, h: 0.3, fontSize: 14, bold: true, color: colors.seminari });
-        slide.addText(`${reportData.pilastri.collaboratori.funnel.iscritti} iscritti → ${reportData.pilastri.collaboratori.funnel.presenti} presenti → ${reportData.pilastri.collaboratori.funnel.attivati} attivati`, { x: 0.6, y: 3.8, w: 4.2, h: 0.3, fontSize: 12, color: colors.dark });
-        slide.addText(`Presenza: ${reportData.pilastri.collaboratori.funnel.pctPresenti}% • Conversione: ${reportData.pilastri.collaboratori.funnel.pctAttivati}%`, { x: 0.6, y: 4.15, w: 4.2, h: 0.25, fontSize: 10, color: colors.muted });
+        slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, { x: 0.4, y: 3.2, w: 4.5, h: 1.4, fill: { color: 'FFFFFF' }, line: { color: 'E5E7EB', pt: 1 } });
+        slide.addText('Seminari', { x: 0.5, y: 3.3, w: 4.3, h: 0.3, fontSize: 14, bold: true, color: '7C3AED' });
+        slide.addText(reportData.pilastri.collaboratori.funnel.iscritti + ' iscritti - ' + reportData.pilastri.collaboratori.funnel.presenti + ' presenti - ' + reportData.pilastri.collaboratori.funnel.attivati + ' attivati', { x: 0.5, y: 3.7, w: 4.3, h: 0.3, fontSize: 16, color: '1F2937' });
+        slide.addText('Presenza: ' + reportData.pilastri.collaboratori.funnel.pctPresenti + '% | Conversione: ' + reportData.pilastri.collaboratori.funnel.pctAttivati + '%', { x: 0.5, y: 4.1, w: 4.3, h: 0.3, fontSize: 12, color: '6B7280' });
       }
       
-      // IVD
       if (reportData.trackerCoaching) {
-        slide.addShape(pptx.shapes.RECTANGLE, { x: 5.1, y: 3.3, w: 4.4, h: 1.2, fill: { color: 'FFFFFF' }, line: { color: 'E5E7EB', pt: 1 } });
-        slide.addText('👥 Nuovi IVD', { x: 5.2, y: 3.4, w: 4.2, h: 0.3, fontSize: 14, bold: true, color: colors.primary });
-        slide.addText(`${reportData.trackerCoaching.totale} totali • ${reportData.trackerCoaching.ivdConContratti} produttivi (${100 - reportData.trackerCoaching.pctInattivi}%)`, { x: 5.2, y: 3.8, w: 4.2, h: 0.3, fontSize: 12, color: colors.dark });
-        slide.addText(`${reportData.trackerCoaching.ivdInattivi} inattivi (${reportData.trackerCoaching.pctInattivi}%)`, { x: 5.2, y: 4.15, w: 4.2, h: 0.25, fontSize: 10, color: colors.alert });
+        slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, { x: 5.1, y: 3.2, w: 4.5, h: 1.4, fill: { color: 'FFFFFF' }, line: { color: 'E5E7EB', pt: 1 } });
+        slide.addText('Nuovi IVD', { x: 5.2, y: 3.3, w: 4.3, h: 0.3, fontSize: 14, bold: true, color: '2AAA8A' });
+        slide.addText(reportData.trackerCoaching.totale + ' totali - ' + reportData.trackerCoaching.ivdConContratti + ' produttivi', { x: 5.2, y: 3.7, w: 4.3, h: 0.3, fontSize: 16, color: '1F2937' });
+        slide.addText('Inattivi: ' + reportData.trackerCoaching.ivdInattivi + ' (' + reportData.trackerCoaching.pctInattivi + '%)', { x: 5.2, y: 4.1, w: 4.3, h: 0.3, fontSize: 12, color: 'EF4444' });
       }
       
-      // ═══ SLIDE 3: FOTOVOLTAICO (se dati) ═══
+      // SLIDE 3: FOTOVOLTAICO
       if (reportData.pilastri.fv) {
         slide = pptx.addSlide();
         slide.background = { color: 'F0FDF4' };
-        slide.addText('☀️ Pilastro Fotovoltaico', { x: 0.5, y: 0.3, w: 9, h: 0.6, fontSize: 28, bold: true, color: colors.fv });
-        slide.addText(`📅 ${periodo}`, { x: 0.5, y: 0.8, w: 9, h: 0.3, fontSize: 12, color: colors.muted });
+        slide.addText('Fotovoltaico', { x: 0.5, y: 0.3, w: 9, h: 0.6, fontSize: 32, bold: true, color: '15803D' });
+        slide.addText(periodo, { x: 0.5, y: 0.85, w: 9, h: 0.3, fontSize: 14, color: '6B7280' });
         
-        // Funnel
         const fv = reportData.pilastri.fv;
-        const funnelData = [
-          { label: 'Inseriti', value: fv.funnel.inseriti, color: colors.dark },
-          { label: 'Positivi', value: fv.funnel.positivi, color: colors.fv, pct: fv.funnel.pctPositivi },
+        const funnelItems = [
+          { label: 'Inseriti', value: fv.funnel.inseriti, color: '6B7280' },
+          { label: 'Positivi', value: fv.funnel.positivi, color: '15803D' },
           { label: 'Lavorazione', value: fv.funnel.lavorazione, color: 'F59E0B' },
-          { label: 'Persi', value: fv.funnel.negativi, color: colors.alert, pct: fv.funnel.pctNegativi }
+          { label: 'Persi', value: fv.funnel.negativi, color: 'EF4444' }
         ];
         
-        funnelData.forEach((item, i) => {
-          slide.addShape(pptx.shapes.RECTANGLE, { x: 0.5 + i * 2.4, y: 1.3, w: 2.2, h: 1.5, fill: { color: 'FFFFFF' }, line: { color: item.color, pt: 2 } });
-          slide.addText(item.value.toString(), { x: 0.5 + i * 2.4, y: 1.5, w: 2.2, h: 0.7, fontSize: 32, bold: true, color: item.color, align: 'center' });
-          slide.addText(`${item.label}${item.pct !== undefined ? ` (${item.pct}%)` : ''}`, { x: 0.5 + i * 2.4, y: 2.3, w: 2.2, h: 0.3, fontSize: 11, color: colors.muted, align: 'center' });
+        funnelItems.forEach((item, i) => {
+          slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, { x: 0.4 + i * 2.4, y: 1.4, w: 2.2, h: 1.3, fill: { color: 'FFFFFF' }, line: { color: item.color, pt: 2 } });
+          slide.addText(item.value.toString(), { x: 0.4 + i * 2.4, y: 1.6, w: 2.2, h: 0.6, fontSize: 36, bold: true, color: item.color, align: 'center' });
+          slide.addText(item.label, { x: 0.4 + i * 2.4, y: 2.3, w: 2.2, h: 0.3, fontSize: 12, color: '6B7280', align: 'center' });
         });
         
-        // Top 5 K e NW
-        slide.addText('🏆 Top 5 K Manager', { x: 0.5, y: 3.1, w: 4.4, h: 0.4, fontSize: 14, bold: true, color: colors.fv });
-        fv.classifiche?.k.slice(0, 5).forEach(([nome, stats], i) => {
-          slide.addText(`${i + 1}. ${nome}`, { x: 0.5, y: 3.5 + i * 0.35, w: 2.5, h: 0.3, fontSize: 11, color: colors.dark });
-          slide.addText(`${stats.total} ins | ${stats.positivo} pos`, { x: 3, y: 3.5 + i * 0.35, w: 1.8, h: 0.3, fontSize: 10, color: colors.muted, align: 'right' });
-        });
-        
-        slide.addText('⭐ Top 5 Networker', { x: 5.1, y: 3.1, w: 4.4, h: 0.4, fontSize: 14, bold: true, color: colors.fv });
-        fv.classifiche?.nw.slice(0, 5).forEach(([nome, stats], i) => {
-          slide.addText(`${i + 1}. ${nome}`, { x: 5.1, y: 3.5 + i * 0.35, w: 2.5, h: 0.3, fontSize: 11, color: colors.dark });
-          slide.addText(`${stats.total} ins | ${stats.positivo} pos`, { x: 7.6, y: 3.5 + i * 0.35, w: 1.8, h: 0.3, fontSize: 10, color: colors.muted, align: 'right' });
-        });
+        if (fv.classifiche?.k?.length > 0) {
+          slide.addText('Top 5 K Manager', { x: 0.5, y: 3.0, w: 4, h: 0.4, fontSize: 16, bold: true, color: '15803D' });
+          fv.classifiche.k.slice(0, 5).forEach((item, i) => {
+            const nome = item[0];
+            const stats = item[1];
+            slide.addText((i + 1) + '. ' + nome, { x: 0.5, y: 3.4 + i * 0.35, w: 2.5, h: 0.3, fontSize: 12, color: '1F2937' });
+            slide.addText((stats.positivo || 0) + ' pos', { x: 3, y: 3.4 + i * 0.35, w: 1, h: 0.3, fontSize: 12, color: '15803D', align: 'right' });
+          });
+        }
       }
       
-      // ═══ SLIDE 4: LUCE AMICA (se dati) ═══
+      // SLIDE 4: LUCE AMICA
       if (reportData.pilastri.energy) {
         slide = pptx.addSlide();
         slide.background = { color: 'FFFBEB' };
-        slide.addText('⚡ Pilastro Luce Amica', { x: 0.5, y: 0.3, w: 9, h: 0.6, fontSize: 28, bold: true, color: colors.la });
-        slide.addText(`📅 ${periodo}`, { x: 0.5, y: 0.8, w: 9, h: 0.3, fontSize: 12, color: colors.muted });
+        slide.addText('Luce Amica', { x: 0.5, y: 0.3, w: 9, h: 0.6, fontSize: 32, bold: true, color: 'B45309' });
+        slide.addText(periodo, { x: 0.5, y: 0.85, w: 9, h: 0.3, fontSize: 14, color: '6B7280' });
         
         const la = reportData.pilastri.energy;
-        const funnelData = [
-          { label: 'Inseriti', value: la.funnel.inseriti, color: colors.dark },
-          { label: 'Accettati', value: la.funnel.accettati, color: '10B981', pct: la.funnel.pctAccettati },
+        const funnelItems = [
+          { label: 'Inseriti', value: la.funnel.inseriti, color: '6B7280' },
+          { label: 'Accettati', value: la.funnel.accettati, color: '15803D' },
           { label: 'Lavorabili', value: la.funnel.lavorabili, color: 'F59E0B' },
-          { label: 'Cessati', value: la.funnel.persi, color: colors.alert }
+          { label: 'Cessati', value: la.funnel.persi, color: 'EF4444' }
         ];
         
-        funnelData.forEach((item, i) => {
-          slide.addShape(pptx.shapes.RECTANGLE, { x: 0.5 + i * 2.4, y: 1.3, w: 2.2, h: 1.5, fill: { color: 'FFFFFF' }, line: { color: item.color, pt: 2 } });
-          slide.addText(item.value.toString(), { x: 0.5 + i * 2.4, y: 1.5, w: 2.2, h: 0.7, fontSize: 32, bold: true, color: item.color, align: 'center' });
-          slide.addText(`${item.label}${item.pct !== undefined ? ` (${item.pct}%)` : ''}`, { x: 0.5 + i * 2.4, y: 2.3, w: 2.2, h: 0.3, fontSize: 11, color: colors.muted, align: 'center' });
+        funnelItems.forEach((item, i) => {
+          slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, { x: 0.4 + i * 2.4, y: 1.4, w: 2.2, h: 1.3, fill: { color: 'FFFFFF' }, line: { color: item.color, pt: 2 } });
+          slide.addText(item.value.toString(), { x: 0.4 + i * 2.4, y: 1.6, w: 2.2, h: 0.6, fontSize: 36, bold: true, color: item.color, align: 'center' });
+          slide.addText(item.label, { x: 0.4 + i * 2.4, y: 2.3, w: 2.2, h: 0.3, fontSize: 12, color: '6B7280', align: 'center' });
         });
         
-        // Fatturato
         if (reportData.fatturato?.la) {
-          const fat = reportData.fatturato.la;
-          slide.addShape(pptx.shapes.RECTANGLE, { x: 0.5, y: 3.1, w: 9, h: 1.2, fill: { color: colors.la } });
-          slide.addText('💰 Fatturato Generato', { x: 0.6, y: 3.2, w: 8.8, h: 0.35, fontSize: 14, bold: true, color: 'FFFFFF' });
-          slide.addText(`€${Math.round(fat.accettati.totale).toLocaleString('it-IT')}/anno • €${Math.round(fat.accettati.totale/12).toLocaleString('it-IT')}/mese • ${fat.accettati.kwhTotali.toLocaleString('it-IT')} kWh green`, { x: 0.6, y: 3.6, w: 8.8, h: 0.35, fontSize: 16, color: 'FFFFFF' });
-          slide.addText(`${fat.accettati.contratti} contratti accettati • ${fat.accettati.puntiTotali.toLocaleString('it-IT')} punti`, { x: 0.6, y: 4, w: 8.8, h: 0.25, fontSize: 11, color: 'FEF3C7' });
+          slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, { x: 0.4, y: 3.0, w: 9.2, h: 1.2, fill: { color: 'B45309' } });
+          slide.addText('Fatturato Generato', { x: 0.5, y: 3.1, w: 9, h: 0.3, fontSize: 14, bold: true, color: 'FFFFFF' });
+          slide.addText('€' + Math.round(reportData.fatturato.la.accettati.totale).toLocaleString('it-IT') + '/anno | €' + Math.round(reportData.fatturato.la.accettati.totale/12).toLocaleString('it-IT') + '/mese', { x: 0.5, y: 3.5, w: 9, h: 0.4, fontSize: 18, color: 'FFFFFF' });
         }
-        
-        // Top 5
-        slide.addText('🏆 Top 5 K Manager', { x: 0.5, y: 4.5, w: 4.4, h: 0.4, fontSize: 14, bold: true, color: colors.la });
-        la.classifiche?.k.slice(0, 5).forEach(([nome, stats], i) => {
-          slide.addText(`${i + 1}. ${nome} - ${stats.total} ins | ${stats.positivo} acc`, { x: 0.5, y: 4.85 + i * 0.28, w: 4.4, h: 0.25, fontSize: 10, color: colors.dark });
-        });
       }
       
-      // ═══ SLIDE 5: BEST PERFORMERS ═══
-      if (reportData.bestPerformers) {
-        slide = pptx.addSlide();
-        slide.background = { color: 'FFFFFF' };
-        slide.addText('🏆 Top Performers', { x: 0.5, y: 0.3, w: 9, h: 0.6, fontSize: 28, bold: true, color: 'F59E0B' });
-        slide.addText(`📅 ${periodo}`, { x: 0.5, y: 0.8, w: 9, h: 0.3, fontSize: 12, color: colors.muted });
-        
-        // K Manager
-        slide.addShape(pptx.shapes.RECTANGLE, { x: 0.5, y: 1.2, w: 4.4, h: 4, fill: { color: 'FEF3C7' }, line: { color: 'FCD34D', pt: 2 } });
-        slide.addText('👑 TOP K MANAGER', { x: 0.6, y: 1.3, w: 4.2, h: 0.4, fontSize: 16, bold: true, color: colors.la });
-        
-        let ky = 1.8;
-        const kItems = [
-          { label: '☀️ Fatturato FV', data: reportData.bestPerformers.fv?.fatturato?.k, fmt: v => `€${v.toLocaleString('it-IT')}` },
-          { label: '⚡ Fatturato LA', data: reportData.bestPerformers.la?.fatturato?.k, fmt: v => `€${v.toLocaleString('it-IT')}/m` },
-          { label: '🎓 Iscritti Sem.', data: reportData.bestPerformers.seminari?.iscritti?.k, fmt: v => v },
-          { label: '✅ Presenti Sem.', data: reportData.bestPerformers.seminari?.presenti?.k, fmt: v => v },
-          { label: '📈 Conversione FV', data: reportData.bestPerformers.fv?.conversione?.k, fmt: v => `${v}%` }
-        ];
-        
-        kItems.forEach(item => {
-          if (item.data) {
-            slide.addText(item.label, { x: 0.7, y: ky, w: 1.8, h: 0.35, fontSize: 11, color: colors.muted });
-            slide.addText(`${item.data.nome}`, { x: 0.7, y: ky + 0.3, w: 2.5, h: 0.3, fontSize: 12, bold: true, color: colors.dark });
-            slide.addText(item.fmt(item.data.valore), { x: 3.2, y: ky + 0.15, w: 1.5, h: 0.35, fontSize: 14, bold: true, color: colors.la, align: 'right' });
-            ky += 0.7;
-          }
-        });
-        
-        // Networker
-        slide.addShape(pptx.shapes.RECTANGLE, { x: 5.1, y: 1.2, w: 4.4, h: 4, fill: { color: 'D1FAE5' }, line: { color: '6EE7B7', pt: 2 } });
-        slide.addText('⭐ TOP NETWORKER', { x: 5.2, y: 1.3, w: 4.2, h: 0.4, fontSize: 16, bold: true, color: '059669' });
-        
-        let ny = 1.8;
-        const nwItems = [
-          { label: '☀️ Fatturato FV', data: reportData.bestPerformers.fv?.fatturato?.nw, fmt: v => `€${v.toLocaleString('it-IT')}` },
-          { label: '⚡ Fatturato LA', data: reportData.bestPerformers.la?.fatturato?.nw, fmt: v => `€${v.toLocaleString('it-IT')}/m` },
-          { label: '🎓 Iscritti Sem.', data: reportData.bestPerformers.seminari?.iscritti?.nw, fmt: v => v },
-          { label: '✅ Presenti Sem.', data: reportData.bestPerformers.seminari?.presenti?.nw, fmt: v => v },
-          { label: '🎯 Velocità 1° LA', data: reportData.bestPerformers.tracker?.primaLA?.nw, fmt: v => `${v}g` }
-        ];
-        
-        nwItems.forEach(item => {
-          if (item.data) {
-            slide.addText(item.label, { x: 5.3, y: ny, w: 1.8, h: 0.35, fontSize: 11, color: colors.muted });
-            slide.addText(`${item.data.nome}`, { x: 5.3, y: ny + 0.3, w: 2.5, h: 0.3, fontSize: 12, bold: true, color: colors.dark });
-            slide.addText(item.fmt(item.data.valore), { x: 7.8, y: ny + 0.15, w: 1.5, h: 0.35, fontSize: 14, bold: true, color: '059669', align: 'right' });
-            ny += 0.7;
-          }
-        });
-      }
-      
-      // ═══ SLIDE 6: ALERT (se presenti) ═══
-      if (reportData.alertDaAttivare && reportData.alertDaAttivare.totale > 0) {
-        slide = pptx.addSlide();
-        slide.background = { color: 'FEF2F2' };
-        slide.addText('🚨 Alert Da Attivare', { x: 0.5, y: 0.3, w: 9, h: 0.6, fontSize: 28, bold: true, color: colors.alert });
-        slide.addText(`📅 ${periodo} • ${reportData.alertDaAttivare.totale} contratti in attesa`, { x: 0.5, y: 0.8, w: 9, h: 0.3, fontSize: 12, color: colors.muted });
-        
-        const alert = reportData.alertDaAttivare;
-        const boxes = [
-          { label: 'VERDI (0-30g)', count: alert.verde.length, color: '10B981', bg: 'D1FAE5' },
-          { label: 'GIALLI (31-60g)', count: alert.giallo.length, color: 'F59E0B', bg: 'FEF3C7' },
-          { label: 'ROSSI (61-150g)', count: alert.rosso.filter(a => a.giorni <= 150).length, color: 'EF4444', bg: 'FEE2E2' },
-          { label: 'CRITICI (>150g)', count: alert.rosso.filter(a => a.giorni > 150).length, color: '6B7280', bg: 'F3F4F6' }
-        ];
-        
-        boxes.forEach((box, i) => {
-          slide.addShape(pptx.shapes.RECTANGLE, { x: 0.5 + i * 2.4, y: 1.3, w: 2.2, h: 2, fill: { color: box.bg }, line: { color: box.color, pt: 3 } });
-          slide.addText(box.count.toString(), { x: 0.5 + i * 2.4, y: 1.6, w: 2.2, h: 0.8, fontSize: 48, bold: true, color: box.color, align: 'center' });
-          slide.addText(box.label, { x: 0.5 + i * 2.4, y: 2.6, w: 2.2, h: 0.4, fontSize: 11, bold: true, color: box.color, align: 'center' });
-        });
-      }
-      
-      // ═══ SLIDE FINALE: CHIUSURA ═══
+      // SLIDE FINALE
       slide = pptx.addSlide();
-      slide.background = { color: colors.dark };
-      slide.addText('Grazie!', { x: 0.5, y: 2, w: 9, h: 0.8, fontSize: 48, bold: true, color: 'FFFFFF', align: 'center' });
-      slide.addText('Leader Ranking v14.0', { x: 0.5, y: 2.9, w: 9, h: 0.4, fontSize: 18, color: colors.primary, align: 'center' });
-      slide.addText(`Report generato il ${new Date().toLocaleDateString('it-IT')}`, { x: 0.5, y: 4.5, w: 9, h: 0.3, fontSize: 12, color: '9CA3AF', align: 'center' });
+      slide.background = { color: '1F2937' };
+      slide.addText('Grazie!', { x: 0.5, y: 2.2, w: 9, h: 0.8, fontSize: 56, bold: true, color: 'FFFFFF', align: 'center' });
+      slide.addText('Leader Ranking', { x: 0.5, y: 3.1, w: 9, h: 0.4, fontSize: 20, color: '2AAA8A', align: 'center' });
+      slide.addText(new Date().toLocaleDateString('it-IT'), { x: 0.5, y: 4.5, w: 9, h: 0.3, fontSize: 14, color: '9CA3AF', align: 'center' });
       
       // Salva
-      pptx.writeFile({ fileName: `LeaderRanking_${periodo.replace(/[^a-zA-Z0-9]/g, '_')}.pptx` });
+      await pptx.writeFile({ fileName: 'LeaderRanking_' + periodo.replace(/[^a-zA-Z0-9]/g, '_') + '.pptx' });
+      
+      // Rimuovi loading
+      document.body.removeChild(loadingDiv);
       
     } catch (err) {
-      console.error('Errore generazione PowerPoint:', err);
-      alert('Errore nella generazione del PowerPoint: ' + err.message);
+      document.body.removeChild(loadingDiv);
+      console.error('Errore PowerPoint:', err);
+      alert('Errore generazione PowerPoint: ' + err.message);
     }
   };
 
@@ -5493,10 +5260,10 @@ export default function Home() {
             )}
             
             {/* RIEPILOGO FV - INSERITI vs EFFETTIVI */}
-            <div style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', borderRadius: 16, padding: 20, marginBottom: 15, color: '#FFF' }}>
+            <div style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, marginBottom: 15, border: '1px solid #E5E7EB' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-                <span style={{ fontSize: 13, color: '#FFD700', fontWeight: 700 }}>☀️ FOTOVOLTAICO</span>
-                <span style={{ fontSize: 9, color: '#666' }}>
+                <span style={{ fontSize: 14, color: '#15803D', fontWeight: 700 }}>☀️ FOTOVOLTAICO</span>
+                <span style={{ fontSize: 9, color: '#6B7280' }}>
                   Pilastro: {reportData.fatturato.coerenza?.fv?.pilastroInseriti} ins / {reportData.fatturato.coerenza?.fv?.pilastroPositivi} pos / {reportData.fatturato.coerenza?.fv?.pilastroLavorazione} lav / {reportData.fatturato.coerenza?.fv?.pilastroPersi} persi
                 </span>
               </div>
@@ -5504,136 +5271,136 @@ export default function Home() {
               {/* Riga 1: Confronto INSERITI vs EFFETTIVI */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 15 }}>
                 {/* Inseriti (Potenziale) */}
-                <div style={{ textAlign: 'center', padding: 12, background: 'rgba(255,255,255,0.08)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)' }}>
-                  <div style={{ fontSize: 9, color: '#888', marginBottom: 3 }}>📋 INSERITI (Potenziale)</div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: '#FFF' }}>€{reportData.fatturato.fv.inseriti.totale.toLocaleString('it-IT')}</div>
-                  <div style={{ fontSize: 10, color: reportData.fatturato.coerenza?.fv?.pilastroInseriti === reportData.fatturato.fv.inseriti.contratti ? '#4CAF50' : '#FF5722', fontWeight: 600 }}>{reportData.fatturato.fv.inseriti.contratti} contratti</div>
+                <div style={{ textAlign: 'center', padding: 12, background: '#F9FAFB', borderRadius: 10, border: '1px solid #E5E7EB' }}>
+                  <div style={{ fontSize: 9, color: '#6B7280', marginBottom: 3 }}>📋 INSERITI (Potenziale)</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: '#1F2937' }}>€{reportData.fatturato.fv.inseriti.totale.toLocaleString('it-IT')}</div>
+                  <div style={{ fontSize: 10, color: reportData.fatturato.coerenza?.fv?.pilastroInseriti === reportData.fatturato.fv.inseriti.contratti ? '#10B981' : '#F59E0B', fontWeight: 600 }}>{reportData.fatturato.fv.inseriti.contratti} contratti</div>
                 </div>
                 
                 {/* Effettivi (Positivi) */}
-                <div style={{ textAlign: 'center', padding: 12, background: 'rgba(76,175,80,0.15)', borderRadius: 10, border: '1px solid rgba(76,175,80,0.3)' }}>
-                  <div style={{ fontSize: 9, color: '#4CAF50', marginBottom: 3 }}>✅ EFFETTIVI (Positivi)</div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: '#4CAF50' }}>€{reportData.fatturato.fv.effettivi.totale.toLocaleString('it-IT')}</div>
-                  <div style={{ fontSize: 10, color: reportData.fatturato.coerenza?.fv?.pilastroPositivi === reportData.fatturato.fv.effettivi.contratti ? '#4CAF50' : '#FF5722', fontWeight: 600 }}>{reportData.fatturato.fv.effettivi.contratti} contratti</div>
+                <div style={{ textAlign: 'center', padding: 12, background: '#F0FDF4', borderRadius: 10, border: '1px solid #BBF7D0' }}>
+                  <div style={{ fontSize: 9, color: '#15803D', marginBottom: 3 }}>✅ EFFETTIVI (Positivi)</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: '#15803D' }}>€{reportData.fatturato.fv.effettivi.totale.toLocaleString('it-IT')}</div>
+                  <div style={{ fontSize: 10, color: reportData.fatturato.coerenza?.fv?.pilastroPositivi === reportData.fatturato.fv.effettivi.contratti ? '#10B981' : '#F59E0B', fontWeight: 600 }}>{reportData.fatturato.fv.effettivi.contratti} contratti</div>
                 </div>
                 
                 {/* In Lavorazione */}
-                <div style={{ textAlign: 'center', padding: 12, background: 'rgba(255,215,0,0.15)', borderRadius: 10, border: '1px solid rgba(255,215,0,0.3)' }}>
-                  <div style={{ fontSize: 9, color: '#FFD700', marginBottom: 3 }}>⏳ DA SBLOCCARE</div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: '#FFD700' }}>€{reportData.fatturato.fv.lavorazione.totale.toLocaleString('it-IT')}</div>
-                  <div style={{ fontSize: 10, color: reportData.fatturato.coerenza?.fv?.pilastroLavorazione === reportData.fatturato.fv.lavorazione.contratti ? '#4CAF50' : '#FF5722', fontWeight: 600 }}>{reportData.fatturato.fv.lavorazione.contratti} contratti</div>
+                <div style={{ textAlign: 'center', padding: 12, background: '#FFFBEB', borderRadius: 10, border: '1px solid #FCD34D' }}>
+                  <div style={{ fontSize: 9, color: '#B45309', marginBottom: 3 }}>⏳ DA SBLOCCARE</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: '#B45309' }}>€{reportData.fatturato.fv.lavorazione.totale.toLocaleString('it-IT')}</div>
+                  <div style={{ fontSize: 10, color: reportData.fatturato.coerenza?.fv?.pilastroLavorazione === reportData.fatturato.fv.lavorazione.contratti ? '#10B981' : '#F59E0B', fontWeight: 600 }}>{reportData.fatturato.fv.lavorazione.contratti} contratti</div>
                 </div>
                 
                 {/* Persi */}
-                <div style={{ textAlign: 'center', padding: 12, background: 'rgba(229,57,53,0.15)', borderRadius: 10, border: '1px solid rgba(229,57,53,0.3)' }}>
-                  <div style={{ fontSize: 9, color: '#E53935', marginBottom: 3 }}>❌ PERSI</div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: '#E53935' }}>€{reportData.fatturato.fv.persi.totale.toLocaleString('it-IT')}</div>
-                  <div style={{ fontSize: 10, color: '#666' }}>{reportData.fatturato.fv.persi.contratti} contratti</div>
+                <div style={{ textAlign: 'center', padding: 12, background: '#FEF2F2', borderRadius: 10, border: '1px solid #FECACA' }}>
+                  <div style={{ fontSize: 9, color: '#DC2626', marginBottom: 3 }}>❌ PERSI</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: '#DC2626' }}>€{reportData.fatturato.fv.persi.totale.toLocaleString('it-IT')}</div>
+                  <div style={{ fontSize: 10, color: '#6B7280' }}>{reportData.fatturato.fv.persi.contratti} contratti</div>
                 </div>
               </div>
               
               {/* Riga 2: Dettagli tecnici */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
-                <div style={{ textAlign: 'center', padding: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
-                  <div style={{ fontSize: 9, color: '#888' }}>⚡ kWp INSTALLATI</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: '#2AAA8A' }}>{reportData.fatturato.fv.effettivi.kw}</div>
+                <div style={{ textAlign: 'center', padding: 8, background: '#F0FDF4', borderRadius: 8 }}>
+                  <div style={{ fontSize: 9, color: '#6B7280' }}>⚡ kWp INSTALLATI</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: '#15803D' }}>{reportData.fatturato.fv.effettivi.kw}</div>
                 </div>
-                <div style={{ textAlign: 'center', padding: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
-                  <div style={{ fontSize: 9, color: '#888' }}>🔋 kWh BATTERIE</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: '#9C27B0' }}>{reportData.fatturato.fv.effettivi.kwh}</div>
+                <div style={{ textAlign: 'center', padding: 8, background: '#F5F3FF', borderRadius: 8 }}>
+                  <div style={{ fontSize: 9, color: '#6B7280' }}>🔋 kWh BATTERIE</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: '#7C3AED' }}>{reportData.fatturato.fv.effettivi.kwh}</div>
                 </div>
-                <div style={{ textAlign: 'center', padding: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
-                  <div style={{ fontSize: 9, color: '#888' }}>⭐ PUNTI EFFETTIVI</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: '#FFD700' }}>{reportData.fatturato.fv.effettivi.punti.toLocaleString('it-IT')}</div>
+                <div style={{ textAlign: 'center', padding: 8, background: '#FFFBEB', borderRadius: 8 }}>
+                  <div style={{ fontSize: 9, color: '#6B7280' }}>⭐ PUNTI EFFETTIVI</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: '#B45309' }}>{reportData.fatturato.fv.effettivi.punti.toLocaleString('it-IT')}</div>
                 </div>
-                <div style={{ textAlign: 'center', padding: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
-                  <div style={{ fontSize: 9, color: '#888' }}>📊 PUNTI INSERITI</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: '#888' }}>{reportData.fatturato.fv.inseriti.punti.toLocaleString('it-IT')}</div>
+                <div style={{ textAlign: 'center', padding: 8, background: '#F9FAFB', borderRadius: 8 }}>
+                  <div style={{ fontSize: 9, color: '#6B7280' }}>📊 PUNTI INSERITI</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: '#6B7280' }}>{reportData.fatturato.fv.inseriti.punti.toLocaleString('it-IT')}</div>
                 </div>
               </div>
             </div>
             
             {/* RIEPILOGO LA - FATTURATO + PUNTI */}
-            <div style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', borderRadius: 16, padding: 20, marginBottom: 20, color: '#FFF' }}>
+            <div style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, marginBottom: 20, border: '1px solid #E5E7EB' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-                <span style={{ fontSize: 13, color: '#FF9800', fontWeight: 700 }}>🌱 LUCE AMICA</span>
-                <span style={{ fontSize: 9, color: '#666' }}>
+                <span style={{ fontSize: 14, color: '#B45309', fontWeight: 700 }}>⚡ LUCE AMICA</span>
+                <span style={{ fontSize: 9, color: '#6B7280' }}>
                   Pilastro: {reportData.fatturato.coerenza?.la?.pilastroInseriti} ins / {reportData.fatturato.coerenza?.la?.pilastroAccettati} acc / {reportData.fatturato.coerenza?.la?.pilastroInFornitura} attivi
                 </span>
               </div>
               
               {/* Riga 1: FATTURATO POTENZIALE (basato su Accettati NWG Spa) */}
               <div style={{ marginBottom: 15 }}>
-                <div style={{ fontSize: 10, color: '#FFD700', fontWeight: 600, marginBottom: 8 }}>💰 FATTURATO POTENZIALE (Stato NWG Spa = Accettato)</div>
+                <div style={{ fontSize: 10, color: '#B45309', fontWeight: 600, marginBottom: 8 }}>💰 FATTURATO POTENZIALE (Stato NWG Spa = Accettato)</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
-                  <div style={{ textAlign: 'center', padding: 12, background: 'rgba(255,255,255,0.08)', borderRadius: 10 }}>
-                    <div style={{ fontSize: 9, color: '#888', marginBottom: 3 }}>📋 INSERITI</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#FFF' }}>€{Math.round(reportData.fatturato.la.inseriti.totale).toLocaleString('it-IT')}</div>
-                    <div style={{ fontSize: 10, color: '#666' }}>{reportData.fatturato.la.inseriti.contratti} contr.</div>
+                  <div style={{ textAlign: 'center', padding: 12, background: '#F9FAFB', borderRadius: 10, border: '1px solid #E5E7EB' }}>
+                    <div style={{ fontSize: 9, color: '#6B7280', marginBottom: 3 }}>📋 INSERITI</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#1F2937' }}>€{Math.round(reportData.fatturato.la.inseriti.totale).toLocaleString('it-IT')}</div>
+                    <div style={{ fontSize: 10, color: '#6B7280' }}>{reportData.fatturato.la.inseriti.contratti} contr.</div>
                   </div>
-                  <div style={{ textAlign: 'center', padding: 12, background: 'rgba(255,215,0,0.15)', borderRadius: 10, border: '1px solid rgba(255,215,0,0.3)' }}>
-                    <div style={{ fontSize: 9, color: '#FFD700', marginBottom: 3 }}>✅ POTENZIALE/ANNO</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#FFD700' }}>€{Math.round(reportData.fatturato.la.accettatiPunti.totale).toLocaleString('it-IT')}</div>
-                    <div style={{ fontSize: 10, color: reportData.fatturato.coerenza?.la?.pilastroAccettati === reportData.fatturato.la.accettatiPunti.contratti ? '#4CAF50' : '#FF5722', fontWeight: 600 }}>{reportData.fatturato.la.accettatiPunti.contratti} accettati</div>
+                  <div style={{ textAlign: 'center', padding: 12, background: '#FFFBEB', borderRadius: 10, border: '1px solid #FCD34D' }}>
+                    <div style={{ fontSize: 9, color: '#B45309', marginBottom: 3 }}>✅ POTENZIALE/ANNO</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#B45309' }}>€{Math.round(reportData.fatturato.la.accettatiPunti.totale).toLocaleString('it-IT')}</div>
+                    <div style={{ fontSize: 10, color: reportData.fatturato.coerenza?.la?.pilastroAccettati === reportData.fatturato.la.accettatiPunti.contratti ? '#10B981' : '#F59E0B', fontWeight: 600 }}>{reportData.fatturato.la.accettatiPunti.contratti} accettati</div>
                   </div>
-                  <div style={{ textAlign: 'center', padding: 12, background: 'rgba(255,215,0,0.08)', borderRadius: 10 }}>
-                    <div style={{ fontSize: 9, color: '#FFD700', marginBottom: 3 }}>📅 POTENZ./MESE</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#FFD700' }}>€{Math.round(reportData.fatturato.la.accettatiPunti.totale / 12).toLocaleString('it-IT')}</div>
-                    <div style={{ fontSize: 10, color: '#666' }}>/mese</div>
+                  <div style={{ textAlign: 'center', padding: 12, background: '#FEF3C7', borderRadius: 10 }}>
+                    <div style={{ fontSize: 9, color: '#B45309', marginBottom: 3 }}>📅 POTENZ./MESE</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#92400E' }}>€{Math.round(reportData.fatturato.la.accettatiPunti.totale / 12).toLocaleString('it-IT')}</div>
+                    <div style={{ fontSize: 10, color: '#6B7280' }}>/mese</div>
                   </div>
-                  <div style={{ textAlign: 'center', padding: 12, background: 'rgba(255,255,255,0.05)', borderRadius: 10 }}>
-                    <div style={{ fontSize: 9, color: '#888', marginBottom: 3 }}>🍃 kWh GREEN</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#FFF' }}>{reportData.fatturato.la.accettatiPunti.kwh.toLocaleString('it-IT')}</div>
-                    <div style={{ fontSize: 10, color: '#666' }}>/anno</div>
+                  <div style={{ textAlign: 'center', padding: 12, background: '#F0FDF4', borderRadius: 10 }}>
+                    <div style={{ fontSize: 9, color: '#15803D', marginBottom: 3 }}>🍃 kWh GREEN</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#15803D' }}>{reportData.fatturato.la.accettatiPunti.kwh.toLocaleString('it-IT')}</div>
+                    <div style={{ fontSize: 10, color: '#6B7280' }}>/anno</div>
                   </div>
                 </div>
               </div>
               
               {/* Riga 2: FATTURATO EFFETTIVO (basato su Attivi NWG Energia - ad oggi) */}
               <div style={{ marginBottom: 15 }}>
-                <div style={{ fontSize: 10, color: '#4CAF50', fontWeight: 600, marginBottom: 8 }}>💰 FATTURATO EFFETTIVO AD OGGI (Stato NWG Energia = Attivo/In fornitura)</div>
+                <div style={{ fontSize: 10, color: '#15803D', fontWeight: 600, marginBottom: 8 }}>💰 FATTURATO EFFETTIVO AD OGGI (Stato NWG Energia = Attivo/In fornitura)</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
-                  <div style={{ textAlign: 'center', padding: 12, background: 'rgba(76,175,80,0.15)', borderRadius: 10, border: '1px solid rgba(76,175,80,0.3)' }}>
-                    <div style={{ fontSize: 9, color: '#4CAF50', marginBottom: 3 }}>✅ ATTIVI OGGI</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#4CAF50' }}>{reportData.fatturato.la.attiviEffettivi.contratti}</div>
-                    <div style={{ fontSize: 10, color: '#666' }}>in fornitura</div>
+                  <div style={{ textAlign: 'center', padding: 12, background: '#F0FDF4', borderRadius: 10, border: '1px solid #BBF7D0' }}>
+                    <div style={{ fontSize: 9, color: '#15803D', marginBottom: 3 }}>✅ ATTIVI OGGI</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#15803D' }}>{reportData.fatturato.la.attiviEffettivi.contratti}</div>
+                    <div style={{ fontSize: 10, color: '#6B7280' }}>in fornitura</div>
                   </div>
-                  <div style={{ textAlign: 'center', padding: 12, background: 'rgba(76,175,80,0.2)', borderRadius: 10, border: '1px solid rgba(76,175,80,0.4)' }}>
-                    <div style={{ fontSize: 9, color: '#4CAF50', marginBottom: 3 }}>💰 EFFETTIVO/ANNO</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#4CAF50' }}>€{Math.round(reportData.fatturato.la.attiviEffettivi.totale).toLocaleString('it-IT')}</div>
-                    <div style={{ fontSize: 10, color: '#666' }}>ricorrente</div>
+                  <div style={{ textAlign: 'center', padding: 12, background: '#DCFCE7', borderRadius: 10, border: '1px solid #86EFAC' }}>
+                    <div style={{ fontSize: 9, color: '#15803D', marginBottom: 3 }}>💰 EFFETTIVO/ANNO</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#166534' }}>€{Math.round(reportData.fatturato.la.attiviEffettivi.totale).toLocaleString('it-IT')}</div>
+                    <div style={{ fontSize: 10, color: '#6B7280' }}>ricorrente</div>
                   </div>
-                  <div style={{ textAlign: 'center', padding: 12, background: 'rgba(76,175,80,0.1)', borderRadius: 10 }}>
-                    <div style={{ fontSize: 9, color: '#4CAF50', marginBottom: 3 }}>📅 EFFETT./MESE</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#4CAF50' }}>€{Math.round(reportData.fatturato.la.attiviEffettivi.totale / 12).toLocaleString('it-IT')}</div>
-                    <div style={{ fontSize: 10, color: '#666' }}>/mese</div>
+                  <div style={{ textAlign: 'center', padding: 12, background: '#F0FDF4', borderRadius: 10 }}>
+                    <div style={{ fontSize: 9, color: '#15803D', marginBottom: 3 }}>📅 EFFETT./MESE</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#15803D' }}>€{Math.round(reportData.fatturato.la.attiviEffettivi.totale / 12).toLocaleString('it-IT')}</div>
+                    <div style={{ fontSize: 10, color: '#6B7280' }}>/mese</div>
                   </div>
-                  <div style={{ textAlign: 'center', padding: 12, background: 'rgba(76,175,80,0.08)', borderRadius: 10 }}>
-                    <div style={{ fontSize: 9, color: '#4CAF50', marginBottom: 3 }}>🍃 kWh GREEN</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#4CAF50' }}>{reportData.fatturato.la.attiviEffettivi.kwh.toLocaleString('it-IT')}</div>
-                    <div style={{ fontSize: 10, color: '#666' }}>/anno</div>
+                  <div style={{ textAlign: 'center', padding: 12, background: '#F0FDF4', borderRadius: 10 }}>
+                    <div style={{ fontSize: 9, color: '#15803D', marginBottom: 3 }}>🍃 kWh GREEN</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#15803D' }}>{reportData.fatturato.la.attiviEffettivi.kwh.toLocaleString('it-IT')}</div>
+                    <div style={{ fontSize: 10, color: '#6B7280' }}>/anno</div>
                   </div>
                 </div>
               </div>
               
               {/* Riga 3: PUNTI (basati su Accettato NWG Spa - anche se poi cessa, pagano!) */}
               <div>
-                <div style={{ fontSize: 10, color: '#FFD700', fontWeight: 600, marginBottom: 8 }}>⭐ PUNTI LA (Stato NWG Spa = Accettato) - anche se poi cessa, pagano!</div>
+                <div style={{ fontSize: 10, color: '#B45309', fontWeight: 600, marginBottom: 8 }}>⭐ PUNTI LA (Stato NWG Spa = Accettato) - anche se poi cessa, pagano!</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-                  <div style={{ textAlign: 'center', padding: 12, background: 'rgba(255,255,255,0.08)', borderRadius: 10 }}>
-                    <div style={{ fontSize: 9, color: '#888', marginBottom: 3 }}>📋 INSERITI</div>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#FFF' }}>{reportData.fatturato.la.inseriti.punti.toLocaleString('it-IT')}</div>
-                    <div style={{ fontSize: 10, color: '#666' }}>{reportData.fatturato.la.inseriti.contratti} contratti</div>
+                  <div style={{ textAlign: 'center', padding: 12, background: '#F9FAFB', borderRadius: 10, border: '1px solid #E5E7EB' }}>
+                    <div style={{ fontSize: 9, color: '#6B7280', marginBottom: 3 }}>📋 INSERITI</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: '#1F2937' }}>{reportData.fatturato.la.inseriti.punti.toLocaleString('it-IT')}</div>
+                    <div style={{ fontSize: 10, color: '#6B7280' }}>{reportData.fatturato.la.inseriti.contratti} contratti</div>
                   </div>
-                  <div style={{ textAlign: 'center', padding: 12, background: 'rgba(255,215,0,0.15)', borderRadius: 10, border: '1px solid rgba(255,215,0,0.3)' }}>
-                    <div style={{ fontSize: 9, color: '#FFD700', marginBottom: 3 }}>✅ ACCETTATI (punti)</div>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#FFD700' }}>{reportData.fatturato.la.accettatiPunti.punti.toLocaleString('it-IT')}</div>
-                    <div style={{ fontSize: 10, color: reportData.fatturato.coerenza?.la?.pilastroAccettati === reportData.fatturato.la.accettatiPunti.contratti ? '#4CAF50' : '#FF5722', fontWeight: 600 }}>{reportData.fatturato.la.accettatiPunti.contratti} contratti</div>
+                  <div style={{ textAlign: 'center', padding: 12, background: '#FFFBEB', borderRadius: 10, border: '1px solid #FCD34D' }}>
+                    <div style={{ fontSize: 9, color: '#B45309', marginBottom: 3 }}>✅ ACCETTATI (punti)</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: '#B45309' }}>{reportData.fatturato.la.accettatiPunti.punti.toLocaleString('it-IT')}</div>
+                    <div style={{ fontSize: 10, color: reportData.fatturato.coerenza?.la?.pilastroAccettati === reportData.fatturato.la.accettatiPunti.contratti ? '#10B981' : '#F59E0B', fontWeight: 600 }}>{reportData.fatturato.la.accettatiPunti.contratti} contratti</div>
                   </div>
-                  <div style={{ textAlign: 'center', padding: 12, background: 'rgba(255,255,255,0.05)', borderRadius: 10 }}>
-                    <div style={{ fontSize: 9, color: '#888', marginBottom: 3 }}>📊 % CONVERSIONE</div>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#FFF' }}>{reportData.fatturato.la.inseriti.contratti > 0 ? Math.round(reportData.fatturato.la.accettatiPunti.contratti / reportData.fatturato.la.inseriti.contratti * 100) : 0}%</div>
-                    <div style={{ fontSize: 10, color: '#666' }}>punti guadagnati</div>
+                  <div style={{ textAlign: 'center', padding: 12, background: '#F9FAFB', borderRadius: 10 }}>
+                    <div style={{ fontSize: 9, color: '#6B7280', marginBottom: 3 }}>📊 % CONVERSIONE</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: '#1F2937' }}>{reportData.fatturato.la.inseriti.contratti > 0 ? Math.round(reportData.fatturato.la.accettatiPunti.contratti / reportData.fatturato.la.inseriti.contratti * 100) : 0}%</div>
+                    <div style={{ fontSize: 10, color: '#6B7280' }}>punti guadagnati</div>
                   </div>
                 </div>
               </div>
@@ -5759,54 +5526,27 @@ export default function Home() {
             </p>
           </div>
           
-          {/* Report PNG */}
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 12 }}>📷 Report PNG (immagini)</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-              <button 
-                onClick={() => downloadReportPNG('generale')}
-                style={{ padding: '12px 20px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', color: '#FFF', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
-              >
-                📊 Report Completo
-              </button>
-              <button 
-                onClick={() => downloadReportPNG('fv')}
-                style={{ padding: '12px 20px', background: '#F0FDF4', color: '#15803D', border: '2px solid #BBF7D0', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-              >
-                ☀️ Fotovoltaico
-              </button>
-              <button 
-                onClick={() => downloadReportPNG('la')}
-                style={{ padding: '12px 20px', background: '#FFFBEB', color: '#B45309', border: '2px solid #FCD34D', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-              >
-                ⚡ Luce Amica
-              </button>
-              <button 
-                onClick={() => downloadReportPNG('seminari')}
-                style={{ padding: '12px 20px', background: '#F5F3FF', color: '#7C3AED', border: '2px solid #C4B5FD', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-              >
-                🎓 Seminari
-              </button>
-              <button 
-                onClick={() => downloadReportPNG('best')}
-                style={{ padding: '12px 20px', background: '#FEF3C7', color: '#B45309', border: '2px solid #FCD34D', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-              >
-                🏆 Top Performers
-              </button>
-            </div>
-          </div>
-          
-          {/* PowerPoint */}
-          <div>
-            <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 12 }}>📽️ Presentazione PowerPoint</div>
+          {/* Bottoni Download */}
+          <div style={{ display: 'flex', gap: 15, flexWrap: 'wrap' }}>
+            <button 
+              onClick={downloadReportPNG}
+              style={{ padding: '16px 28px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', color: '#FFF', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 4px 12px rgba(42,170,138,0.3)' }}
+            >
+              <span style={{ fontSize: 24 }}>📷</span>
+              <div style={{ textAlign: 'left' }}>
+                <div>Scarica Immagine PNG</div>
+                <div style={{ fontSize: 11, opacity: 0.8 }}>Report completo per condivisione</div>
+              </div>
+            </button>
+            
             <button 
               onClick={downloadPowerPoint}
-              style={{ padding: '14px 28px', background: 'linear-gradient(135deg, #1E40AF, #3B82F6)', color: '#FFF', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)' }}
+              style={{ padding: '16px 28px', background: 'linear-gradient(135deg, #1E40AF, #3B82F6)', color: '#FFF', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 4px 12px rgba(59,130,246,0.3)' }}
             >
-              <span style={{ fontSize: 20 }}>📽️</span>
+              <span style={{ fontSize: 24 }}>📽️</span>
               <div style={{ textAlign: 'left' }}>
                 <div>Scarica PowerPoint</div>
-                <div style={{ fontSize: 10, opacity: 0.8 }}>Slide dinamiche per riunioni</div>
+                <div style={{ fontSize: 11, opacity: 0.8 }}>Slide per presentazioni</div>
               </div>
             </button>
           </div>
