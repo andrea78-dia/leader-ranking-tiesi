@@ -682,21 +682,26 @@ export default function Home() {
 
   // === REPORT AGGREGATO v3 - 3 PILASTRI CON CONVERSIONE ===
   const processReportCSV = (type, file) => {
+    console.log(`📂 Caricamento ${type}: ${file.name}`);
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target.result;
-      const data = parseCSV(text);
+      console.log(`📄 ${type} - Testo letto: ${text.length} caratteri`);
+      console.log(`📄 ${type} - Prime 200 char: ${text.substring(0, 200)}`);
       
-      // Filtra IVD: solo "Attivazione START&GO" (escludi rinnovi)
-      let filteredRows = data;
-      if (type === 'ivd') {
-        filteredRows = data.filter(row => {
-          const prodotto = (row['Prodotto'] || '').toLowerCase();
-          return prodotto.includes('attivazione') || prodotto.includes('start');
-        });
+      const data = parseCSV(text);
+      console.log(`📊 ${type} - Righe parsate: ${data.length}`);
+      if (data.length > 0) {
+        console.log(`📊 ${type} - Colonne:`, Object.keys(data[0]));
+        console.log(`📊 ${type} - Prima riga:`, data[0]);
       }
       
-      setReportCSVs(prev => ({ ...prev, [type]: { name: file.name, rows: filteredRows.length, data: filteredRows } }));
+      // IVD: NON filtriamo più, teniamo tutti (nuovi + rinnovi) e calcoliamo statistiche separate
+      setReportCSVs(prev => ({ ...prev, [type]: { name: file.name, rows: data.length, data: data } }));
+      console.log(`✅ ${type} caricato con ${data.length} righe`);
+    };
+    reader.onerror = (e) => {
+      console.error(`❌ Errore lettura ${type}:`, e);
     };
     reader.readAsText(file);
   };
@@ -1080,10 +1085,55 @@ export default function Home() {
       result.heatmapMesi.presenti = calcHeatmapMesi(presentiData);
     }
     
-    // Attivati (IVD Contracts)
+    // Attivati (IVD Contracts) - STATISTICHE COMPLETE
     if (reportCSVs.ivd?.data?.length > 0) {
       const ivdData = reportCSVs.ivd.data;
+      
+      // Statistiche prodotti
+      const nuoviStartGo = ivdData.filter(r => (r['Prodotto'] || '').toLowerCase().includes('start')).length;
+      const nuoviStandard = ivdData.filter(r => (r['Prodotto'] || '').toLowerCase().includes('attivazione') && !(r['Prodotto'] || '').toLowerCase().includes('start')).length;
+      const rinnoviMensili = ivdData.filter(r => (r['Prodotto'] || '').toLowerCase().includes('rinnovo') && (r['Prodotto'] || '').toLowerCase().includes('12')).length;
+      const rinnoviAnnuali = ivdData.filter(r => (r['Prodotto'] || '').toLowerCase().includes('rinnovo') && (r['Prodotto'] || '').toLowerCase().includes('annuale')).length;
+      
+      // Statistiche stato contratto
+      const accettati = ivdData.filter(r => (r['Stato'] || '').toLowerCase().includes('accettato')).length;
+      const recessi = ivdData.filter(r => (r['Stato'] || '').toLowerCase().includes('recesso')).length;
+      const sospesi = ivdData.filter(r => (r['Stato'] || '').toLowerCase().includes('sospeso')).length;
+      
+      // Statistiche VipOffice
+      const vipActive = ivdData.filter(r => (r['Stato Vipoffice IVD'] || '').toLowerCase() === 'active').length;
+      const vipInactive = ivdData.filter(r => (r['Stato Vipoffice IVD'] || '').toLowerCase() === 'inactive').length;
+      
+      // Incroci importanti
+      const accettatiMaInattivi = ivdData.filter(r => 
+        (r['Stato'] || '').toLowerCase().includes('accettato') && 
+        (r['Stato Vipoffice IVD'] || '').toLowerCase() === 'inactive'
+      ).length;
+      
       collabData.attivati = ivdData.length;
+      collabData.ivdDettaglio = {
+        totale: ivdData.length,
+        nuovi: nuoviStartGo + nuoviStandard,
+        nuoviStartGo,
+        nuoviStandard,
+        rinnovi: rinnoviMensili + rinnoviAnnuali,
+        rinnoviMensili,
+        rinnoviAnnuali,
+        // Stati contratto
+        accettati,
+        recessi,
+        sospesi,
+        pctAccettati: ivdData.length > 0 ? Math.round(accettati / ivdData.length * 100) : 0,
+        pctRecessi: ivdData.length > 0 ? Math.round(recessi / ivdData.length * 100) : 0,
+        // VipOffice
+        vipActive,
+        vipInactive,
+        pctVipActive: ivdData.length > 0 ? Math.round(vipActive / ivdData.length * 100) : 0,
+        pctVipInactive: ivdData.length > 0 ? Math.round(vipInactive / ivdData.length * 100) : 0,
+        // Alert
+        accettatiMaInattivi,
+        alertInattivi: accettatiMaInattivi > 0
+      };
       collabData.statiAttivati = countStatiRaggruppati(ivdData, 'Stato', STATO_MAP_IVD);
       
       // Aggiungi attivati alle classifiche esistenti o crea nuove
@@ -1122,6 +1172,7 @@ export default function Home() {
           pctAssenti: collabData.iscritti > 0 ? Math.round(collabData.assenti / collabData.iscritti * 100) : 0,
           pctAttivati: collabData.presenti > 0 ? Math.round(collabData.attivati / collabData.presenti * 100) : 0
         },
+        ivdDettaglio: collabData.ivdDettaglio || null,
         omonimie: collabData.omonimie || [],
         statiAttivati: collabData.statiAttivati,
         classifiche: collabData.classifiche || { k: [], nw: [], sdp: [] },
@@ -2277,7 +2328,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v14.4 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v14.6 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -4932,6 +4983,128 @@ export default function Home() {
               </div>
             </div>
             
+            {/* DETTAGLIO IVD COMPLETO */}
+            {reportData.pilastri.collaboratori.ivdDettaglio && (
+              <div style={{ background: 'linear-gradient(135deg, #FFF8E1, #FFF3E0)', borderRadius: 16, padding: 20, marginBottom: 20, border: '1px solid #FFE082' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                  <span style={{ fontSize: 20 }}>👥</span>
+                  <div>
+                    <h4 style={{ color: '#F57C00', fontSize: 14, margin: 0, fontWeight: 700 }}>DETTAGLIO IVD ATTIVATI</h4>
+                    <p style={{ color: '#8D6E63', fontSize: 10, margin: 0 }}>Nuovi, Rinnovi, Stati contratto e VipOffice</p>
+                  </div>
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
+                  {/* PRODOTTI */}
+                  <div style={{ background: '#FFFFFF', borderRadius: 12, padding: 14, border: '1px solid #E0E0E0' }}>
+                    <div style={{ fontSize: 10, color: '#9E9E9E', marginBottom: 8, fontWeight: 600 }}>📦 PRODOTTI</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 11, color: '#666' }}>🆕 START&GO</span>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: '#4CAF50' }}>{reportData.pilastri.collaboratori.ivdDettaglio.nuoviStartGo}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 11, color: '#666' }}>🆕 STANDARD</span>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: '#2196F3' }}>{reportData.pilastri.collaboratori.ivdDettaglio.nuoviStandard}</span>
+                      </div>
+                      <div style={{ height: 1, background: '#E0E0E0', margin: '4px 0' }} />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 11, color: '#666' }}>🔄 Rinn. 12m</span>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: '#9C27B0' }}>{reportData.pilastri.collaboratori.ivdDettaglio.rinnoviMensili}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 11, color: '#666' }}>🔄 Rinn. Anno</span>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: '#673AB7' }}>{reportData.pilastri.collaboratori.ivdDettaglio.rinnoviAnnuali}</span>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px dashed #E0E0E0', display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 10, color: '#888' }}>Nuovi: <strong style={{ color: '#4CAF50' }}>{reportData.pilastri.collaboratori.ivdDettaglio.nuovi}</strong></span>
+                      <span style={{ fontSize: 10, color: '#888' }}>Rinnovi: <strong style={{ color: '#9C27B0' }}>{reportData.pilastri.collaboratori.ivdDettaglio.rinnovi}</strong></span>
+                    </div>
+                  </div>
+                  
+                  {/* STATO CONTRATTO */}
+                  <div style={{ background: '#FFFFFF', borderRadius: 12, padding: 14, border: '1px solid #E0E0E0' }}>
+                    <div style={{ fontSize: 10, color: '#9E9E9E', marginBottom: 8, fontWeight: 600 }}>📋 STATO CONTRATTO</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 11, color: '#666' }}>✅ Accettato</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 16, fontWeight: 700, color: '#4CAF50' }}>{reportData.pilastri.collaboratori.ivdDettaglio.accettati}</span>
+                          <span style={{ fontSize: 10, color: '#4CAF50', background: '#E8F5E9', padding: '2px 6px', borderRadius: 10 }}>{reportData.pilastri.collaboratori.ivdDettaglio.pctAccettati}%</span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 11, color: '#666' }}>❌ Recesso</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 16, fontWeight: 700, color: '#F44336' }}>{reportData.pilastri.collaboratori.ivdDettaglio.recessi}</span>
+                          <span style={{ fontSize: 10, color: '#F44336', background: '#FFEBEE', padding: '2px 6px', borderRadius: 10 }}>{reportData.pilastri.collaboratori.ivdDettaglio.pctRecessi}%</span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 11, color: '#666' }}>⏳ Sospeso</span>
+                        <span style={{ fontSize: 16, fontWeight: 700, color: '#FF9800' }}>{reportData.pilastri.collaboratori.ivdDettaglio.sospesi}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* VIPOFFICE */}
+                  <div style={{ background: '#FFFFFF', borderRadius: 12, padding: 14, border: '1px solid #E0E0E0' }}>
+                    <div style={{ fontSize: 10, color: '#9E9E9E', marginBottom: 8, fontWeight: 600 }}>🖥️ STATO VIPOFFICE</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 11, color: '#666' }}>🟢 Active</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 16, fontWeight: 700, color: '#4CAF50' }}>{reportData.pilastri.collaboratori.ivdDettaglio.vipActive}</span>
+                          <span style={{ fontSize: 10, color: '#4CAF50', background: '#E8F5E9', padding: '2px 6px', borderRadius: 10 }}>{reportData.pilastri.collaboratori.ivdDettaglio.pctVipActive}%</span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 11, color: '#666' }}>🔴 Inactive</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 16, fontWeight: 700, color: '#F44336' }}>{reportData.pilastri.collaboratori.ivdDettaglio.vipInactive}</span>
+                          <span style={{ fontSize: 10, color: '#F44336', background: '#FFEBEE', padding: '2px 6px', borderRadius: 10 }}>{reportData.pilastri.collaboratori.ivdDettaglio.pctVipInactive}%</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Alert inattivi */}
+                    {reportData.pilastri.collaboratori.ivdDettaglio.accettatiMaInattivi > 0 && (
+                      <div style={{ marginTop: 10, padding: 8, background: '#FFF3E0', borderRadius: 8, border: '1px solid #FFB74D' }}>
+                        <div style={{ fontSize: 10, color: '#E65100', fontWeight: 600 }}>
+                          ⚠️ {reportData.pilastri.collaboratori.ivdDettaglio.accettatiMaInattivi} Accettati ma INATTIVI
+                        </div>
+                        <div style={{ fontSize: 9, color: '#8D6E63', marginTop: 2 }}>Da riattivare/contattare</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Barra riepilogo totali */}
+                <div style={{ background: '#FFFFFF', borderRadius: 10, padding: 12, display: 'flex', justifyContent: 'space-around', alignItems: 'center', border: '1px solid #E0E0E0' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#FF9800' }}>{reportData.pilastri.collaboratori.ivdDettaglio.totale}</div>
+                    <div style={{ fontSize: 9, color: '#888' }}>TOTALE IVD</div>
+                  </div>
+                  <div style={{ width: 1, height: 30, background: '#E0E0E0' }} />
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#4CAF50' }}>{reportData.pilastri.collaboratori.ivdDettaglio.nuovi}</div>
+                    <div style={{ fontSize: 9, color: '#888' }}>NUOVI</div>
+                  </div>
+                  <div style={{ width: 1, height: 30, background: '#E0E0E0' }} />
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#9C27B0' }}>{reportData.pilastri.collaboratori.ivdDettaglio.rinnovi}</div>
+                    <div style={{ fontSize: 9, color: '#888' }}>RINNOVI</div>
+                  </div>
+                  <div style={{ width: 1, height: 30, background: '#E0E0E0' }} />
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#4CAF50' }}>{reportData.pilastri.collaboratori.ivdDettaglio.vipActive}</div>
+                    <div style={{ fontSize: 9, color: '#888' }}>VIP ACTIVE</div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {/* DETTAGLIO STATI COLLABORATORI */}
             {reportData.pilastri.collaboratori.statiDettaglio && reportData.pilastri.collaboratori.statiDettaglio.length > 0 && (
               <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, marginBottom: 20 }}>
@@ -5508,21 +5681,21 @@ export default function Home() {
               • I punti VipOffice potrebbero includere <strong>accettati di inserimenti anni precedenti</strong> non presenti in questo export
             </div>
             
-            {/* CLASSIFICHE FATTURATO - 2 colonne */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 15 }}>
+            {/* CLASSIFICHE FATTURATO - 2 colonne con più spazio */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 20, marginTop: 20 }}>
               {/* Classifica K Manager FV */}
-              <div style={{ background: '#F8F8F8', borderRadius: 12, padding: 15 }}>
-                <div style={{ fontSize: 12, color: '#2AAA8A', fontWeight: 700, marginBottom: 10 }}>👑 TOP K MANAGER - FV Effettivo <span style={{ fontSize: 10, color: '#999', fontWeight: 400 }}>({reportData.fatturato.fv.classificaK.length})</span></div>
-                <div style={{ maxHeight: 350, overflowY: 'auto', paddingRight: 5 }}>
+              <div style={{ background: '#F8F8F8', borderRadius: 16, padding: 20 }}>
+                <div style={{ fontSize: 13, color: '#2AAA8A', fontWeight: 700, marginBottom: 12 }}>👑 TOP K MANAGER - FV Effettivo <span style={{ fontSize: 10, color: '#999', fontWeight: 400 }}>({reportData.fatturato.fv.classificaK.length})</span></div>
+                <div style={{ maxHeight: 400, overflowY: 'auto', paddingRight: 8 }}>
                   {reportData.fatturato.fv.classificaK.map(([nome, dati], i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #E8E8E8', fontSize: 11, background: i < 3 ? 'rgba(42,170,138,0.05)' : 'transparent' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ width: 22, height: 22, borderRadius: '50%', background: i < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: i < 3 ? '#FFF' : '#666' }}>{i + 1}</span>
-                        <span style={{ fontWeight: i < 3 ? 700 : 500, color: '#333', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nome}</span>
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 8px', borderBottom: '1px solid #E8E8E8', fontSize: 12, background: i < 3 ? 'rgba(42,170,138,0.05)' : 'transparent', borderRadius: 8, marginBottom: 2 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                        <span style={{ width: 24, height: 24, borderRadius: '50%', background: i < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: i < 3 ? '#FFF' : '#666', flexShrink: 0 }}>{i + 1}</span>
+                        <span style={{ fontWeight: i < 3 ? 700 : 500, color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>{nome}</span>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 700, color: '#4CAF50', fontSize: 13 }}>€{dati.fatturato.toLocaleString('it-IT')}</div>
-                        <div style={{ fontSize: 9, color: '#888' }}>{dati.kw}kW | {dati.kwh}kWh | {dati.punti}pt</div>
+                      <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 10 }}>
+                        <div style={{ fontWeight: 700, color: '#4CAF50', fontSize: 14 }}>€{dati.fatturato.toLocaleString('it-IT')}</div>
+                        <div style={{ fontSize: 10, color: '#888' }}>{dati.kw}kW | {dati.punti}pt</div>
                       </div>
                     </div>
                   ))}
@@ -5530,18 +5703,18 @@ export default function Home() {
               </div>
               
               {/* Classifica Networker FV */}
-              <div style={{ background: '#F8F8F8', borderRadius: 12, padding: 15 }}>
-                <div style={{ fontSize: 12, color: '#9C27B0', fontWeight: 700, marginBottom: 10 }}>⭐ TOP NETWORKER - FV Effettivo <span style={{ fontSize: 10, color: '#999', fontWeight: 400 }}>({reportData.fatturato.fv.classificaNW.length})</span></div>
-                <div style={{ maxHeight: 350, overflowY: 'auto', paddingRight: 5 }}>
+              <div style={{ background: '#F8F8F8', borderRadius: 16, padding: 20 }}>
+                <div style={{ fontSize: 13, color: '#9C27B0', fontWeight: 700, marginBottom: 12 }}>⭐ TOP NETWORKER - FV Effettivo <span style={{ fontSize: 10, color: '#999', fontWeight: 400 }}>({reportData.fatturato.fv.classificaNW.length})</span></div>
+                <div style={{ maxHeight: 400, overflowY: 'auto', paddingRight: 8 }}>
                   {reportData.fatturato.fv.classificaNW.map(([nome, dati], i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #E8E8E8', fontSize: 11, background: i < 3 ? 'rgba(156,39,176,0.05)' : 'transparent' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ width: 22, height: 22, borderRadius: '50%', background: i < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: i < 3 ? '#FFF' : '#666' }}>{i + 1}</span>
-                        <span style={{ fontWeight: i < 3 ? 700 : 500, color: '#333', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nome}</span>
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 8px', borderBottom: '1px solid #E8E8E8', fontSize: 12, background: i < 3 ? 'rgba(156,39,176,0.05)' : 'transparent', borderRadius: 8, marginBottom: 2 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                        <span style={{ width: 24, height: 24, borderRadius: '50%', background: i < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: i < 3 ? '#FFF' : '#666', flexShrink: 0 }}>{i + 1}</span>
+                        <span style={{ fontWeight: i < 3 ? 700 : 500, color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>{nome}</span>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 700, color: '#4CAF50', fontSize: 13 }}>€{dati.fatturato.toLocaleString('it-IT')}</div>
-                        <div style={{ fontSize: 9, color: '#888' }}>{dati.kw}kW | {dati.kwh}kWh | {dati.punti}pt</div>
+                      <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 10 }}>
+                        <div style={{ fontWeight: 700, color: '#4CAF50', fontSize: 14 }}>€{dati.fatturato.toLocaleString('it-IT')}</div>
+                        <div style={{ fontSize: 10, color: '#888' }}>{dati.kw}kW | {dati.punti}pt</div>
                       </div>
                     </div>
                   ))}
@@ -5549,18 +5722,18 @@ export default function Home() {
               </div>
               
               {/* Classifica K Manager LA */}
-              <div style={{ background: '#F8F8F8', borderRadius: 12, padding: 15 }}>
-                <div style={{ fontSize: 12, color: '#FF9800', fontWeight: 700, marginBottom: 10 }}>👑 TOP K MANAGER - LA Accettati <span style={{ fontSize: 10, color: '#999', fontWeight: 400 }}>({reportData.fatturato.la.classificaK.length})</span></div>
-                <div style={{ maxHeight: 350, overflowY: 'auto', paddingRight: 5 }}>
+              <div style={{ background: '#F8F8F8', borderRadius: 16, padding: 20 }}>
+                <div style={{ fontSize: 13, color: '#FF9800', fontWeight: 700, marginBottom: 12 }}>👑 TOP K MANAGER - LA Accettati <span style={{ fontSize: 10, color: '#999', fontWeight: 400 }}>({reportData.fatturato.la.classificaK.length})</span></div>
+                <div style={{ maxHeight: 400, overflowY: 'auto', paddingRight: 8 }}>
                   {reportData.fatturato.la.classificaK.map(([nome, dati], i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #E8E8E8', fontSize: 11, background: i < 3 ? 'rgba(255,152,0,0.05)' : 'transparent' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ width: 22, height: 22, borderRadius: '50%', background: i < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: i < 3 ? '#FFF' : '#666' }}>{i + 1}</span>
-                        <span style={{ fontWeight: i < 3 ? 700 : 500, color: '#333', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nome}</span>
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 8px', borderBottom: '1px solid #E8E8E8', fontSize: 12, background: i < 3 ? 'rgba(255,152,0,0.05)' : 'transparent', borderRadius: 8, marginBottom: 2 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                        <span style={{ width: 24, height: 24, borderRadius: '50%', background: i < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: i < 3 ? '#FFF' : '#666', flexShrink: 0 }}>{i + 1}</span>
+                        <span style={{ fontWeight: i < 3 ? 700 : 500, color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>{nome}</span>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 700, color: '#FF9800', fontSize: 13 }}>€{Math.round(dati.fatturato).toLocaleString('it-IT')}/anno</div>
-                        <div style={{ fontSize: 9, color: '#888' }}>{dati.contratti} contr. | {dati.punti}pt | {dati.kwh.toLocaleString('it-IT')}kWh</div>
+                      <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 10 }}>
+                        <div style={{ fontWeight: 700, color: '#FF9800', fontSize: 14 }}>€{Math.round(dati.fatturato).toLocaleString('it-IT')}/anno</div>
+                        <div style={{ fontSize: 10, color: '#888' }}>{dati.contratti} contr. | {dati.punti}pt</div>
                       </div>
                     </div>
                   ))}
@@ -5568,18 +5741,18 @@ export default function Home() {
               </div>
               
               {/* Classifica Networker LA */}
-              <div style={{ background: '#F8F8F8', borderRadius: 12, padding: 15 }}>
-                <div style={{ fontSize: 12, color: '#4CAF50', fontWeight: 700, marginBottom: 10 }}>⭐ TOP NETWORKER - LA Accettati <span style={{ fontSize: 10, color: '#999', fontWeight: 400 }}>({reportData.fatturato.la.classificaNW.length})</span></div>
-                <div style={{ maxHeight: 350, overflowY: 'auto', paddingRight: 5 }}>
+              <div style={{ background: '#F8F8F8', borderRadius: 16, padding: 20 }}>
+                <div style={{ fontSize: 13, color: '#4CAF50', fontWeight: 700, marginBottom: 12 }}>⭐ TOP NETWORKER - LA Accettati <span style={{ fontSize: 10, color: '#999', fontWeight: 400 }}>({reportData.fatturato.la.classificaNW.length})</span></div>
+                <div style={{ maxHeight: 400, overflowY: 'auto', paddingRight: 8 }}>
                   {reportData.fatturato.la.classificaNW.map(([nome, dati], i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #E8E8E8', fontSize: 11, background: i < 3 ? 'rgba(76,175,80,0.05)' : 'transparent' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ width: 22, height: 22, borderRadius: '50%', background: i < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: i < 3 ? '#FFF' : '#666' }}>{i + 1}</span>
-                        <span style={{ fontWeight: i < 3 ? 700 : 500, color: '#333', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nome}</span>
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 8px', borderBottom: '1px solid #E8E8E8', fontSize: 12, background: i < 3 ? 'rgba(76,175,80,0.05)' : 'transparent', borderRadius: 8, marginBottom: 2 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                        <span style={{ width: 24, height: 24, borderRadius: '50%', background: i < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: i < 3 ? '#FFF' : '#666', flexShrink: 0 }}>{i + 1}</span>
+                        <span style={{ fontWeight: i < 3 ? 700 : 500, color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>{nome}</span>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 700, color: '#4CAF50', fontSize: 13 }}>€{Math.round(dati.fatturato).toLocaleString('it-IT')}/anno</div>
-                        <div style={{ fontSize: 9, color: '#888' }}>{dati.punti}pt | {dati.kwh.toLocaleString('it-IT')}kWh green</div>
+                      <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 10 }}>
+                        <div style={{ fontWeight: 700, color: '#4CAF50', fontSize: 14 }}>€{Math.round(dati.fatturato).toLocaleString('it-IT')}/anno</div>
+                        <div style={{ fontSize: 10, color: '#888' }}>{dati.punti}pt | {dati.kwh.toLocaleString('it-IT')}kWh</div>
                       </div>
                     </div>
                   ))}
@@ -5757,7 +5930,7 @@ export default function Home() {
         </div>
         
         {/* Footer versione */}
-        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v14.4</p>
+        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v14.6</p>
       </div>
     </div></>);
 
@@ -5951,7 +6124,7 @@ export default function Home() {
           </div>
         )}
       </main>
-      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v14.4 • Leader Ranking</footer>
+      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v14.6 • Leader Ranking</footer>
     </div></>);
 
   // PREVIEW
