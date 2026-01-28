@@ -1375,17 +1375,43 @@ export default function Home() {
       // Conta contratti totali per ogni IVD e calcola giorni da attivazione
       const oggi = new Date();
       trackerCoaching.forEach(tracker => {
-        // Conta LA totali
+        // Conta LA totali e punti
+        let puntiLA = 0;
         tracker.totaleLA = laData.filter(la => {
           const intermediario = la['Nome Intermediario'] || '';
-          return confrontaNomi(intermediario, tracker.nome);
+          if (confrontaNomi(intermediario, tracker.nome)) {
+            // Calcola punti LA (15 o 20)
+            const prodotto = la['Prodotto'] || la['Offerta'] || '';
+            puntiLA += prodotto.includes('20') ? 20 : 15;
+            return true;
+          }
+          return false;
         }).length;
+        tracker.puntiLA = puntiLA;
         
-        // Conta FV totali
+        // Conta FV totali e punti (stima 400 pt per contratto)
+        let puntiFV = 0;
         tracker.totaleFV = fvData.filter(fv => {
           const intermediario = fv['Nome Intermediario'] || '';
-          return confrontaNomi(intermediario, tracker.nome);
+          if (confrontaNomi(intermediario, tracker.nome)) {
+            puntiFV += 400; // Media punti FV
+            return true;
+          }
+          return false;
         }).length;
+        tracker.puntiFV = puntiFV;
+        
+        // Punti totali produzione propria
+        tracker.puntiTotali = puntiLA + puntiFV;
+        
+        // Percentuali LA/FV
+        if (tracker.puntiTotali > 0) {
+          tracker.pctLA = Math.round(puntiLA / tracker.puntiTotali * 100);
+          tracker.pctFV = Math.round(puntiFV / tracker.puntiTotali * 100);
+        } else {
+          tracker.pctLA = 0;
+          tracker.pctFV = 0;
+        }
         
         // Conta Seminari invitati
         tracker.totaleSeminari = semData.filter(sem => {
@@ -1408,10 +1434,25 @@ export default function Home() {
         // Giorni da attivazione
         const dataAtt = new Date(tracker.dataAttivazione);
         tracker.giorniDaAttivazione = Math.floor((oggi - dataAtt) / (1000 * 60 * 60 * 24));
+        
+        // SCORE = Punti × Velocità (100 / media giorni primi contratti)
+        const giorniValidi = [tracker.giorniLA, tracker.giorniFV, tracker.giorniIscritto, tracker.giorniAttivato].filter(g => g !== null && g >= 0);
+        if (giorniValidi.length > 0 && tracker.puntiTotali > 0) {
+          const mediaGiorni = giorniValidi.reduce((a, b) => a + b, 0) / giorniValidi.length;
+          tracker.velocita = mediaGiorni > 0 ? Math.round(100 / mediaGiorni * 10) / 10 : 10; // Max velocità se 0 giorni
+          tracker.score = Math.round(tracker.puntiTotali * tracker.velocita);
+        } else if (tracker.puntiTotali > 0) {
+          // Ha punti ma nessun primo contratto tracciato - usa velocità base
+          tracker.velocita = 1;
+          tracker.score = tracker.puntiTotali;
+        } else {
+          tracker.velocita = 0;
+          tracker.score = 0;
+        }
       });
       
-      // ORDINAMENTO: per produttività totale (chi ha fatto di più in cima)
-      trackerCoaching.sort((a, b) => b.produttivitaTotale - a.produttivitaTotale);
+      // ORDINAMENTO: per SCORE (punti × velocità)
+      trackerCoaching.sort((a, b) => b.score - a.score);
       
       // Calcola medie
       const conLA = trackerCoaching.filter(t => t.giorniLA !== null);
@@ -1429,6 +1470,26 @@ export default function Home() {
         ivdConContratti,
         ivdInattivi,
         pctInattivi: Math.round(ivdInattivi / trackerCoaching.length * 100) || 0,
+        // Statistiche punti produzione propria
+        puntiStats: {
+          totale: trackerCoaching.reduce((s, t) => s + t.puntiTotali, 0),
+          totaleLA: trackerCoaching.reduce((s, t) => s + t.puntiLA, 0),
+          totaleFV: trackerCoaching.reduce((s, t) => s + t.puntiFV, 0),
+          media: Math.round(trackerCoaching.reduce((s, t) => s + t.puntiTotali, 0) / trackerCoaching.length) || 0,
+          mediaProduttivi: ivdConContratti > 0 ? Math.round(trackerCoaching.filter(t => t.puntiTotali > 0).reduce((s, t) => s + t.puntiTotali, 0) / ivdConContratti) : 0,
+          contrattiLA: trackerCoaching.reduce((s, t) => s + t.totaleLA, 0),
+          contrattiFV: trackerCoaching.reduce((s, t) => s + t.totaleFV, 0)
+        },
+        // Funnel produzione
+        funnel: {
+          totaleNuovi: trackerCoaching.length,
+          vipActive: trackerCoaching.filter(t => t.vipOffice === 'active').length || Math.round(trackerCoaching.length * 0.8), // stima se non disponibile
+          conProduzione: ivdConContratti,
+          conLA: trackerCoaching.filter(t => t.totaleLA > 0).length,
+          conFV: trackerCoaching.filter(t => t.totaleFV > 0).length,
+          con1Iscritto: trackerCoaching.filter(t => t.totaleSeminari > 0).length,
+          con1Attivato: trackerCoaching.filter(t => t.totaleIVDPortati > 0).length
+        },
         medie: {
           la: conLA.length > 0 ? Math.round(conLA.reduce((s, t) => s + t.giorniLA, 0) / conLA.length) : null,
           fv: conFV.length > 0 ? Math.round(conFV.reduce((s, t) => s + t.giorniFV, 0) / conFV.length) : null,
@@ -1463,7 +1524,9 @@ export default function Home() {
       fv: { 
         // I numeri contratti DEVONO corrispondere a quelli del pilastro
         inseriti: { totale: 0, punti: 0, kw: 0, kwh: 0, contratti: 0, noMatch: 0 },
-        effettivi: { totale: 0, punti: 0, kw: 0, kwh: 0, contratti: 0 },
+        effettivi: { totale: 0, punti: 0, kw: 0, kwh: 0, contratti: 0 }, // Solo positivi (fatturato entrato)
+        // NUOVO: Punti accettati = positivi + AAC in attesa sblocco (danno punti anche se non fatturato)
+        accettatiPunti: { totale: 0, punti: 0, kw: 0, kwh: 0, contratti: 0, aacContratti: 0 },
         lavorazione: { totale: 0, punti: 0, kw: 0, kwh: 0, contratti: 0 },
         persi: { totale: 0, punti: 0, kw: 0, kwh: 0, contratti: 0 },
         perK: {}, perNW: {},
@@ -1527,6 +1590,9 @@ export default function Home() {
           fatturato.perMese.punti[meseProd].totaleIns += match.punti;
         }
         
+        // Verifica se è AAC in attesa sblocco (per punti accettati)
+        const isAAC = stato.toLowerCase().includes('aac') && stato.toLowerCase().includes('attesa');
+        
         // Breakdown per stato (DEVE corrispondere al pilastro!)
         if (cat === 'positivo') {
           fatturato.fv.effettivi.totale += match.prezzo;
@@ -1534,6 +1600,13 @@ export default function Home() {
           fatturato.fv.effettivi.kw += match.kw;
           fatturato.fv.effettivi.kwh += match.kwh;
           fatturato.fv.effettivi.contratti++;
+          
+          // Anche i positivi contano per punti accettati
+          fatturato.fv.accettatiPunti.totale += match.prezzo;
+          fatturato.fv.accettatiPunti.punti += match.punti;
+          fatturato.fv.accettatiPunti.kw += match.kw;
+          fatturato.fv.accettatiPunti.kwh += match.kwh;
+          fatturato.fv.accettatiPunti.contratti++;
           
           // Track per mese (effettivi)
           if (meseProd) {
@@ -1567,6 +1640,16 @@ export default function Home() {
           fatturato.fv.lavorazione.kw += match.kw;
           fatturato.fv.lavorazione.kwh += match.kwh;
           fatturato.fv.lavorazione.contratti++;
+          
+          // AAC in attesa sblocco: NON è fatturato MA dà PUNTI accettati!
+          if (isAAC) {
+            fatturato.fv.accettatiPunti.totale += 0; // NON conta per fatturato
+            fatturato.fv.accettatiPunti.punti += match.punti; // MA conta per punti!
+            fatturato.fv.accettatiPunti.kw += match.kw;
+            fatturato.fv.accettatiPunti.kwh += match.kwh;
+            fatturato.fv.accettatiPunti.contratti++;
+            fatturato.fv.accettatiPunti.aacContratti++; // Track quanti sono AAC
+          }
         } else if (cat === 'negativo') {
           fatturato.fv.persi.totale += match.prezzo;
           fatturato.fv.persi.punti += match.punti;
@@ -2328,7 +2411,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v14.6 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v15.1 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -2343,6 +2426,106 @@ export default function Home() {
       link.download = `dashboard_${eventDate.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.png`;
       link.href = imgData;
       link.click();
+    }
+  };
+
+  // === SCREENSHOT SEZIONI REPORT (usa html2canvas dinamico) ===
+  const screenshotSection = async (sectionId, filename) => {
+    try {
+      // Carica html2canvas dinamicamente
+      if (!window.html2canvas) {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+        document.head.appendChild(script);
+        await new Promise(resolve => script.onload = resolve);
+      }
+      
+      const element = document.getElementById(sectionId);
+      if (!element) {
+        alert(`Sezione ${sectionId} non trovata`);
+        return;
+      }
+      
+      // Mostra loading
+      const originalBg = element.style.background;
+      element.style.background = '#FFFFFF';
+      
+      const canvas = await window.html2canvas(element, {
+        scale: 2, // Alta risoluzione
+        useCORS: true,
+        backgroundColor: '#FFFFFF',
+        logging: false
+      });
+      
+      element.style.background = originalBg;
+      
+      // Download
+      const link = document.createElement('a');
+      link.download = `${filename}_${new Date().toISOString().slice(0,10)}.png`;
+      link.href = canvas.toDataURL('image/png', 1.0);
+      link.click();
+    } catch (err) {
+      console.error('Screenshot error:', err);
+      alert('Errore nella generazione dello screenshot');
+    }
+  };
+  
+  // Screenshot tutte le sezioni come ZIP
+  const screenshotAllSections = async () => {
+    try {
+      // Carica JSZip e html2canvas dinamicamente
+      if (!window.JSZip) {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+        document.head.appendChild(script);
+        await new Promise(resolve => script.onload = resolve);
+      }
+      if (!window.html2canvas) {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+        document.head.appendChild(script);
+        await new Promise(resolve => script.onload = resolve);
+      }
+      
+      const zip = new window.JSZip();
+      const sections = [
+        { id: 'section-fv', name: '01_Pilastro_FV' },
+        { id: 'section-la', name: '02_Pilastro_LA' },
+        { id: 'section-collab', name: '03_Pilastro_Collaboratori' },
+        { id: 'section-tracker', name: '04_Tracker_Coaching' },
+        { id: 'section-fatturato', name: '05_Analisi_Fatturato' },
+        { id: 'section-classifiche-fatturato', name: '06_Classifiche_Fatturato' },
+        { id: 'section-alert', name: '07_Alert_Da_Attivare' }
+      ];
+      
+      // Mostra loading
+      const loadingDiv = document.createElement('div');
+      loadingDiv.innerHTML = '<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999"><div style="background:white;padding:40px;border-radius:16px;text-align:center"><div style="font-size:48px;margin-bottom:16px">📸</div><div style="font-size:18px;font-weight:600" id="screenshot-progress">Generazione screenshot...</div></div></div>';
+      document.body.appendChild(loadingDiv);
+      
+      let count = 0;
+      for (const section of sections) {
+        const element = document.getElementById(section.id);
+        if (element) {
+          document.getElementById('screenshot-progress').textContent = `Screenshot ${++count}/${sections.length}: ${section.name}`;
+          const canvas = await window.html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#FFFFFF', logging: false });
+          const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+          zip.file(`${section.name}.png`, blob);
+        }
+      }
+      
+      // Genera e scarica ZIP
+      document.getElementById('screenshot-progress').textContent = 'Creazione ZIP...';
+      const content = await zip.generateAsync({ type: 'blob' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(content);
+      link.download = `Report_Screenshot_${new Date().toISOString().slice(0,10)}.zip`;
+      link.click();
+      
+      document.body.removeChild(loadingDiv);
+    } catch (err) {
+      console.error('Screenshot all error:', err);
+      alert('Errore nella generazione degli screenshot');
     }
   };
 
@@ -4613,7 +4796,7 @@ export default function Home() {
         
         {/* PILASTRO FOTOVOLTAICO */}
         {reportData.pilastri.fv && (
-          <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
+          <div id="section-fv" style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 28 }}>☀️</span>
@@ -4622,11 +4805,14 @@ export default function Home() {
                   <p style={{ color: '#666', fontSize: 12, margin: 0 }}>Totale inseriti: {reportData.pilastri.fv.totale}</p>
                 </div>
               </div>
-              {reportData.periodoRiferimento && (
-                <div style={{ background: '#F0FDF4', padding: '6px 12px', borderRadius: 8, border: '1px solid #BBF7D0' }}>
-                  <span style={{ fontSize: 11, color: '#15803D', fontWeight: 600 }}>📅 {reportData.periodoRiferimento.label}</span>
-                </div>
-              )}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button onClick={() => screenshotSection('section-fv', 'Pilastro_FV')} style={{ padding: '6px 12px', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>📷</button>
+                {reportData.periodoRiferimento && (
+                  <div style={{ background: '#F0FDF4', padding: '6px 12px', borderRadius: 8, border: '1px solid #BBF7D0' }}>
+                    <span style={{ fontSize: 11, color: '#15803D', fontWeight: 600 }}>📅 {reportData.periodoRiferimento.label}</span>
+                  </div>
+                )}
+              </div>
             </div>
             
             {/* FUNNEL GRANDE - CON TUTTE LE % */}
@@ -4712,7 +4898,7 @@ export default function Home() {
               })()}
             </div>
             
-            {/* CLASSIFICHE CON 4 COLONNE */}
+            {/* CLASSIFICHE CON 4 COLONNE + % */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
               {[
                 { title: 'K MANAGER', emoji: '👑', data: reportData.pilastri.fv.classifiche.k, color: '#B45309' },
@@ -4722,7 +4908,7 @@ export default function Home() {
                 <div key={title} style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
                   <div style={{ fontSize: 13, color: color, fontWeight: 700, marginBottom: 12 }}>{emoji} {title} <span style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 400 }}>({data.length})</span></div>
                   {/* Header 4 colonne */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 40px)', gap: 4, marginBottom: 8, paddingBottom: 8, borderBottom: '2px solid #E5E7EB' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 50px)', gap: 4, marginBottom: 8, paddingBottom: 8, borderBottom: '2px solid #E5E7EB' }}>
                     <span style={{ fontSize: 9, color: '#9CA3AF', fontWeight: 600 }}>Nome</span>
                     <span style={{ fontSize: 9, color: '#3B82F6', fontWeight: 600, textAlign: 'center' }}>Ins</span>
                     <span style={{ fontSize: 9, color: '#10B981', fontWeight: 600, textAlign: 'center' }}>Pos</span>
@@ -4730,10 +4916,15 @@ export default function Home() {
                     <span style={{ fontSize: 9, color: '#EF4444', fontWeight: 600, textAlign: 'center' }}>Per</span>
                   </div>
                   <div style={{ maxHeight: 350, overflowY: 'auto' }}>
-                    {data.map(([name, stats], i) => (
+                    {data.map(([name, stats], i) => {
+                      const tot = stats.total || 1;
+                      const pctPos = Math.round((stats.positivo || 0) / tot * 100);
+                      const pctLav = Math.round((stats.lavorazione || 0) / tot * 100);
+                      const pctNeg = Math.round((stats.negativo || 0) / tot * 100);
+                      return (
                       <div key={i} style={{ 
                         display: 'grid', 
-                        gridTemplateColumns: '1fr repeat(4, 40px)', 
+                        gridTemplateColumns: '1fr repeat(4, 50px)', 
                         gap: 4, 
                         padding: '6px 0', 
                         borderBottom: '1px solid #F3F4F6', 
@@ -4741,14 +4932,14 @@ export default function Home() {
                         background: i < 3 ? `${color}08` : 'transparent'
                       }}>
                         <span style={{ color: '#1F2937', fontWeight: i < 3 ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {i < 3 ? ['🥇','🥈','🥉'][i] : `${i+1}°`} {name.length > 15 ? name.substring(0,15) + '...' : name}
+                          {i < 3 ? ['🥇','🥈','🥉'][i] : `${i+1}°`} {name.length > 12 ? name.substring(0,12) + '...' : name}
                         </span>
                         <span style={{ color: '#3B82F6', fontWeight: 600, textAlign: 'center' }}>{stats.total || 0}</span>
-                        <span style={{ color: '#10B981', fontWeight: 600, textAlign: 'center' }}>{stats.positivo || 0}</span>
-                        <span style={{ color: '#F59E0B', fontWeight: 600, textAlign: 'center' }}>{stats.lavorazione || 0}</span>
-                        <span style={{ color: '#EF4444', fontWeight: 600, textAlign: 'center' }}>{stats.negativo || 0}</span>
+                        <span style={{ textAlign: 'center' }}><span style={{ color: '#10B981', fontWeight: 600 }}>{stats.positivo || 0}</span><span style={{ fontSize: 8, color: '#9CA3AF' }}> {pctPos}%</span></span>
+                        <span style={{ textAlign: 'center' }}><span style={{ color: '#F59E0B', fontWeight: 600 }}>{stats.lavorazione || 0}</span><span style={{ fontSize: 8, color: '#9CA3AF' }}> {pctLav}%</span></span>
+                        <span style={{ textAlign: 'center' }}><span style={{ color: '#EF4444', fontWeight: 600 }}>{stats.negativo || 0}</span><span style={{ fontSize: 8, color: '#9CA3AF' }}> {pctNeg}%</span></span>
                       </div>
-                    ))}
+                    );})}
                   </div>
                 </div>
               ))}
@@ -4758,7 +4949,7 @@ export default function Home() {
         
         {/* PILASTRO LUCE AMICA */}
         {reportData.pilastri.energy && (
-          <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
+          <div id="section-la" style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 28 }}>⚡</span>
@@ -4767,11 +4958,14 @@ export default function Home() {
                   <p style={{ color: '#666', fontSize: 12, margin: 0 }}>Totale inseriti: {reportData.pilastri.energy.totale}</p>
                 </div>
               </div>
-              {reportData.periodoRiferimento && (
-                <div style={{ background: '#FFFBEB', padding: '6px 12px', borderRadius: 8, border: '1px solid #FCD34D' }}>
-                  <span style={{ fontSize: 11, color: '#B45309', fontWeight: 600 }}>📅 {reportData.periodoRiferimento.label}</span>
-                </div>
-              )}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button onClick={() => screenshotSection('section-la', 'Pilastro_LA')} style={{ padding: '6px 12px', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>📷</button>
+                {reportData.periodoRiferimento && (
+                  <div style={{ background: '#FFFBEB', padding: '6px 12px', borderRadius: 8, border: '1px solid #FCD34D' }}>
+                    <span style={{ fontSize: 11, color: '#B45309', fontWeight: 600 }}>📅 {reportData.periodoRiferimento.label}</span>
+                  </div>
+                )}
+              </div>
             </div>
             
             {/* FUNNEL GRANDE */}
@@ -4903,7 +5097,7 @@ export default function Home() {
               </div>
             </div>
             
-            {/* CLASSIFICHE LA - CON 4 COLONNE */}
+            {/* CLASSIFICHE LA - CON 4 COLONNE + % */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
               {[
                 { title: 'K MANAGER', emoji: '👑', data: reportData.pilastri.energy.classifiche.k, color: '#B45309' },
@@ -4913,7 +5107,7 @@ export default function Home() {
                 <div key={title} style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
                   <div style={{ fontSize: 13, color: color, fontWeight: 700, marginBottom: 12 }}>{emoji} {title} <span style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 400 }}>({data.length})</span></div>
                   {/* Header 4 colonne */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 40px)', gap: 4, marginBottom: 8, paddingBottom: 8, borderBottom: '2px solid #E5E7EB' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 50px)', gap: 4, marginBottom: 8, paddingBottom: 8, borderBottom: '2px solid #E5E7EB' }}>
                     <span style={{ fontSize: 9, color: '#9CA3AF', fontWeight: 600 }}>Nome</span>
                     <span style={{ fontSize: 9, color: '#3B82F6', fontWeight: 600, textAlign: 'center' }}>Ins</span>
                     <span style={{ fontSize: 9, color: '#10B981', fontWeight: 600, textAlign: 'center' }}>Acc</span>
@@ -4921,10 +5115,15 @@ export default function Home() {
                     <span style={{ fontSize: 9, color: '#EF4444', fontWeight: 600, textAlign: 'center' }}>Per</span>
                   </div>
                   <div style={{ maxHeight: 350, overflowY: 'auto' }}>
-                    {data.map(([name, stats], i) => (
+                    {data.map(([name, stats], i) => {
+                      const tot = stats.total || 1;
+                      const pctAcc = Math.round((stats.positivo || 0) / tot * 100);
+                      const pctLav = Math.round((stats.lavorabile || 0) / tot * 100);
+                      const pctPer = Math.round((stats.meno || 0) / tot * 100);
+                      return (
                       <div key={i} style={{ 
                         display: 'grid', 
-                        gridTemplateColumns: '1fr repeat(4, 40px)', 
+                        gridTemplateColumns: '1fr repeat(4, 50px)', 
                         gap: 4, 
                         padding: '6px 0', 
                         borderBottom: '1px solid #F3F4F6', 
@@ -4932,14 +5131,14 @@ export default function Home() {
                         background: i < 3 ? `${color}08` : 'transparent'
                       }}>
                         <span style={{ color: '#1F2937', fontWeight: i < 3 ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {i < 3 ? ['🥇','🥈','🥉'][i] : `${i+1}°`} {name.length > 15 ? name.substring(0,15) + '...' : name}
+                          {i < 3 ? ['🥇','🥈','🥉'][i] : `${i+1}°`} {name.length > 12 ? name.substring(0,12) + '...' : name}
                         </span>
                         <span style={{ color: '#3B82F6', fontWeight: 600, textAlign: 'center' }}>{stats.total || 0}</span>
-                        <span style={{ color: '#10B981', fontWeight: 600, textAlign: 'center' }}>{stats.positivo || 0}</span>
-                        <span style={{ color: '#F59E0B', fontWeight: 600, textAlign: 'center' }}>{stats.lavorabile || 0}</span>
-                        <span style={{ color: '#EF4444', fontWeight: 600, textAlign: 'center' }}>{stats.meno || 0}</span>
+                        <span style={{ textAlign: 'center' }}><span style={{ color: '#10B981', fontWeight: 600 }}>{stats.positivo || 0}</span><span style={{ fontSize: 8, color: '#9CA3AF' }}> {pctAcc}%</span></span>
+                        <span style={{ textAlign: 'center' }}><span style={{ color: '#F59E0B', fontWeight: 600 }}>{stats.lavorabile || 0}</span><span style={{ fontSize: 8, color: '#9CA3AF' }}> {pctLav}%</span></span>
+                        <span style={{ textAlign: 'center' }}><span style={{ color: '#EF4444', fontWeight: 600 }}>{stats.meno || 0}</span><span style={{ fontSize: 8, color: '#9CA3AF' }}> {pctPer}%</span></span>
                       </div>
-                    ))}
+                    );})}
                   </div>
                 </div>
               ))}
@@ -4949,7 +5148,7 @@ export default function Home() {
         
         {/* PILASTRO COLLABORATORI */}
         {reportData.pilastri.collaboratori && (
-          <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
+          <div id="section-collab" style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 28 }}>🎓</span>
@@ -4958,14 +5157,17 @@ export default function Home() {
                   <p style={{ color: '#666', fontSize: 12, margin: 0 }}>Funnel: Iscritti → Presenti → Attivati</p>
                 </div>
               </div>
-              {reportData.periodoRiferimento && (
-                <div style={{ background: '#F5F3FF', padding: '6px 12px', borderRadius: 8, border: '1px solid #C4B5FD' }}>
-                  <span style={{ fontSize: 11, color: '#7C3AED', fontWeight: 600 }}>📅 {reportData.periodoRiferimento.label}</span>
-                </div>
-              )}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button onClick={() => screenshotSection('section-collab', 'Pilastro_Collaboratori')} style={{ padding: '6px 12px', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>📷</button>
+                {reportData.periodoRiferimento && (
+                  <div style={{ background: '#F5F3FF', padding: '6px 12px', borderRadius: 8, border: '1px solid #C4B5FD' }}>
+                    <span style={{ fontSize: 11, color: '#7C3AED', fontWeight: 600 }}>📅 {reportData.periodoRiferimento.label}</span>
+                  </div>
+                )}
+              </div>
             </div>
             
-            {/* FUNNEL */}
+            {/* FUNNEL - Usa NUOVI attivati, non totale */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, marginBottom: 25, flexWrap: 'wrap' }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 42, fontWeight: 800, color: '#2AAA8A' }}>{reportData.pilastri.collaboratori.funnel.iscritti}</div>
@@ -4978,8 +5180,11 @@ export default function Home() {
               </div>
               <div style={{ fontSize: 24, color: '#E0E0E0' }}>→</div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 42, fontWeight: 800, color: '#FF9800' }}>{reportData.pilastri.collaboratori.funnel.attivati}</div>
-                <div style={{ fontSize: 12, color: '#FF9800' }}>🟠 Attivati <span style={{ fontSize: 10 }}>({reportData.pilastri.collaboratori.funnel.pctAttivati}%)</span></div>
+                <div style={{ fontSize: 42, fontWeight: 800, color: '#FF9800' }}>{reportData.pilastri.collaboratori.ivdDettaglio?.nuovi || reportData.pilastri.collaboratori.funnel.attivati}</div>
+                <div style={{ fontSize: 12, color: '#FF9800' }}>🟠 Nuovi Attivati <span style={{ fontSize: 10 }}>({reportData.pilastri.collaboratori.funnel.presenti > 0 ? Math.round((reportData.pilastri.collaboratori.ivdDettaglio?.nuovi || reportData.pilastri.collaboratori.funnel.attivati) / reportData.pilastri.collaboratori.funnel.presenti * 100) : 0}%)</span></div>
+                {reportData.pilastri.collaboratori.ivdDettaglio?.rinnovi > 0 && (
+                  <div style={{ fontSize: 10, color: '#9CA3AF', marginTop: 4 }}>+ {reportData.pilastri.collaboratori.ivdDettaglio.rinnovi} rinnovi</div>
+                )}
               </div>
             </div>
             
@@ -5174,7 +5379,7 @@ export default function Home() {
               </div>
             )}
             
-            {/* CLASSIFICHE COLLAB CON 4 COLONNE */}
+            {/* CLASSIFICHE COLLAB CON 4 COLONNE + % */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
               {[
                 { title: 'K MANAGER', emoji: '👑', data: reportData.pilastri.collaboratori.classifiche.k, color: '#B45309' },
@@ -5184,7 +5389,7 @@ export default function Home() {
                 <div key={title} style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
                   <div style={{ fontSize: 13, color: color, fontWeight: 700, marginBottom: 12 }}>{emoji} {title} <span style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 400 }}>({data.length})</span></div>
                   {/* Header 4 colonne */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 40px)', gap: 4, marginBottom: 8, paddingBottom: 8, borderBottom: '2px solid #E5E7EB' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 50px)', gap: 4, marginBottom: 8, paddingBottom: 8, borderBottom: '2px solid #E5E7EB' }}>
                     <span style={{ fontSize: 9, color: '#9CA3AF', fontWeight: 600 }}>Nome</span>
                     <span style={{ fontSize: 9, color: '#3B82F6', fontWeight: 600, textAlign: 'center' }}>Iscr</span>
                     <span style={{ fontSize: 9, color: '#10B981', fontWeight: 600, textAlign: 'center' }}>Pres</span>
@@ -5192,10 +5397,14 @@ export default function Home() {
                     <span style={{ fontSize: 9, color: '#F59E0B', fontWeight: 600, textAlign: 'center' }}>Att</span>
                   </div>
                   <div style={{ maxHeight: 350, overflowY: 'auto' }}>
-                    {data.map(([name, stats], i) => (
+                    {data.map(([name, stats], i) => {
+                      const tot = stats.iscritti || stats.total || 1;
+                      const pctPres = Math.round((stats.presenti || 0) / tot * 100);
+                      const pctAss = Math.round((stats.assenti || 0) / tot * 100);
+                      return (
                       <div key={i} style={{ 
                         display: 'grid', 
-                        gridTemplateColumns: '1fr repeat(4, 40px)', 
+                        gridTemplateColumns: '1fr repeat(4, 50px)', 
                         gap: 4, 
                         padding: '6px 0', 
                         borderBottom: '1px solid #F3F4F6', 
@@ -5203,14 +5412,14 @@ export default function Home() {
                         background: i < 3 ? `${color}08` : 'transparent'
                       }}>
                         <span style={{ color: '#1F2937', fontWeight: i < 3 ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {i < 3 ? ['🥇','🥈','🥉'][i] : `${i+1}°`} {name.length > 15 ? name.substring(0,15) + '...' : name}
+                          {i < 3 ? ['🥇','🥈','🥉'][i] : `${i+1}°`} {name.length > 12 ? name.substring(0,12) + '...' : name}
                         </span>
                         <span style={{ color: '#3B82F6', fontWeight: 600, textAlign: 'center' }}>{stats.iscritti || stats.total || 0}</span>
-                        <span style={{ color: '#10B981', fontWeight: 600, textAlign: 'center' }}>{stats.presenti || 0}</span>
-                        <span style={{ color: '#EF4444', fontWeight: 600, textAlign: 'center' }}>{stats.assenti || 0}</span>
+                        <span style={{ textAlign: 'center' }}><span style={{ color: '#10B981', fontWeight: 600 }}>{stats.presenti || 0}</span><span style={{ fontSize: 8, color: '#9CA3AF' }}> {pctPres}%</span></span>
+                        <span style={{ textAlign: 'center' }}><span style={{ color: '#EF4444', fontWeight: 600 }}>{stats.assenti || 0}</span><span style={{ fontSize: 8, color: '#9CA3AF' }}> {pctAss}%</span></span>
                         <span style={{ color: '#F59E0B', fontWeight: 600, textAlign: 'center' }}>{stats.attivati || 0}</span>
                       </div>
-                    ))}
+                    );})}
                   </div>
                 </div>
               ))}
@@ -5353,108 +5562,161 @@ export default function Home() {
           </div>
         )}
         
-        {/* TRACKER COACHING - FULL WIDTH, PIÙ SPAZIOSO */}
+        {/* TRACKER COACHING - COMPLETO CON CLASSIFICA SCORE */}
         {reportData.trackerCoaching && reportData.trackerCoaching.totale > 0 && (
-          <div style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, border: '1px solid #E5E7EB' }}>
+          <div id="section-tracker" style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, border: '1px solid #E5E7EB' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontSize: 28 }}>🎯</span>
                 <div>
-                  <h3 style={{ color: '#2AAA8A', fontSize: 18, margin: 0, fontWeight: 700 }}>Tracker Coaching</h3>
-                  <p style={{ color: '#6B7280', fontSize: 12, margin: '4px 0 0' }}>Monitoraggio milestone dei {reportData.trackerCoaching.totale} nuovi IVD attivati</p>
+                  <h3 style={{ color: '#2AAA8A', fontSize: 18, margin: 0, fontWeight: 700 }}>Tracker Coaching - Nuovi IVD Livello 1</h3>
+                  <p style={{ color: '#6B7280', fontSize: 12, margin: '4px 0 0' }}>Monitoraggio produzione propria dei {reportData.trackerCoaching.totale} nuovi attivati</p>
                 </div>
               </div>
               <button onClick={() => {
-                const csv = 'Nome IVD;Data Attivazione;Networker;LA (giorni);FV (giorni);Iscritto (giorni);Attivato (giorni)\n' + 
-                  reportData.trackerCoaching.lista.map(t => 
-                    `${t.nome};${t.dataAttivazione};${t.networker || '-'};${t.giorniLA !== null ? t.giorniLA : '-'};${t.giorniFV !== null ? t.giorniFV : '-'};${t.giorniIscritto !== null ? t.giorniIscritto : '-'};${t.giorniAttivato !== null ? t.giorniAttivato : '-'}`
+                const csv = 'Nome IVD;Punti;%LA;%FV;1°LA;1°FV;1°Iscr;1°Att;Score\n' + 
+                  reportData.trackerCoaching.lista.filter(t => t.puntiTotali > 0).map(t => 
+                    `${t.nome};${t.puntiTotali};${t.pctLA}%;${t.pctFV}%;${t.giorniLA !== null ? t.giorniLA+'g' : '-'};${t.giorniFV !== null ? t.giorniFV+'g' : '-'};${t.giorniIscritto !== null ? t.giorniIscritto+'g' : '-'};${t.giorniAttivato !== null ? t.giorniAttivato+'g' : '-'};${t.score}`
                   ).join('\n');
                 const blob = new Blob([csv], {type: 'text/csv'}); const url = URL.createObjectURL(blob);
-                const link = document.createElement('a'); link.href = url; link.download = 'tracker_coaching_completo.csv'; link.click();
+                const link = document.createElement('a'); link.href = url; link.download = 'classifica_produzione_propria.csv'; link.click();
               }} style={{ padding: '8px 16px', background: '#2AAA8A', color: '#FFF', border: 'none', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>📥 Scarica CSV</button>
             </div>
             
-            {/* Metriche tempo - più grandi e spaziose */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
-              <div style={{ background: '#F0FDF4', borderRadius: 12, padding: 20, textAlign: 'center', border: '2px solid #BBF7D0' }}>
-                <div style={{ fontSize: 11, color: '#15803D', fontWeight: 600, marginBottom: 4 }}>⚡ Prima LA</div>
-                <div style={{ fontSize: 36, fontWeight: 800, color: '#15803D' }}>{reportData.trackerCoaching.medie.la !== null ? reportData.trackerCoaching.medie.la : '-'}</div>
-                <div style={{ fontSize: 12, color: '#6B7280' }}>giorni</div>
-                <div style={{ fontSize: 11, color: '#10B981', fontWeight: 600, marginTop: 8 }}>{reportData.trackerCoaching.completamento.la}% completato</div>
+            {/* FUNNEL PRODUZIONE */}
+            <div style={{ background: 'linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 100%)', borderRadius: 16, padding: 20, marginBottom: 20, border: '1px solid #BBF7D0' }}>
+              <div style={{ fontSize: 12, color: '#15803D', fontWeight: 700, marginBottom: 16 }}>📊 FUNNEL PRODUZIONE NUOVI ATTIVATI</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ textAlign: 'center', padding: '12px 20px', background: '#FFFFFF', borderRadius: 12, border: '2px solid #2AAA8A' }}>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: '#2AAA8A' }}>{reportData.trackerCoaching.totale}</div>
+                  <div style={{ fontSize: 10, color: '#666' }}>NUOVI ATTIVATI</div>
+                </div>
+                <div style={{ fontSize: 20, color: '#BBF7D0' }}>→</div>
+                <div style={{ textAlign: 'center', padding: '12px 20px', background: '#FFFFFF', borderRadius: 12, border: '2px solid #4CAF50' }}>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: '#4CAF50' }}>{reportData.trackerCoaching.funnel?.vipActive || Math.round(reportData.trackerCoaching.totale * 0.8)}</div>
+                  <div style={{ fontSize: 10, color: '#666' }}>ACTIVE VipOffice</div>
+                </div>
+                <div style={{ fontSize: 20, color: '#BBF7D0' }}>→</div>
+                <div style={{ textAlign: 'center', padding: '12px 20px', background: '#FFFFFF', borderRadius: 12, border: '2px solid #10B981' }}>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: '#10B981' }}>{reportData.trackerCoaching.ivdConContratti}</div>
+                  <div style={{ fontSize: 10, color: '#666' }}>CON PRODUZIONE</div>
+                  <div style={{ fontSize: 9, color: '#10B981', marginTop: 4 }}>{Math.round(reportData.trackerCoaching.ivdConContratti / reportData.trackerCoaching.totale * 100)}%</div>
+                </div>
               </div>
-              <div style={{ background: '#FFFBEB', borderRadius: 12, padding: 20, textAlign: 'center', border: '2px solid #FCD34D' }}>
-                <div style={{ fontSize: 11, color: '#B45309', fontWeight: 600, marginBottom: 4 }}>☀️ Primo FV</div>
-                <div style={{ fontSize: 36, fontWeight: 800, color: '#B45309' }}>{reportData.trackerCoaching.medie.fv !== null ? reportData.trackerCoaching.medie.fv : '-'}</div>
-                <div style={{ fontSize: 12, color: '#6B7280' }}>giorni</div>
-                <div style={{ fontSize: 11, color: '#F59E0B', fontWeight: 600, marginTop: 8 }}>{reportData.trackerCoaching.completamento.fv}% completato</div>
-              </div>
-              <div style={{ background: '#F5F3FF', borderRadius: 12, padding: 20, textAlign: 'center', border: '2px solid #C4B5FD' }}>
-                <div style={{ fontSize: 11, color: '#6D28D9', fontWeight: 600, marginBottom: 4 }}>🎓 Primo Iscritto</div>
-                <div style={{ fontSize: 36, fontWeight: 800, color: '#6D28D9' }}>{reportData.trackerCoaching.medie.iscritto !== null ? reportData.trackerCoaching.medie.iscritto : '-'}</div>
-                <div style={{ fontSize: 12, color: '#6B7280' }}>giorni</div>
-                <div style={{ fontSize: 11, color: '#8B5CF6', fontWeight: 600, marginTop: 8 }}>{reportData.trackerCoaching.completamento.iscritto}% completato</div>
-              </div>
-              <div style={{ background: '#FFF7ED', borderRadius: 12, padding: 20, textAlign: 'center', border: '2px solid #FDBA74' }}>
-                <div style={{ fontSize: 11, color: '#EA580C', fontWeight: 600, marginBottom: 4 }}>👥 Primo Attivato</div>
-                <div style={{ fontSize: 36, fontWeight: 800, color: '#EA580C' }}>{reportData.trackerCoaching.medie.attivato !== null ? reportData.trackerCoaching.medie.attivato : '-'}</div>
-                <div style={{ fontSize: 12, color: '#6B7280' }}>giorni</div>
-                <div style={{ fontSize: 11, color: '#F97316', fontWeight: 600, marginTop: 8 }}>{reportData.trackerCoaching.completamento.attivato}% completato</div>
+              {/* Sotto-funnel produzione */}
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 16 }}>
+                <div style={{ textAlign: 'center', padding: '8px 16px', background: '#ECFDF5', borderRadius: 8 }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#15803D' }}>{reportData.trackerCoaching.funnel?.conLA || reportData.trackerCoaching.puntiStats?.contrattiLA || 0}</div>
+                  <div style={{ fontSize: 9, color: '#666' }}>con LA</div>
+                </div>
+                <div style={{ textAlign: 'center', padding: '8px 16px', background: '#FFFBEB', borderRadius: 8 }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#B45309' }}>{reportData.trackerCoaching.funnel?.conFV || reportData.trackerCoaching.puntiStats?.contrattiFV || 0}</div>
+                  <div style={{ fontSize: 9, color: '#666' }}>con FV</div>
+                </div>
+                <div style={{ textAlign: 'center', padding: '8px 16px', background: '#F5F3FF', borderRadius: 8 }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#6D28D9' }}>{reportData.trackerCoaching.funnel?.con1Iscritto || 0}</div>
+                  <div style={{ fontSize: 9, color: '#666' }}>con 1° Iscritto</div>
+                </div>
+                <div style={{ textAlign: 'center', padding: '8px 16px', background: '#FFF7ED', borderRadius: 8 }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#EA580C' }}>{reportData.trackerCoaching.funnel?.con1Attivato || 0}</div>
+                  <div style={{ fontSize: 9, color: '#666' }}>con 1° Attivato</div>
+                </div>
               </div>
             </div>
             
-            {/* Statistiche e lista */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 20 }}>
-              {/* Stats sintetiche */}
-              <div style={{ background: '#F9FAFB', borderRadius: 12, padding: 20, border: '1px solid #E5E7EB' }}>
-                <div style={{ fontSize: 14, color: '#374151', fontWeight: 700, marginBottom: 16 }}>📊 Riepilogo</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#F0FDF4', borderRadius: 8, border: '1px solid #BBF7D0' }}>
-                    <span style={{ fontSize: 12, color: '#15803D', fontWeight: 500 }}>✅ IVD Produttivi</span>
-                    <span style={{ fontSize: 20, fontWeight: 800, color: '#15803D' }}>{reportData.trackerCoaching.ivdConContratti}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#FEF2F2', borderRadius: 8, border: '1px solid #FECACA' }}>
-                    <span style={{ fontSize: 12, color: '#DC2626', fontWeight: 500 }}>❌ IVD Inattivi</span>
-                    <span style={{ fontSize: 20, fontWeight: 800, color: '#DC2626' }}>{reportData.trackerCoaching.ivdInattivi} ({reportData.trackerCoaching.pctInattivi}%)</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#FFFFFF', borderRadius: 8, border: '1px solid #E5E7EB' }}>
-                    <span style={{ fontSize: 12, color: '#6B7280', fontWeight: 500 }}>📋 Totale IVD</span>
-                    <span style={{ fontSize: 20, fontWeight: 800, color: '#1F2937' }}>{reportData.trackerCoaching.totale}</span>
-                  </div>
-                </div>
+            {/* METRICHE VELOCITÀ + PRODUZIONE PROPRIA */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 20 }}>
+              <div style={{ background: '#F0FDF4', borderRadius: 12, padding: 16, textAlign: 'center', border: '2px solid #BBF7D0' }}>
+                <div style={{ fontSize: 10, color: '#15803D', fontWeight: 600, marginBottom: 4 }}>⚡ Prima LA</div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: '#15803D' }}>{reportData.trackerCoaching.medie.la !== null ? reportData.trackerCoaching.medie.la : '-'}</div>
+                <div style={{ fontSize: 10, color: '#6B7280' }}>giorni</div>
+                <div style={{ fontSize: 10, color: '#10B981', fontWeight: 600, marginTop: 4 }}>{reportData.trackerCoaching.completamento.la}%</div>
               </div>
-              
-              {/* Lista IVD */}
-              <div style={{ background: '#F9FAFB', borderRadius: 12, padding: 20, border: '1px solid #E5E7EB' }}>
-                <div style={{ fontSize: 14, color: '#374151', fontWeight: 700, marginBottom: 16 }}>👥 Lista Nuovi IVD (ultimi 15)</div>
-                {/* Header */}
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr repeat(4, 60px)', gap: 8, marginBottom: 8, paddingBottom: 8, borderBottom: '2px solid #E5E7EB' }}>
-                  <span style={{ fontSize: 10, color: '#6B7280', fontWeight: 600 }}>Nome IVD</span>
-                  <span style={{ fontSize: 10, color: '#6B7280', fontWeight: 600 }}>Attivazione</span>
-                  <span style={{ fontSize: 10, color: '#15803D', fontWeight: 600, textAlign: 'center' }}>LA</span>
-                  <span style={{ fontSize: 10, color: '#B45309', fontWeight: 600, textAlign: 'center' }}>FV</span>
-                  <span style={{ fontSize: 10, color: '#6D28D9', fontWeight: 600, textAlign: 'center' }}>Iscr</span>
-                  <span style={{ fontSize: 10, color: '#EA580C', fontWeight: 600, textAlign: 'center' }}>Att</span>
-                </div>
-                <div style={{ maxHeight: 250, overflowY: 'auto' }}>
-                  {reportData.trackerCoaching.lista.slice(0, 15).map((t, i) => (
-                    <div key={i} style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: '2fr 1fr repeat(4, 60px)', 
-                      gap: 8, 
-                      padding: '10px 4px', 
-                      fontSize: 11, 
-                      background: i % 2 === 0 ? 'transparent' : '#FFFFFF',
-                      borderRadius: 4
-                    }}>
-                      <span style={{ color: '#1F2937', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.nome}</span>
-                      <span style={{ color: '#6B7280' }}>{t.dataAttivazione}</span>
-                      <span style={{ textAlign: 'center', color: t.giorniLA !== null ? '#15803D' : '#D1D5DB', fontWeight: t.giorniLA !== null ? 700 : 400 }}>{t.giorniLA !== null ? `${t.giorniLA}g` : '-'}</span>
-                      <span style={{ textAlign: 'center', color: t.giorniFV !== null ? '#B45309' : '#D1D5DB', fontWeight: t.giorniFV !== null ? 700 : 400 }}>{t.giorniFV !== null ? `${t.giorniFV}g` : '-'}</span>
-                      <span style={{ textAlign: 'center', color: t.giorniIscritto !== null ? '#6D28D9' : '#D1D5DB', fontWeight: t.giorniIscritto !== null ? 700 : 400 }}>{t.giorniIscritto !== null ? `${t.giorniIscritto}g` : '-'}</span>
-                      <span style={{ textAlign: 'center', color: t.giorniAttivato !== null ? '#EA580C' : '#D1D5DB', fontWeight: t.giorniAttivato !== null ? 700 : 400 }}>{t.giorniAttivato !== null ? `${t.giorniAttivato}g` : '-'}</span>
-                    </div>
-                  ))}
-                </div>
+              <div style={{ background: '#FFFBEB', borderRadius: 12, padding: 16, textAlign: 'center', border: '2px solid #FCD34D' }}>
+                <div style={{ fontSize: 10, color: '#B45309', fontWeight: 600, marginBottom: 4 }}>☀️ Primo FV</div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: '#B45309' }}>{reportData.trackerCoaching.medie.fv !== null ? reportData.trackerCoaching.medie.fv : '-'}</div>
+                <div style={{ fontSize: 10, color: '#6B7280' }}>giorni</div>
+                <div style={{ fontSize: 10, color: '#F59E0B', fontWeight: 600, marginTop: 4 }}>{reportData.trackerCoaching.completamento.fv}%</div>
+              </div>
+              <div style={{ background: '#F5F3FF', borderRadius: 12, padding: 16, textAlign: 'center', border: '2px solid #C4B5FD' }}>
+                <div style={{ fontSize: 10, color: '#6D28D9', fontWeight: 600, marginBottom: 4 }}>🎓 1° Iscritto</div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: '#6D28D9' }}>{reportData.trackerCoaching.medie.iscritto !== null ? reportData.trackerCoaching.medie.iscritto : '-'}</div>
+                <div style={{ fontSize: 10, color: '#6B7280' }}>giorni</div>
+                <div style={{ fontSize: 10, color: '#8B5CF6', fontWeight: 600, marginTop: 4 }}>{reportData.trackerCoaching.completamento.iscritto}%</div>
+              </div>
+              <div style={{ background: '#FFF7ED', borderRadius: 12, padding: 16, textAlign: 'center', border: '2px solid #FDBA74' }}>
+                <div style={{ fontSize: 10, color: '#EA580C', fontWeight: 600, marginBottom: 4 }}>👥 1° Attivato</div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: '#EA580C' }}>{reportData.trackerCoaching.medie.attivato !== null ? reportData.trackerCoaching.medie.attivato : '-'}</div>
+                <div style={{ fontSize: 10, color: '#6B7280' }}>giorni</div>
+                <div style={{ fontSize: 10, color: '#F97316', fontWeight: 600, marginTop: 4 }}>{reportData.trackerCoaching.completamento.attivato}%</div>
+              </div>
+              <div style={{ background: 'linear-gradient(135deg, #2AAA8A 0%, #20917A 100%)', borderRadius: 12, padding: 16, textAlign: 'center' }}>
+                <div style={{ fontSize: 10, color: '#FFF', fontWeight: 600, marginBottom: 4 }}>⭐ PROD. PROPRIA</div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: '#FFF' }}>{reportData.trackerCoaching.puntiStats?.media || 0}</div>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>pt/IVD</div>
+                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.9)', marginTop: 4 }}>({reportData.trackerCoaching.puntiStats?.mediaProduttivi || 0} se produttivo)</div>
+              </div>
+            </div>
+            
+            {/* CLASSIFICA COMPLETA PRODUZIONE PROPRIA */}
+            <div style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div style={{ fontSize: 14, color: '#374151', fontWeight: 700 }}>🏆 Classifica Produzione Propria ({reportData.trackerCoaching.ivdConContratti} IVD produttivi)</div>
+                <div style={{ fontSize: 10, color: '#6B7280', fontStyle: 'italic' }}>Score = Punti × Velocità (100/media gg)</div>
+              </div>
+              {/* Header */}
+              <div style={{ display: 'grid', gridTemplateColumns: '30px 1fr 70px 50px 50px 55px 55px 55px 55px 70px', gap: 6, marginBottom: 8, paddingBottom: 8, borderBottom: '2px solid #E5E7EB' }}>
+                <span style={{ fontSize: 9, color: '#6B7280', fontWeight: 600 }}>#</span>
+                <span style={{ fontSize: 9, color: '#6B7280', fontWeight: 600 }}>NOME</span>
+                <span style={{ fontSize: 9, color: '#2AAA8A', fontWeight: 600, textAlign: 'center' }}>PUNTI</span>
+                <span style={{ fontSize: 9, color: '#15803D', fontWeight: 600, textAlign: 'center' }}>%LA</span>
+                <span style={{ fontSize: 9, color: '#B45309', fontWeight: 600, textAlign: 'center' }}>%FV</span>
+                <span style={{ fontSize: 9, color: '#15803D', fontWeight: 600, textAlign: 'center' }}>1°LA</span>
+                <span style={{ fontSize: 9, color: '#B45309', fontWeight: 600, textAlign: 'center' }}>1°FV</span>
+                <span style={{ fontSize: 9, color: '#6D28D9', fontWeight: 600, textAlign: 'center' }}>1°ISCR</span>
+                <span style={{ fontSize: 9, color: '#EA580C', fontWeight: 600, textAlign: 'center' }}>1°ATT</span>
+                <span style={{ fontSize: 9, color: '#DC2626', fontWeight: 600, textAlign: 'center' }}>SCORE</span>
+              </div>
+              <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+                {reportData.trackerCoaching.lista.filter(t => t.puntiTotali > 0).map((t, i) => (
+                  <div key={i} style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: '30px 1fr 70px 50px 50px 55px 55px 55px 55px 70px', 
+                    gap: 6, 
+                    padding: '8px 4px', 
+                    fontSize: 11, 
+                    background: i < 3 ? `rgba(42,170,138,${0.15 - i * 0.04})` : i % 2 === 0 ? 'transparent' : '#FFFFFF',
+                    borderRadius: 4
+                  }}>
+                    <span style={{ fontWeight: i < 3 ? 700 : 400, color: '#1F2937' }}>
+                      {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}`}
+                    </span>
+                    <span style={{ color: '#1F2937', fontWeight: i < 3 ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.nome}</span>
+                    <span style={{ textAlign: 'center', color: '#2AAA8A', fontWeight: 700 }}>{t.puntiTotali.toLocaleString('it-IT')}</span>
+                    <span style={{ textAlign: 'center', color: '#15803D', fontWeight: 500 }}>{t.pctLA}%</span>
+                    <span style={{ textAlign: 'center', color: '#B45309', fontWeight: 500 }}>{t.pctFV}%</span>
+                    <span style={{ textAlign: 'center', color: t.giorniLA !== null ? '#15803D' : '#D1D5DB' }}>{t.giorniLA !== null ? `${t.giorniLA}g` : '-'}</span>
+                    <span style={{ textAlign: 'center', color: t.giorniFV !== null ? '#B45309' : '#D1D5DB' }}>{t.giorniFV !== null ? `${t.giorniFV}g` : '-'}</span>
+                    <span style={{ textAlign: 'center', color: t.giorniIscritto !== null ? '#6D28D9' : '#D1D5DB' }}>{t.giorniIscritto !== null ? `${t.giorniIscritto}g` : '-'}</span>
+                    <span style={{ textAlign: 'center', color: t.giorniAttivato !== null ? '#EA580C' : '#D1D5DB' }}>{t.giorniAttivato !== null ? `${t.giorniAttivato}g` : '-'}</span>
+                    <span style={{ textAlign: 'center', color: '#DC2626', fontWeight: 700 }}>{t.score?.toLocaleString('it-IT') || 0}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: 12, padding: '8px 12px', background: '#F3F4F6', borderRadius: 8, fontSize: 10, color: '#6B7280', fontStyle: 'italic' }}>
+                💡 Score = Punti × Velocità (100 / media giorni primi contratti). Premia chi produce di più e parte più velocemente.
+              </div>
+            </div>
+            
+            {/* ALERT */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 16 }}>
+              <div style={{ background: '#FEF2F2', borderRadius: 8, padding: 12, border: '1px solid #FECACA' }}>
+                <div style={{ fontSize: 11, color: '#DC2626', fontWeight: 600 }}>⚠️ {reportData.trackerCoaching.ivdInattivi} ACTIVE senza produzione</div>
+                <div style={{ fontSize: 10, color: '#6B7280', marginTop: 4 }}>Da seguire con coaching</div>
+              </div>
+              <div style={{ background: '#FFFBEB', borderRadius: 8, padding: 12, border: '1px solid #FCD34D' }}>
+                <div style={{ fontSize: 11, color: '#B45309', fontWeight: 600 }}>📊 Totale punti: {(reportData.trackerCoaching.puntiStats?.totale || 0).toLocaleString('it-IT')}</div>
+                <div style={{ fontSize: 10, color: '#6B7280', marginTop: 4 }}>LA: {Math.round((reportData.trackerCoaching.puntiStats?.totaleLA || 0) / (reportData.trackerCoaching.puntiStats?.totale || 1) * 100)}% | FV: {Math.round((reportData.trackerCoaching.puntiStats?.totaleFV || 0) / (reportData.trackerCoaching.puntiStats?.totale || 1) * 100)}%</div>
               </div>
             </div>
           </div>
@@ -5462,14 +5724,15 @@ export default function Home() {
         
         {/* 💰 ANALISI FATTURATO */}
         {reportData.fatturato && (reportData.fatturato.fv.inseriti.contratti > 0 || reportData.fatturato.la.inseriti.contratti > 0) && (
-          <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
+          <div id="section-fatturato" style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <div>
                 <h3 style={{ color: '#2AAA8A', fontSize: 18, margin: 0, fontWeight: 700 }}>💰 ANALISI FATTURATO LEADER</h3>
                 <p style={{ color: '#666', fontSize: 11, margin: '5px 0 0' }}>Fatturato e punti generati (Inseriti vs Effettivi)</p>
               </div>
-              {/* Badge coerenza */}
-              <div style={{ display: 'flex', gap: 8 }}>
+              {/* Badge coerenza + Screenshot */}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button onClick={() => screenshotSection('section-fatturato', 'Analisi_Fatturato')} style={{ padding: '6px 12px', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>📷</button>
                 <span style={{ 
                   padding: '4px 10px', 
                   borderRadius: 20, 
@@ -5930,7 +6193,7 @@ export default function Home() {
         </div>
         
         {/* Footer versione */}
-        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v14.6</p>
+        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v15.1</p>
       </div>
     </div></>);
 
@@ -6043,8 +6306,33 @@ export default function Home() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {/* UPLOAD CSV PER REPORT - TOP MANAGER STYLE */}
             <div style={{ background: '#FFFFFF', borderRadius: 24, padding: 35, border: '1px solid #E8E8E8', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
-              <h2 style={{ color: '#1a1a2e', fontSize: 24, marginBottom: 6, fontWeight: 700, letterSpacing: '-0.5px' }}>Report Aggregato</h2>
-              <p style={{ color: '#888', fontSize: 13, marginBottom: 25 }}>Carica i CSV per generare report dettagliati con classifiche e statistiche</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 25 }}>
+                <div>
+                  <h2 style={{ color: '#1a1a2e', fontSize: 24, marginBottom: 6, fontWeight: 700, letterSpacing: '-0.5px' }}>Report Aggregato</h2>
+                  <p style={{ color: '#888', fontSize: 13, margin: 0 }}>Carica i CSV per generare report dettagliati con classifiche e statistiche</p>
+                </div>
+                {reportData && (
+                  <button 
+                    onClick={screenshotAllSections}
+                    style={{ 
+                      padding: '12px 20px', 
+                      background: 'linear-gradient(135deg, #2AAA8A, #20917A)', 
+                      color: '#FFF', 
+                      border: 'none', 
+                      borderRadius: 10, 
+                      fontSize: 13, 
+                      fontWeight: 600, 
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      boxShadow: '0 4px 15px rgba(42,170,138,0.3)'
+                    }}
+                  >
+                    📷 Scarica Tutte le Slide
+                  </button>
+                )}
+              </div>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 15, marginBottom: 25 }}>
                 {/* IVD */}
@@ -6124,7 +6412,7 @@ export default function Home() {
           </div>
         )}
       </main>
-      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v14.6 • Leader Ranking</footer>
+      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v15.1 • Leader Ranking</footer>
     </div></>);
 
   // PREVIEW
@@ -6659,7 +6947,7 @@ const S = {
   periodBtn: { display: 'block', width: '100%', padding: '8px 12px', fontSize: 12, border: '1px solid #E0E0E0', borderRadius: 6, background: '#FFFFFF', color: '#666666', cursor: 'pointer', marginBottom: 8, textAlign: 'left' },
   select: { width: '100%', padding: '10px', fontSize: 13, border: '1px solid #E0E0E0', borderRadius: 8, background: '#FFFFFF', color: '#333333', marginBottom: 8 },
   inputSm: { width: '100%', padding: '8px 10px', fontSize: 12, border: '1px solid #E0E0E0', borderRadius: 6, background: '#FFFFFF', color: '#333333', marginBottom: 8, boxSizing: 'border-box' },
-  content: { flex: 1, padding: 15, minHeight: 'calc(100vh - 60px)' },
+  content: { flex: 1, padding: 20, minHeight: 'calc(100vh - 60px)', maxWidth: 1400, margin: '0 auto' },
   uploadBox: { border: '2px dashed #2AAA8A40', borderRadius: 12, padding: '20px', textAlign: 'center', marginBottom: 15, transition: 'all 0.3s', background: '#FFFFFF' },
   rankCard: { background: '#FFFFFF', borderRadius: 16, padding: 18, border: '1px solid #E0E0E0', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' },
   th: { padding: 10, fontSize: 10, fontWeight: 700, color: '#999999', textTransform: 'uppercase', textAlign: 'center' },
