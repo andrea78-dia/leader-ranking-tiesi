@@ -420,14 +420,14 @@ const EVENT_TYPES = ['LUCE AMICA', 'FOTOVOLTAICO', 'INSERITI SEMINARIO', 'ATTIVA
 const WEBHOOK_URL = 'https://hook.eu1.make.com/sm6lrhpoet204lv6xkwj10xiypwnn4qm';
 
 const RANKING_CONFIG = {
-  ivd_inseriti: { label: 'IVD INSERITI', category: 'ivd', color: DS.colors.primaryLight, emoji: '', design: 'impact' },
-  ivd_accettati: { label: 'IVD ACCETTATI', category: 'ivd', color: '#4CAF50', emoji: '', design: 'impact' },
-  sdp_inseriti: { label: 'SDP INSERITI', category: 'sdp', color: DS.colors.primaryLight, emoji: '', design: 'impact' },
-  sdp_accettati: { label: 'SDP ACCETTATI', category: 'sdp', color: '#4CAF50', emoji: '', design: 'impact' },
-  nw: { label: 'NETWORKER', category: 'manager', color: DS.colors.primaryLight, emoji: '<Star size={16} />', design: 'exclusive' },
-  k: { label: 'K MANAGER', category: 'manager', color: DS.colors.accent, emoji: '<Crown size={16} />', design: 'exclusive' },
-  eb: { label: 'ENERGY BROKER', category: 'broker', color: DS.colors.primaryLight, emoji: '🔷', design: 'exclusive' },
-  frm: { label: 'FORMATORI', category: 'formatore', color: DS.colors.primaryLight, emoji: '🎓', design: 'exclusive' },
+  ivd_inseriti: { label: 'IVD INSERITI', category: 'ivd', color: DS.colors.primaryLight, icon: Users, design: 'impact' },
+  ivd_accettati: { label: 'IVD ACCETTATI', category: 'ivd', color: '#4CAF50', icon: CheckCircle, design: 'impact' },
+  sdp_inseriti: { label: 'SDP INSERITI', category: 'sdp', color: DS.colors.primaryLight, icon: Briefcase, design: 'impact' },
+  sdp_accettati: { label: 'SDP ACCETTATI', category: 'sdp', color: '#4CAF50', icon: CheckCircle, design: 'impact' },
+  nw: { label: 'NETWORKER', category: 'manager', color: DS.colors.primaryLight, icon: Star, design: 'exclusive' },
+  k: { label: 'K MANAGER', category: 'manager', color: DS.colors.accent, icon: Crown, design: 'exclusive' },
+  eb: { label: 'ENERGY BROKER', category: 'broker', color: DS.colors.primaryLight, icon: Zap, design: 'exclusive' },
+  frm: { label: 'FORMATORI', category: 'formatore', color: DS.colors.primaryLight, icon: Award, design: 'exclusive' },
 };
 
 const PRODUCTION_CALENDAR = {
@@ -585,7 +585,7 @@ export default function Home() {
   const getData = () => rankings ? (rankings[selectedRanking] || []) : [];
   const getLabels = () => rankings?.type === 'seminario' ? { c1: 'ISCRITTI', c2: 'PRESENTI' } : { c1: 'INSERITI', c2: 'ACCETTATI' };
   const isExclusive = () => ['nw', 'k', 'eb', 'frm'].includes(selectedRanking);
-  const getConfig = () => RANKING_CONFIG[selectedRanking] || { label: '', category: '', color: DS.colors.primaryLight, emoji: '<BarChart3 size={16} />', design: 'impact' };
+  const getConfig = () => RANKING_CONFIG[selectedRanking] || { label: '', category: '', color: DS.colors.primaryLight, icon: BarChart3, design: 'impact' };
   const getClassificaTotal = () => getData().reduce((sum, [,s]) => sum + s.v1, 0);
   const groupByValue = (data, useV2 = false) => {
     const groups = {}; data.forEach(([name, s]) => { const val = useV2 ? s.v2 : s.v1; if (!groups[val]) groups[val] = []; groups[val].push({ name, ...s }); });
@@ -1262,7 +1262,7 @@ export default function Home() {
       
       result.pilastri.fv = {
         nome: 'FOTOVOLTAICO',
-        emoji: '<Sun size={16} />',
+        icon: Sun,
         color: DS.colors.primaryLight,
         totale: fvData.length,
         funnel: {
@@ -1305,7 +1305,7 @@ export default function Home() {
       
       result.pilastri.energy = {
         nome: 'LUCE AMICA',
-        emoji: '<Zap size={16} />',
+        icon: Zap,
         color: DS.colors.accent,
         totale: laData.length,
         funnel: {
@@ -1506,7 +1506,7 @@ export default function Home() {
         statiAttivati: collabData.statiAttivati,
         classifiche: collabData.classifiche || { k: [], nw: [], sdp: [] },
         totaleK: collabData.classifiche ? collabData.classifiche.k.reduce((s, [,v]) => s + v.total, 0) : 0,
-        catLabels: { c1: '📝 Iscritti', c2: '<CheckCircle size={16} /> Presenti', c3: ' Attivati' },
+        catLabels: { c1: '📝 Iscritti', c2: 'Presenti', c3: ' Attivati' },
         catKeys: ['iscritti', 'presenti', 'attivati']
       };
     }
@@ -2541,10 +2541,10 @@ export default function Home() {
     // Header
     ctx.fillStyle = DS.colors.primaryLight;
     ctx.font = 'bold 48px Arial';
-    ctx.fillText('<BarChart3 size={16} /> DASHBOARD', 50, 70);
+    ctx.fillText('DASHBOARD', 50, 70);
     ctx.fillStyle = '#fff';
     ctx.font = '24px Arial';
-    ctx.fillText(`${config.emoji} ${config.label} - ${eventDate}`, 50, 110);
+    ctx.fillText(`${config.icon && <config.icon size={16} color={config.color} />} ${config.label} - ${eventDate}`, 50, 110);
     
     // Stats cards
     const cardW = 400, cardH = 120, cardY = 150;
@@ -2581,7 +2581,7 @@ export default function Home() {
     ctx.fill();
     ctx.fillStyle = DS.colors.accent;
     ctx.font = 'bold 28px Arial';
-    ctx.fillText('<Trophy size={16} /> PODIO', 80, podioY + 40);
+    ctx.fillText('PODIO', 80, podioY + 40);
     
     // Disegna podio semplificato
     const podioData = stats.top3;
@@ -2707,7 +2707,7 @@ export default function Home() {
     // K Manager pie
     ctx.fillStyle = DS.colors.accent;
     ctx.font = 'bold 20px Arial';
-    ctx.fillText('<Crown size={16} /> K MANAGER', pieX + 30, pieY + 40);
+    ctx.fillText('K MANAGER', pieX + 30, pieY + 40);
     const totalK = pies.k.reduce((s, [,v]) => s + v, 0);
     pies.k.slice(0, 5).forEach(([name, val], i) => {
       const py = pieY + 70 + i * 28;
@@ -2723,7 +2723,7 @@ export default function Home() {
     // NW pie
     ctx.fillStyle = DS.colors.primaryLight;
     ctx.font = 'bold 20px Arial';
-    ctx.fillText('<Star size={16} /> NETWORKER TOP 5', pieX + 400, pieY + 40);
+    ctx.fillText('NETWORKER TOP 5', pieX + 400, pieY + 40);
     pies.nw.slice(0, 5).forEach(([name, val], i) => {
       const py = pieY + 70 + i * 28;
       ctx.fillStyle = PIE_COLORS[i];
@@ -2741,7 +2741,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v16.4 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v16.5 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -3216,7 +3216,7 @@ export default function Home() {
       ctx.fillStyle = DS.colors.white;
       ctx.font = 'bold 36px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText('<BarChart3 size={16} /> CLASSIFICA', listX, listStartY - 25);
+      ctx.fillText('CLASSIFICA', listX, listStartY - 25);
       
       const maxV1 = stats.maxV1;
       
@@ -3347,7 +3347,7 @@ export default function Home() {
     
     // Header
     ctx.fillStyle = config.color; ctx.font = 'bold 16px Arial'; ctx.fillText('LEADER RANKING', 45, 65);
-    ctx.fillStyle = '#333333'; ctx.font = 'bold 42px Arial'; ctx.fillText(`${config.emoji} CLASSIFICA ${config.label}`, 45, 115);
+    ctx.fillStyle = '#333333'; ctx.font = 'bold 42px Arial'; ctx.fillText(`${config.icon && <config.icon size={16} color={config.color} />} CLASSIFICA ${config.label}`, 45, 115);
     ctx.fillStyle = '#666666'; ctx.font = '18px Arial'; ctx.fillText(`${eventName} • ${eventDate}`, 45, 148);
     
     // Partecipanti e contratti inline
@@ -3483,7 +3483,7 @@ export default function Home() {
     
     // Title - NERO
     ctx.fillStyle = '#333333'; ctx.font = 'bold 40px Arial'; ctx.textAlign = 'center';
-    ctx.fillText(`${config.emoji} CLASSIFICA ${config.label} ${config.emoji}`, W/2, 105);
+    ctx.fillText(`${config.icon && <config.icon size={16} color={config.color} />} CLASSIFICA ${config.label} ${config.icon && <config.icon size={16} color={config.color} />}`, W/2, 105);
     ctx.fillStyle = '#666666'; ctx.font = '18px Arial';
     ctx.fillText(`${eventName} • ${eventDate}`, W/2, 138);
     
@@ -3519,7 +3519,7 @@ export default function Home() {
         ctx.lineWidth = 2; ctx.stroke();
       }
       
-      const centerY = y + cardH / 2, medals = ['<Trophy size={16} />', '2°', '3°'];
+      const centerY = y + cardH / 2, medals = ['1°', '2°', '3°'];
       
       if (isTop3) {
         ctx.font = '38px Arial'; ctx.fillText(medals[i], 75, centerY + 14);
@@ -3696,7 +3696,7 @@ export default function Home() {
         body: JSON.stringify(webhookData)
       });
       
-      setSendStatus('<CheckCircle size={16} /> Inviato!');
+      setSendStatus('Inviato!');
       setTimeout(() => setSendStatus(''), 3000);
     } catch (e) { 
       console.log('Errore webhook:', e);
@@ -3758,7 +3758,7 @@ export default function Home() {
       ctx.fillStyle = DS.colors.fv;
       ctx.font = 'bold 24px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText('<Sun size={16} /> FOTOVOLTAICO', 70, y + 35);
+      ctx.fillText('FOTOVOLTAICO', 70, y + 35);
       
       ctx.font = 'bold 48px Arial';
       ctx.fillText(fv.funnel.positivi.toString(), 70, y + 90);
@@ -3798,7 +3798,7 @@ export default function Home() {
       ctx.fillStyle = DS.colors.la;
       ctx.font = 'bold 24px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText('<Zap size={16} /> LUCE AMICA', 70, y + 35);
+      ctx.fillText('LUCE AMICA', 70, y + 35);
       
       ctx.font = 'bold 48px Arial';
       ctx.fillText(la.funnel.accettati.toString(), 70, y + 90);
@@ -3883,7 +3883,7 @@ export default function Home() {
       ctx.fillStyle = '#0D9488';
       ctx.font = 'bold 24px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText('<Users size={16} /> NUOVI IVD', 70, y + 35);
+      ctx.fillText('NUOVI IVD', 70, y + 35);
       
       ctx.font = 'bold 48px Arial';
       ctx.fillText(tc.totale.toString(), 70, y + 90);
@@ -4386,7 +4386,7 @@ export default function Home() {
             alignItems: 'center',
             gap: 10
           }}>
-            <span style={{ fontSize: 18 }}>{(data.fv?.conversionePct || 0) >= 50 ? '<CheckCircle size={16} />' : '<AlertTriangle size={16} />'}</span>
+            <span style={{ fontSize: 18 }}>{(data.fv?.conversionePct || 0) >= 50 ? <CheckCircle size={18} color="#4CAF50" /> : <AlertTriangle size={18} color="#F59E0B" />}</span>
             <div>
               <div style={{ fontSize: 10, color: DS.colors.gray500 }}>FV Persi</div>
               <div style={{ fontSize: 14, fontWeight: 700, color: DS.colors.gray800 }}>
@@ -4404,7 +4404,7 @@ export default function Home() {
             alignItems: 'center',
             gap: 10
           }}>
-            <span style={{ fontSize: 18 }}>{(data.alert?.laPctCessati || 0) <= 15 ? '<CheckCircle size={16} />' : '<AlertTriangle size={16} />'}</span>
+            <span style={{ fontSize: 18 }}>{(data.alert?.laPctCessati || 0) <= 15 ? <CheckCircle size={18} color="#4CAF50" /> : <AlertTriangle size={18} color="#F59E0B" />}</span>
             <div>
               <div style={{ fontSize: 10, color: DS.colors.gray500 }}>LA Cessati</div>
               <div style={{ fontSize: 14, fontWeight: 700, color: DS.colors.gray800 }}>
@@ -4422,7 +4422,7 @@ export default function Home() {
             alignItems: 'center',
             gap: 10
           }}>
-            <span style={{ fontSize: 18 }}>{(data.alert?.seminariPctAssenti || 0) <= 30 ? '<CheckCircle size={16} />' : '<AlertTriangle size={16} />'}</span>
+            <span style={{ fontSize: 18 }}>{(data.alert?.seminariPctAssenti || 0) <= 30 ? <CheckCircle size={18} color="#4CAF50" /> : <AlertTriangle size={18} color="#F59E0B" />}</span>
             <div>
               <div style={{ fontSize: 10, color: DS.colors.gray500 }}>Assenti Seminari</div>
               <div style={{ fontSize: 14, fontWeight: 700, color: DS.colors.gray800 }}>
@@ -4440,7 +4440,7 @@ export default function Home() {
             alignItems: 'center',
             gap: 10
           }}>
-            <span style={{ fontSize: 18 }}>{(data.alert?.ivdPctInattivi || 0) <= 20 ? '<CheckCircle size={16} />' : '<AlertTriangle size={16} />'}</span>
+            <span style={{ fontSize: 18 }}>{(data.alert?.ivdPctInattivi || 0) <= 20 ? <CheckCircle size={18} color="#4CAF50" /> : <AlertTriangle size={18} color="#F59E0B" />}</span>
             <div>
               <div style={{ fontSize: 10, color: DS.colors.gray500 }}>IVD Inattivi</div>
               <div style={{ fontSize: 14, fontWeight: 700, color: DS.colors.gray800 }}>
@@ -4895,15 +4895,15 @@ export default function Home() {
                 {/* GRIGLIA 3x3 UNIFORME */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
                   {[
-                    { key: 'fv', emoji: '<Sun size={16} />', label: 'Fotovoltaico', color: DS.colors.fv, bgColor: '#F0FDF4', borderColor: '#BBF7D0' },
-                    { key: 'energy', emoji: '<Zap size={16} />', label: 'Luce Amica', color: DS.colors.la, bgColor: '#FFFBEB', borderColor: '#FCD34D' },
+                    { key: 'fv', icon: Sun, label: 'Fotovoltaico', color: DS.colors.fv, bgColor: '#F0FDF4', borderColor: '#BBF7D0' },
+                    { key: 'energy', icon: Zap, label: 'Luce Amica', color: DS.colors.la, bgColor: '#FFFBEB', borderColor: '#FCD34D' },
                     { key: 'consultings', emoji: '🎓', label: 'Seminari', color: DS.colors.seminari, bgColor: '#F5F3FF', borderColor: '#C4B5FD' },
-                    { key: 'presenti', emoji: '<CheckCircle size={16} />', label: 'Presenti', color: DS.colors.success, bgColor: '#ECFDF5', borderColor: '#A7F3D0' },
-                    { key: 'ivd', emoji: '<Users size={16} />', label: 'Attivati', color: '#EA580C', bgColor: '#FFF7ED', borderColor: '#FDBA74' },
+                    { key: 'presenti', icon: CheckCircle, label: 'Presenti', color: DS.colors.success, bgColor: '#ECFDF5', borderColor: '#A7F3D0' },
+                    { key: 'ivd', icon: Users, label: 'Attivati', color: '#EA580C', bgColor: '#FFF7ED', borderColor: '#FDBA74' },
                     { key: 'guadagnoFV', emoji: '', label: 'Fatturato FV', color: DS.colors.fv, bgColor: '#F0FDF4', borderColor: '#BBF7D0', isCurrency: true },
                     { key: 'guadagnoLA', emoji: '💵', label: 'Fatturato LA', color: DS.colors.la, bgColor: '#FFFBEB', borderColor: '#FCD34D', isCurrency: true },
-                    { key: 'puntiFV', emoji: '<Star size={16} />', label: 'Punti FV', color: DS.colors.seminari, bgColor: '#F5F3FF', borderColor: '#C4B5FD', unit: 'pt' },
-                    { key: 'puntiLA', emoji: '<Trophy size={16} />', label: 'Punti LA', color: '#EA580C', bgColor: '#FFF7ED', borderColor: '#FDBA74', unit: 'pt' }
+                    { key: 'puntiFV', icon: Star, label: 'Punti FV', color: DS.colors.seminari, bgColor: '#F5F3FF', borderColor: '#C4B5FD', unit: 'pt' },
+                    { key: 'puntiLA', icon: Trophy, label: 'Punti LA', color: '#EA580C', bgColor: '#FFF7ED', borderColor: '#FDBA74', unit: 'pt' }
                   ].map(item => {
                     const heatData = reportData.heatmapMesi[item.key];
                     if (!heatData) return null;
@@ -4953,7 +4953,7 @@ export default function Home() {
                         {/* Header */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: 20 }}>{item.emoji}</span>
+                            <span style={{ fontSize: 20 }}>{item.icon && <item.icon size={20} color={item.color} />}</span>
                             <span style={{ fontSize: 14, fontWeight: 700, color: item.color }}>{item.label}</span>
                           </div>
                           <div style={{ 
@@ -5019,17 +5019,17 @@ export default function Home() {
                 const annoDrilldown = anno || heatData.anno || new Date().getFullYear();
                 // Usa info passata dal click o fallback a mappa default
                 const infoMap = { 
-                  fv: { emoji: '<Sun size={16} />', label: 'Fotovoltaico', color: DS.colors.fv }, 
-                  energy: { emoji: '<Zap size={16} />', label: 'Luce Amica', color: DS.colors.la }, 
+                  fv: { icon: Sun, label: 'Fotovoltaico', color: DS.colors.fv }, 
+                  energy: { icon: Zap, label: 'Luce Amica', color: DS.colors.la }, 
                   consultings: { emoji: '🎓', label: 'Seminari', color: DS.colors.seminari }, 
-                  presenti: { emoji: '<CheckCircle size={16} />', label: 'Presenti', color: DS.colors.success }, 
-                  ivd: { emoji: '<Users size={16} />', label: 'Attivati', color: '#EA580C' },
+                  presenti: { icon: CheckCircle, label: 'Presenti', color: DS.colors.success }, 
+                  ivd: { icon: Users, label: 'Attivati', color: '#EA580C' },
                   guadagnoFV: { emoji: '', label: 'Guadagno FV', color: DS.colors.fv, isCurrency: true },
                   guadagnoLA: { emoji: '💵', label: 'Guadagno LA', color: DS.colors.la, isCurrency: true },
-                  puntiFV: { emoji: '<Star size={16} />', label: 'Punti FV', color: DS.colors.seminari, unit: 'pt' },
-                  puntiLA: { emoji: '<Trophy size={16} />', label: 'Punti LA', color: '#EA580C', unit: 'pt' }
+                  puntiFV: { icon: Star, label: 'Punti FV', color: DS.colors.seminari, unit: 'pt' },
+                  puntiLA: { icon: Trophy, label: 'Punti LA', color: '#EA580C', unit: 'pt' }
                 };
-                const info = passedInfo || infoMap[type] || { emoji: '<BarChart3 size={16} />', label: type, color: '#666' };
+                const info = passedInfo || infoMap[type] || { icon: BarChart3, label: type, color: '#666' };
                 const giorni = heatData.giorniPerMese?.[mese] || Array(31).fill(0);
                 const settimane = heatData.settimanePerMese?.[mese] || Array(5).fill(0);
                 const orari = heatData.orariPerMese?.[mese] || { notte: 0, mattinaPrima: 0, mattina: 0, pranzo: 0, pomeriggio: 0, sera: 0, notturno: 0 };
@@ -5038,7 +5038,7 @@ export default function Home() {
                 const orariArray = [
                   { label: '00-06', val: orari.notte, emoji: '🌙' },
                   { label: '06-09', val: orari.mattinaPrima, emoji: '🌅' },
-                  { label: '09-12', val: orari.mattina, emoji: '<Sun size={16} />' },
+                  { label: '09-12', val: orari.mattina, icon: Sun },
                   { label: '12-15', val: orari.pranzo, emoji: '🍽️' },
                   { label: '15-18', val: orari.pomeriggio, emoji: '🌤️' },
                   { label: '18-21', val: orari.sera, emoji: '🌆' },
@@ -5069,7 +5069,7 @@ export default function Home() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
                           <div style={{ fontSize: 14, color: info.color, fontWeight: 700, marginBottom: 5 }}>
-                            {info.emoji} {info.label} - {label.toUpperCase()} {annoDrilldown}
+                            {info.icon && <info.icon size={16} color={info.color} />} {info.label} - {label.toUpperCase()} {annoDrilldown}
                           </div>
                           <div style={{ fontSize: 24, fontWeight: 800, color: '#333' }}>{formatVal(heatData.mesi[mese])} {info.isCurrency ? '' : info.unit === 'pt' ? 'punti' : 'contratti'}</div>
                         </div>
@@ -5106,7 +5106,7 @@ export default function Home() {
                           const bgColor = o.val === 0 ? '#F0F0F0' : intensity > 0.7 ? DS.colors.primaryLight : intensity > 0.3 ? '#4DB6AC' : '#B2DFDB';
                           return (
                             <div key={i} style={{ background: bgColor, borderRadius: 8, padding: '10px 4px', textAlign: 'center' }}>
-                              <div style={{ fontSize: 14 }}>{o.emoji}</div>
+                              <div style={{ fontSize: 14 }}>{o.icon && <o.icon size={14} />}</div>
                               <div style={{ fontSize: 9, color: o.val === 0 ? '#AAA' : DS.colors.white, marginTop: 2 }}>{o.label}</div>
                               <div style={{ fontSize: 16, fontWeight: 700, color: o.val === 0 ? '#CCC' : DS.colors.white }}>{o.val}</div>
                             </div>
@@ -5245,8 +5245,8 @@ export default function Home() {
             {/* CLASSIFICHE CON 4 COLONNE + % */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
               {[
-                { title: 'K MANAGER', emoji: '<Crown size={16} />', data: reportData.pilastri.fv.classifiche.k, color: DS.colors.la },
-                { title: 'NETWORKER', emoji: '<Star size={16} />', data: reportData.pilastri.fv.classifiche.nw, color: DS.colors.fv },
+                { title: 'K MANAGER', icon: Crown, data: reportData.pilastri.fv.classifiche.k, color: DS.colors.la },
+                { title: 'NETWORKER', icon: Star, data: reportData.pilastri.fv.classifiche.nw, color: DS.colors.fv },
                 { title: 'SDP', emoji: '', data: reportData.pilastri.fv.classifiche.sdp, color: '#2563EB' }
               ].map(({ title, emoji, data, color }) => (
                 <div key={title} style={{ background: DS.colors.gray50, borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
@@ -5444,8 +5444,8 @@ export default function Home() {
             {/* CLASSIFICHE LA - CON 4 COLONNE + % */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
               {[
-                { title: 'K MANAGER', emoji: '<Crown size={16} />', data: reportData.pilastri.energy.classifiche.k, color: DS.colors.la },
-                { title: 'NETWORKER', emoji: '<Star size={16} />', data: reportData.pilastri.energy.classifiche.nw, color: DS.colors.fv },
+                { title: 'K MANAGER', icon: Crown, data: reportData.pilastri.energy.classifiche.k, color: DS.colors.la },
+                { title: 'NETWORKER', icon: Star, data: reportData.pilastri.energy.classifiche.nw, color: DS.colors.fv },
                 { title: 'SDP', emoji: '', data: reportData.pilastri.energy.classifiche.sdp, color: '#2563EB' }
               ].map(({ title, emoji, data, color }) => (
                 <div key={title} style={{ background: DS.colors.gray50, borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
@@ -5726,8 +5726,8 @@ export default function Home() {
             {/* CLASSIFICHE COLLAB CON 4 COLONNE + % */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
               {[
-                { title: 'K MANAGER', emoji: '<Crown size={16} />', data: reportData.pilastri.collaboratori.classifiche.k, color: DS.colors.la },
-                { title: 'NETWORKER', emoji: '<Star size={16} />', data: reportData.pilastri.collaboratori.classifiche.nw, color: DS.colors.fv },
+                { title: 'K MANAGER', icon: Crown, data: reportData.pilastri.collaboratori.classifiche.k, color: DS.colors.la },
+                { title: 'NETWORKER', icon: Star, data: reportData.pilastri.collaboratori.classifiche.nw, color: DS.colors.fv },
                 { title: 'SDP', emoji: '', data: reportData.pilastri.collaboratori.classifiche.sdp, color: '#2563EB' }
               ].map(({ title, emoji, data, color }) => (
                 <div key={title} style={{ background: DS.colors.gray50, borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
@@ -6040,7 +6040,7 @@ export default function Home() {
                       {<PositionBadge position={i+1} size="sm" />}
                     </span>
                     <span style={{ color: DS.colors.gray800, fontWeight: i < 3 ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {t.nome} {haAllMilestones && '<Star size={16} />'}
+                      {t.nome} {haAllMilestones && <Star size={14} color="#F59E0B" />}
                     </span>
                     <span style={{ textAlign: 'center', color: DS.colors.primaryLight, fontWeight: 700 }}>{t.puntiTotali.toLocaleString('it-IT')}</span>
                     <span style={{ textAlign: 'center', color: DS.colors.fv, fontWeight: 500 }}>{t.pctLA}%</span>
@@ -6093,7 +6093,7 @@ export default function Home() {
                   color: reportData.fatturato.coerenza?.fv?.ok ? '#2E7D32' : '#C62828',
                   border: `1px solid ${reportData.fatturato.coerenza?.fv?.ok ? '#A5D6A7' : '#EF9A9A'}`
                 }}>
-                  {reportData.fatturato.coerenza?.fv?.ok ? '<CheckCircle size={16} />' : '<AlertTriangle size={16} />'} FV: {reportData.fatturato.coerenza?.fv?.fatturatoInseriti || 0}/{reportData.fatturato.coerenza?.fv?.pilastroInseriti || 0}
+                  {reportData.fatturato.coerenza?.fv?.ok ? <CheckCircle size={18} color="#4CAF50" /> : <AlertTriangle size={18} color="#F59E0B" />} FV: {reportData.fatturato.coerenza?.fv?.fatturatoInseriti || 0}/{reportData.fatturato.coerenza?.fv?.pilastroInseriti || 0}
                 </span>
                 <span style={{ 
                   padding: '4px 10px', 
@@ -6104,7 +6104,7 @@ export default function Home() {
                   color: reportData.fatturato.coerenza?.la?.ok ? '#2E7D32' : '#C62828',
                   border: `1px solid ${reportData.fatturato.coerenza?.la?.ok ? '#A5D6A7' : '#EF9A9A'}`
                 }}>
-                  {reportData.fatturato.coerenza?.la?.ok ? '<CheckCircle size={16} />' : '<AlertTriangle size={16} />'} LA: {reportData.fatturato.coerenza?.la?.fatturatoInseriti || 0}/{reportData.fatturato.coerenza?.la?.pilastroInseriti || 0}
+                  {reportData.fatturato.coerenza?.la?.ok ? <CheckCircle size={18} color="#4CAF50" /> : <AlertTriangle size={18} color="#F59E0B" />} LA: {reportData.fatturato.coerenza?.la?.fatturatoInseriti || 0}/{reportData.fatturato.coerenza?.la?.pilastroInseriti || 0}
                 </span>
               </div>
             </div>
@@ -6512,7 +6512,7 @@ export default function Home() {
         </div>
         
         {/* Footer versione */}
-        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v16.4</p>
+        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v16.5</p>
       </div>
     </div></>);
 
@@ -6543,7 +6543,7 @@ export default function Home() {
               boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
             }}
           >
-            {darkMode ? '<Sun size={16} /> Light' : 'Dark'}
+            {darkMode ? 'Light' : 'Dark'}
           </button>
           {/* User info card */}
           <div style={{ 
@@ -6734,7 +6734,7 @@ export default function Home() {
           </div>
         )}
       </main>
-      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v16.4 • Leader Ranking</footer>
+      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v16.5 • Leader Ranking</footer>
     </div></>);
 
   // PREVIEW
@@ -6748,7 +6748,7 @@ export default function Home() {
         <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'linear-gradient(135deg, #2AAA8A, #20917A)', color: DS.colors.white }} onClick={download}><Download size={16} /> SCARICA</button>
         <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'linear-gradient(135deg,#FFD700,#FFC107)', color: '#333333' }} onClick={handleSendToBot}><Share2 size={16} /> INVIA A BOT</button>
       </div>
-      {sendStatus && <p style={{ textAlign: 'center', marginTop: 10, color: sendStatus.includes('<CheckCircle size={16} />') ? '#4CAF50' : sendStatus.includes('<XCircle size={16} />') ? '#f44' : DS.colors.accent }}>{sendStatus}</p>}
+      {sendStatus && <p style={{ textAlign: 'center', marginTop: 10, color: sendStatus.includes(<CheckCircle size={18} color="#4CAF50" />) ? '#4CAF50' : sendStatus.includes(<XCircle size={18} color="#EF4444" />) ? '#f44' : DS.colors.accent }}>{sendStatus}</p>}
     </div></div></>);
 
   // DASHBOARD
@@ -6833,7 +6833,7 @@ export default function Home() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {/* TITOLO CLASSIFICA SELEZIONATA */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 5 }}>
-                  <span style={{ fontSize: 24 }}>{config.emoji}</span>
+                  <span style={{ fontSize: 24 }}>{config.icon && <config.icon size={16} color={config.color} />}</span>
                   <div>
                     <h2 style={{ color: config.color, fontSize: 18, margin: 0 }}>{config.label}</h2>
                     <p style={{ color: '#666666', fontSize: 12, margin: 0 }}>{eventDate}</p>
@@ -7196,7 +7196,7 @@ export default function Home() {
           })()}
 
           {/* CLASSIFICHE TAB */}
-          {rankings && activeTab === 'classifiche' ? (<div style={S.rankCard}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 15 }}><div><h2 style={{ color: config.color, fontSize: 18, margin: 0 }}>{config.emoji} {config.label}</h2><p style={{ color: '#666666', fontSize: 12, marginTop: 4 }}>{getData().length} partecipanti • {getClassificaTotal()} contratti • {eventDate}</p></div><div style={{ display: 'flex', gap: 15 }}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: config.color }}>{getClassificaTotal()}</div><div style={{ fontSize: 9, color: '#999999' }}>{labels.c1}</div></div><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</div><div style={{ fontSize: 9, color: '#999999' }}>{labels.c2}</div></div></div></div><div style={{ overflowX: 'auto', maxHeight: '50vh', overflowY: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 300 }}><thead><tr style={{ borderBottom: '1px solid #E0E0E0' }}><th style={S.th}>#</th><th style={{ ...S.th, textAlign: 'left' }}>Nome</th><th style={S.th}>{labels.c1}</th>{isExclusive() && <><th style={S.th}>%</th><th style={S.th}>{labels.c2}</th></>}</tr></thead><tbody>{getData().map(([name, s], i) => { const p = s.v1 > 0 ? Math.round(s.v2 / s.v1 * 100) : 0; return (<tr key={name} style={{ borderBottom: '1px solid #F5F5F5', ...(i < 3 ? { background: `${config.color}10` } : {}) }}><td style={{ padding: 10, textAlign: 'center' }}>{<PositionBadge position={i+1} size="sm" />}</td><td style={{ padding: 10, fontWeight: i < 3 ? 700 : 500, fontSize: 13 }}>{name}</td><td style={{ padding: 10, textAlign: 'center', color: config.color, fontWeight: 700 }}>{s.v1}</td>{isExclusive() && <><td style={{ padding: 10, textAlign: 'center', color: p >= 50 ? '#4CAF50' : DS.colors.accent, fontSize: 12 }}>{p}%</td><td style={{ padding: 10, textAlign: 'center', color: '#4CAF50', fontWeight: 700 }}>{s.v2}</td></>}</tr>); })}</tbody></table></div>{(user.role === 'admin' || user.role === 'assistente') && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}><Camera size={16} /> PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg, #2AAA8A, #4DB6AC)' }} onClick={() => handleSendToBot()}><Share2 size={16} /> Invia a Bot</button>{sendStatus && <span style={{ fontSize: 13, color: sendStatus.includes('<CheckCircle size={16} />') ? '#4CAF50' : sendStatus.includes('<XCircle size={16} />') ? '#f44' : DS.colors.accent }}>{sendStatus}</span>}</div>)}{user.role === 'k' && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}><Camera size={16} /> PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg, #2AAA8A, #20917A)' }} onClick={() => handleSendToBot()}><Share2 size={16} /> Invia a Bot</button></div>)}</div>) : !rankings && (<div style={{ textAlign: 'center', padding: 60, color: '#999999' }}><div style={{ fontSize: 50 }}><BarChart3 size={16} /></div><p>Carica un CSV per iniziare</p></div>)}
+          {rankings && activeTab === 'classifiche' ? (<div style={S.rankCard}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 15 }}><div><h2 style={{ color: config.color, fontSize: 18, margin: 0 }}>{config.icon && <config.icon size={16} color={config.color} />} {config.label}</h2><p style={{ color: '#666666', fontSize: 12, marginTop: 4 }}>{getData().length} partecipanti • {getClassificaTotal()} contratti • {eventDate}</p></div><div style={{ display: 'flex', gap: 15 }}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: config.color }}>{getClassificaTotal()}</div><div style={{ fontSize: 9, color: '#999999' }}>{labels.c1}</div></div><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</div><div style={{ fontSize: 9, color: '#999999' }}>{labels.c2}</div></div></div></div><div style={{ overflowX: 'auto', maxHeight: '50vh', overflowY: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 300 }}><thead><tr style={{ borderBottom: '1px solid #E0E0E0' }}><th style={S.th}>#</th><th style={{ ...S.th, textAlign: 'left' }}>Nome</th><th style={S.th}>{labels.c1}</th>{isExclusive() && <><th style={S.th}>%</th><th style={S.th}>{labels.c2}</th></>}</tr></thead><tbody>{getData().map(([name, s], i) => { const p = s.v1 > 0 ? Math.round(s.v2 / s.v1 * 100) : 0; return (<tr key={name} style={{ borderBottom: '1px solid #F5F5F5', ...(i < 3 ? { background: `${config.color}10` } : {}) }}><td style={{ padding: 10, textAlign: 'center' }}>{<PositionBadge position={i+1} size="sm" />}</td><td style={{ padding: 10, fontWeight: i < 3 ? 700 : 500, fontSize: 13 }}>{name}</td><td style={{ padding: 10, textAlign: 'center', color: config.color, fontWeight: 700 }}>{s.v1}</td>{isExclusive() && <><td style={{ padding: 10, textAlign: 'center', color: p >= 50 ? '#4CAF50' : DS.colors.accent, fontSize: 12 }}>{p}%</td><td style={{ padding: 10, textAlign: 'center', color: '#4CAF50', fontWeight: 700 }}>{s.v2}</td></>}</tr>); })}</tbody></table></div>{(user.role === 'admin' || user.role === 'assistente') && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}><Camera size={16} /> PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg, #2AAA8A, #4DB6AC)' }} onClick={() => handleSendToBot()}><Share2 size={16} /> Invia a Bot</button>{sendStatus && <span style={{ fontSize: 13, color: sendStatus.includes(<CheckCircle size={18} color="#4CAF50" />) ? '#4CAF50' : sendStatus.includes(<XCircle size={18} color="#EF4444" />) ? '#f44' : DS.colors.accent }}>{sendStatus}</span>}</div>)}{user.role === 'k' && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}><Camera size={16} /> PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg, #2AAA8A, #20917A)' }} onClick={() => handleSendToBot()}><Share2 size={16} /> Invia a Bot</button></div>)}</div>) : !rankings && (<div style={{ textAlign: 'center', padding: 60, color: '#999999' }}><div style={{ fontSize: 50 }}><BarChart3 size={16} /></div><p>Carica un CSV per iniziare</p></div>)}
         </section>
       </main>
       {showConfirmModal && (
