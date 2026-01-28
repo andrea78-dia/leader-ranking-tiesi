@@ -1,79 +1,370 @@
 import React, { useState } from 'react';
 import Head from 'next/head';
+import { Camera, Download, FileText, BarChart3, Users, Sun, Zap, TrendingUp, Target, Award, Calendar, AlertTriangle, CheckCircle, XCircle, ChevronLeft, LogOut, Menu, X, Filter, Clock, Star, Trophy, Medal, Crown, Briefcase, Building2, UserCheck, FileSpreadsheet, Image, Share2, Eye, RefreshCw } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 🎨 DESIGN SYSTEM - Stili uniformi per tutta l'app
+// 🎨 DESIGN SYSTEM v2.0 - Executive Level UI
 // ═══════════════════════════════════════════════════════════════════════════
+
 const DS = {
-  // Colori
+  // ─────────────────────────────────────────────────────────────────────────
+  // COLORI - Palette Executive Raffinata
+  // ─────────────────────────────────────────────────────────────────────────
   colors: {
-    primary: '#2AAA8A',
-    primaryDark: '#20917A',
-    secondary: '#F59E0B',
-    success: '#10B981',
-    danger: '#EF4444',
-    warning: '#F59E0B',
+    // Primary - Verde Teal Executive
+    primary: '#1E8A6E',
+    primaryLight: DS.colors.primaryLight,
+    primaryDark: '#166D57',
+    primaryBg: '#F0FDF9',
+    primaryBorder: '#A7F3D0',
     
-    bgPage: '#F8F9FA',
-    bgCard: '#FFFFFF',
-    bgMuted: '#F9FAFB',
+    // Accent - Oro NWG Raffinato
+    accent: DS.colors.accent,
+    accentLight: '#E5C255',
+    accentDark: '#A68512',
+    accentBg: '#FFFBEB',
+    accentBorder: '#FDE68A',
     
-    border: '#E5E7EB',
-    borderLight: '#F3F4F6',
+    // Semantic
+    success: DS.colors.success,
+    successBg: '#ECFDF5',
+    successBorder: '#A7F3D0',
     
-    textPrimary: '#1F2937',
-    textSecondary: '#6B7280',
-    textMuted: '#9CA3AF',
+    danger: DS.colors.danger,
+    dangerBg: '#FEF2F2',
+    dangerBorder: '#FECACA',
     
-    // Prodotti
-    fv: '#15803D',
-    fvBg: '#F0FDF4',
-    fvBorder: '#BBF7D0',
+    warning: DS.colors.warning,
+    warningBg: '#FFFBEB',
+    warningBorder: '#FDE68A',
     
-    la: '#B45309',
+    info: '#0284C7',
+    infoBg: '#F0F9FF',
+    infoBorder: '#BAE6FD',
+    
+    // Neutrals
+    white: DS.colors.white,
+    gray50: DS.colors.gray50,
+    gray100: DS.colors.gray100,
+    gray200: DS.colors.gray200,
+    gray300: '#D1D5DB',
+    gray400: '#9CA3AF',
+    gray500: DS.colors.gray500,
+    gray600: '#4B5563',
+    gray700: DS.colors.gray700,
+    gray800: DS.colors.gray800,
+    gray900: '#111827',
+    
+    // Prodotti - Coerenti con brand
+    fv: DS.colors.success,      // Fotovoltaico - Verde Emerald
+    fvBg: '#ECFDF5',
+    fvBorder: '#A7F3D0',
+    
+    la: DS.colors.warning,      // Luce Amica - Ambra
     laBg: '#FFFBEB',
-    laBorder: '#FCD34D',
+    laBorder: '#FDE68A',
     
-    seminari: '#7C3AED',
+    seminari: DS.colors.seminari, // Seminari - Viola
     seminariBg: '#F5F3FF',
     seminariBorder: '#C4B5FD',
     
-    ivd: '#0D9488',
-    ivdBg: '#F0FDFA',
-    ivdBorder: '#99F6E4'
+    ivd: '#0891B2',      // IVD - Cyan
+    ivdBg: '#ECFEFF',
+    ivdBorder: '#A5F3FC',
+    
+    // Podio
+    gold: DS.colors.accent,
+    silver: DS.colors.gray500,
+    bronze: DS.colors.la
   },
   
-  // Border radius
-  radius: {
+  // ─────────────────────────────────────────────────────────────────────────
+  // TIPOGRAFIA - Sistema Gerarchico
+  // ─────────────────────────────────────────────────────────────────────────
+  font: {
+    family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    
+    // Sizes
+    h1: { size: 28, weight: 700, height: 1.2 },
+    h2: { size: 20, weight: 700, height: 1.3 },
+    h3: { size: 16, weight: 600, height: 1.4 },
+    body: { size: 14, weight: 400, height: 1.5 },
+    caption: { size: 12, weight: 500, height: 1.4 },
+    micro: { size: 11, weight: 500, height: 1.3 }
+  },
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // SPACING - Sistema 4px
+  // ─────────────────────────────────────────────────────────────────────────
+  space: {
+    xs: 4,
     sm: 8,
     md: 12,
     lg: 16,
     xl: 20,
+    '2xl': 24,
+    '3xl': 32,
+    '4xl': 40
+  },
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // BORDER RADIUS - Consistente
+  // ─────────────────────────────────────────────────────────────────────────
+  radius: {
+    sm: 6,
+    md: 8,
+    lg: 12,
+    xl: 16,
     full: 9999
   },
   
-  // Shadows
+  // ─────────────────────────────────────────────────────────────────────────
+  // SHADOWS - Subtle & Professional
+  // ─────────────────────────────────────────────────────────────────────────
   shadow: {
-    sm: '0 1px 2px rgba(0,0,0,0.05)',
-    md: '0 4px 6px -1px rgba(0,0,0,0.1)',
-    lg: '0 10px 15px -3px rgba(0,0,0,0.1)'
+    sm: '0 1px 2px rgba(0,0,0,0.04)',
+    md: '0 2px 4px rgba(0,0,0,0.06)',
+    lg: '0 4px 12px rgba(0,0,0,0.08)',
+    xl: '0 8px 24px rgba(0,0,0,0.12)'
   },
   
-  // Card styles presets
-  card: {
-    background: '#FFFFFF',
-    borderRadius: 16,
-    border: '1px solid #E5E7EB',
-    padding: 20,
-    shadow: '0 1px 3px rgba(0,0,0,0.05)'
-  },
-  
-  cardInner: {
-    background: '#F9FAFB',
-    borderRadius: 12,
-    border: '1px solid #E5E7EB',
-    padding: 16
+  // ─────────────────────────────────────────────────────────────────────────
+  // TRANSITIONS
+  // ─────────────────────────────────────────────────────────────────────────
+  transition: {
+    fast: 'all 0.15s ease',
+    normal: 'all 0.2s ease',
+    slow: 'all 0.3s ease'
   }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPONENTI UI RIUTILIZZABILI
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Icona con wrapper consistente
+const Icon = ({ icon: IconComponent, size = 16, color = DS.colors.gray500, style = {} }) => (
+  <IconComponent size={size} color={color} strokeWidth={2} style={{ flexShrink: 0, ...style }} />
+);
+
+// Badge per posizioni podio (sostituisce emoji medaglie)
+const PositionBadge = ({ position, size = 'md' }) => {
+  const sizes = { sm: 20, md: 24, lg: 32 };
+  const fontSizes = { sm: 10, md: 12, lg: 14 };
+  const s = sizes[size];
+  const fs = fontSizes[size];
+  
+  const colors = {
+    1: { bg: DS.colors.gold, text: DS.colors.white },
+    2: { bg: DS.colors.gray400, text: DS.colors.white },
+    3: { bg: DS.colors.bronze, text: DS.colors.white }
+  };
+  
+  const c = colors[position] || { bg: DS.colors.gray200, text: DS.colors.gray600 };
+  
+  return (
+    <div style={{
+      width: s,
+      height: s,
+      borderRadius: DS.radius.full,
+      background: position <= 3 ? c.bg : 'transparent',
+      border: position > 3 ? `1px solid ${DS.colors.gray300}` : 'none',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontWeight: 700,
+      fontSize: fs,
+      color: c.text,
+      flexShrink: 0
+    }}>
+      {position}°
+    </div>
+  );
+};
+
+// Bottone primario
+const Button = ({ children, onClick, variant = 'primary', size = 'md', icon: IconComp, disabled = false, style = {} }) => {
+  const variants = {
+    primary: { bg: DS.colors.primary, color: DS.colors.white, border: 'none' },
+    secondary: { bg: DS.colors.white, color: DS.colors.gray700, border: `1px solid ${DS.colors.gray200}` },
+    ghost: { bg: 'transparent', color: DS.colors.gray600, border: 'none' },
+    danger: { bg: DS.colors.danger, color: DS.colors.white, border: 'none' },
+    accent: { bg: DS.colors.accent, color: DS.colors.white, border: 'none' }
+  };
+  
+  const sizes = {
+    sm: { padding: '6px 12px', fontSize: 12 },
+    md: { padding: '10px 16px', fontSize: 13 },
+    lg: { padding: '12px 24px', fontSize: 14 }
+  };
+  
+  const v = variants[variant];
+  const sz = sizes[size];
+  
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        background: v.bg,
+        color: v.color,
+        border: v.border,
+        borderRadius: DS.radius.md,
+        padding: sz.padding,
+        fontSize: sz.fontSize,
+        fontWeight: 600,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.5 : 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        transition: DS.transition.fast,
+        fontFamily: DS.font.family,
+        ...style
+      }}
+    >
+      {IconComp && <IconComp size={sz.fontSize + 2} strokeWidth={2} />}
+      {children}
+    </button>
+  );
+};
+
+// Card container
+const Card = ({ children, padding = DS.space.xl, style = {} }) => (
+  <div style={{
+    background: DS.colors.white,
+    borderRadius: DS.radius.lg,
+    border: `1px solid ${DS.colors.gray200}`,
+    padding,
+    boxShadow: DS.shadow.sm,
+    ...style
+  }}>
+    {children}
+  </div>
+);
+
+// Section header
+const SectionHeader = ({ icon: IconComp, title, subtitle, color = DS.colors.primary, rightContent }) => (
+  <div style={{ 
+    display: 'flex', 
+    justifyContent: 'space-between', 
+    alignItems: 'flex-start', 
+    marginBottom: DS.space.xl 
+  }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: DS.space.md }}>
+      {IconComp && (
+        <div style={{
+          width: 40,
+          height: 40,
+          borderRadius: DS.radius.md,
+          background: `${color}15`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <IconComp size={20} color={color} strokeWidth={2} />
+        </div>
+      )}
+      <div>
+        <h3 style={{ 
+          fontSize: DS.font.h2.size, 
+          fontWeight: DS.font.h2.weight, 
+          color: DS.colors.gray800, 
+          margin: 0 
+        }}>
+          {title}
+        </h3>
+        {subtitle && (
+          <p style={{ 
+            fontSize: DS.font.caption.size, 
+            color: DS.colors.gray500, 
+            margin: '4px 0 0' 
+          }}>
+            {subtitle}
+          </p>
+        )}
+      </div>
+    </div>
+    {rightContent}
+  </div>
+);
+
+// Metric card
+const MetricCard = ({ label, value, sublabel, icon: IconComp, color = DS.colors.primary, trend }) => (
+  <div style={{
+    background: DS.colors.white,
+    borderRadius: DS.radius.lg,
+    padding: DS.space.lg,
+    border: `1px solid ${DS.colors.gray200}`,
+    borderLeft: `3px solid ${color}`
+  }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: DS.space.sm }}>
+      <span style={{ fontSize: DS.font.micro.size, fontWeight: 600, color: DS.colors.gray500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        {label}
+      </span>
+      {IconComp && <IconComp size={16} color={color} strokeWidth={2} />}
+    </div>
+    <div style={{ fontSize: 28, fontWeight: 800, color: DS.colors.gray800, lineHeight: 1 }}>
+      {value}
+    </div>
+    {sublabel && (
+      <div style={{ fontSize: DS.font.micro.size, color: DS.colors.gray500, marginTop: DS.space.xs }}>
+        {sublabel}
+      </div>
+    )}
+    {trend && (
+      <div style={{ 
+        fontSize: DS.font.micro.size, 
+        color: trend > 0 ? DS.colors.success : DS.colors.danger, 
+        marginTop: DS.space.xs,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 4
+      }}>
+        <TrendingUp size={12} style={{ transform: trend < 0 ? 'rotate(180deg)' : 'none' }} />
+        {Math.abs(trend)}%
+      </div>
+    )}
+  </div>
+);
+
+// Badge
+const Badge = ({ children, variant = 'default', size = 'md' }) => {
+  const variants = {
+    default: { bg: DS.colors.gray100, color: DS.colors.gray600, border: DS.colors.gray200 },
+    primary: { bg: DS.colors.primaryBg, color: DS.colors.primary, border: DS.colors.primaryBorder },
+    success: { bg: DS.colors.successBg, color: DS.colors.success, border: DS.colors.successBorder },
+    warning: { bg: DS.colors.warningBg, color: DS.colors.warning, border: DS.colors.warningBorder },
+    danger: { bg: DS.colors.dangerBg, color: DS.colors.danger, border: DS.colors.dangerBorder },
+    accent: { bg: DS.colors.accentBg, color: DS.colors.accent, border: DS.colors.accentBorder }
+  };
+  
+  const sizes = {
+    sm: { padding: '2px 6px', fontSize: 10 },
+    md: { padding: '4px 8px', fontSize: 11 },
+    lg: { padding: '6px 12px', fontSize: 12 }
+  };
+  
+  const v = variants[variant];
+  const sz = sizes[size];
+  
+  return (
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 4,
+      padding: sz.padding,
+      fontSize: sz.fontSize,
+      fontWeight: 600,
+      borderRadius: DS.radius.sm,
+      background: v.bg,
+      color: v.color,
+      border: `1px solid ${v.border}`
+    }}>
+      {children}
+    </span>
+  );
 };
 
 const USERS = {
@@ -91,14 +382,14 @@ const EVENT_TYPES = ['LUCE AMICA', 'FOTOVOLTAICO', 'INSERITI SEMINARIO', 'ATTIVA
 const WEBHOOK_URL = 'https://hook.eu1.make.com/sm6lrhpoet204lv6xkwj10xiypwnn4qm';
 
 const RANKING_CONFIG = {
-  ivd_inseriti: { label: 'IVD INSERITI', category: 'ivd', color: '#2AAA8A', emoji: '🟠', design: 'impact' },
-  ivd_accettati: { label: 'IVD ACCETTATI', category: 'ivd', color: '#4CAF50', emoji: '🟢', design: 'impact' },
-  sdp_inseriti: { label: 'SDP INSERITI', category: 'sdp', color: '#2AAA8A', emoji: '🔵', design: 'impact' },
-  sdp_accettati: { label: 'SDP ACCETTATI', category: 'sdp', color: '#4CAF50', emoji: '🟢', design: 'impact' },
-  nw: { label: 'NETWORKER', category: 'manager', color: '#2AAA8A', emoji: '⭐', design: 'exclusive' },
-  k: { label: 'K MANAGER', category: 'manager', color: '#FFD700', emoji: '👑', design: 'exclusive' },
-  eb: { label: 'ENERGY BROKER', category: 'broker', color: '#2AAA8A', emoji: '🔷', design: 'exclusive' },
-  frm: { label: 'FORMATORI', category: 'formatore', color: '#2AAA8A', emoji: '🎓', design: 'exclusive' },
+  ivd_inseriti: { label: 'IVD INSERITI', category: 'ivd', color: DS.colors.primaryLight, emoji: '', design: 'impact' },
+  ivd_accettati: { label: 'IVD ACCETTATI', category: 'ivd', color: '#4CAF50', emoji: '', design: 'impact' },
+  sdp_inseriti: { label: 'SDP INSERITI', category: 'sdp', color: DS.colors.primaryLight, emoji: '', design: 'impact' },
+  sdp_accettati: { label: 'SDP ACCETTATI', category: 'sdp', color: '#4CAF50', emoji: '', design: 'impact' },
+  nw: { label: 'NETWORKER', category: 'manager', color: DS.colors.primaryLight, emoji: '<Star size={16} />', design: 'exclusive' },
+  k: { label: 'K MANAGER', category: 'manager', color: DS.colors.accent, emoji: '<Crown size={16} />', design: 'exclusive' },
+  eb: { label: 'ENERGY BROKER', category: 'broker', color: DS.colors.primaryLight, emoji: '🔷', design: 'exclusive' },
+  frm: { label: 'FORMATORI', category: 'formatore', color: DS.colors.primaryLight, emoji: '🎓', design: 'exclusive' },
 };
 
 const PRODUCTION_CALENDAR = {
@@ -256,7 +547,7 @@ export default function Home() {
   const getData = () => rankings ? (rankings[selectedRanking] || []) : [];
   const getLabels = () => rankings?.type === 'seminario' ? { c1: 'ISCRITTI', c2: 'PRESENTI' } : { c1: 'INSERITI', c2: 'ACCETTATI' };
   const isExclusive = () => ['nw', 'k', 'eb', 'frm'].includes(selectedRanking);
-  const getConfig = () => RANKING_CONFIG[selectedRanking] || { label: '', category: '', color: '#2AAA8A', emoji: '📊', design: 'impact' };
+  const getConfig = () => RANKING_CONFIG[selectedRanking] || { label: '', category: '', color: DS.colors.primaryLight, emoji: '<BarChart3 size={16} />', design: 'impact' };
   const getClassificaTotal = () => getData().reduce((sum, [,s]) => sum + s.v1, 0);
   const groupByValue = (data, useV2 = false) => {
     const groups = {}; data.forEach(([name, s]) => { const val = useV2 ? s.v2 : s.v1; if (!groups[val]) groups[val] = []; groups[val].push({ name, ...s }); });
@@ -373,23 +664,23 @@ export default function Home() {
   };
 
   // Colori per torte e stati - DIFFERENZIATI
-  const PIE_COLORS_K = ['#FFD700', '#2AAA8A', '#2196F3', '#9C27B0', '#FF5722']; // K Manager - colori diversi!
+  const PIE_COLORS_K = [DS.colors.accent, DS.colors.primaryLight, '#2196F3', '#9C27B0', '#FF5722']; // K Manager - colori diversi!
   const PIE_COLORS_NW = ['#2196F3', '#1E88E5', '#1976D2', '#1565C0', '#0D47A1']; // Blu per Networker
   const PIE_COLORS_STATI = ['#4CAF50', '#66BB6A', '#81C784', '#A5D6A7', '#C8E6C9']; // Verde per Stati
-  const PIE_COLORS = ['#FFD700', '#2AAA8A', '#2196F3', '#9C27B0', '#FF5722', '#E91E63', '#607D8B', '#795548', '#4CAF50', '#666666'];
+  const PIE_COLORS = [DS.colors.accent, DS.colors.primaryLight, '#2196F3', '#9C27B0', '#FF5722', '#E91E63', '#607D8B', '#795548', '#4CAF50', '#666666'];
   const STATO_COLORS = { 
-    'Accettato': '#4CAF50', 'Sospeso': '#FFD700', 'In sospeso': '#FFD700', 'Presente': '#4CAF50', 'Assente': '#E53935', 
-    'In lavorazione': '#FFD700', 'Installato': '#4CAF50', 'Impianto installato': '#4CAF50', 'Recesso': '#E53935', 
+    'Accettato': '#4CAF50', 'Sospeso': DS.colors.accent, 'In sospeso': DS.colors.accent, 'Presente': '#4CAF50', 'Assente': '#E53935', 
+    'In lavorazione': DS.colors.accent, 'Installato': '#4CAF50', 'Impianto installato': '#4CAF50', 'Recesso': '#E53935', 
     'Annullato': '#E53935', 'In fornitura': '#4CAF50', 'Attivo': '#4CAF50', 'Cessato': '#E53935', 'Negativo': '#E53935',
-    'Non perfezionato': '#E53935', 'Respinto': '#E53935', 'Da attivare': '#FFD700', 'Risoluzione': '#E53935'
+    'Non perfezionato': '#E53935', 'Respinto': '#E53935', 'Da attivare': DS.colors.accent, 'Risoluzione': '#E53935'
   };
   
   // Colori heatmap - FREDDO = ROSSO
   const HEATMAP_COLORS = {
-    hot: '#4CAF50',      // >70% 🟢 Verde
-    warm: '#FFD700',     // 40-70% 🟡 Giallo
-    cool: '#E53935',     // 10-40% 🔴 Rosso (era verde)
-    cold: '#E53935',     // <10% 🔴 Rosso
+    hot: '#4CAF50',      // >70%  Verde
+    warm: DS.colors.accent,     // 40-70% 🟡 Giallo
+    cool: '#E53935',     // 10-40%  Rosso (era verde)
+    cold: '#E53935',     // <10%  Rosso
     zero: '#F5F5F5' // 0 ⬜
   };
   
@@ -404,7 +695,7 @@ export default function Home() {
 
   // === MAPPATURA STATI (Aggiornata secondo documento) ===
   const STATO_MAP_FV = {
-    // 🟢 POSITIVO (contratti definitivamente chiusi/installati)
+    //  POSITIVO (contratti definitivamente chiusi/installati)
     'Impianto installato': 'positivo', 
     'AAC contratto accettato': 'positivo', // AAC senza "attesa sblocco" = OK
     'Impianto pronto per spedizione': 'positivo', 'Impianto pronto spedizione': 'positivo',
@@ -416,7 +707,7 @@ export default function Home() {
     'AAC – Contratto accettato in attesa sblocco': 'lavorazione', 'AAC - Contratto accettato in attesa sblocco': 'lavorazione', 'attesa sblocco': 'lavorazione', // SPOSTATO QUI!
     'Rep.Fin – In lavorazione': 'lavorazione', 'Rep.Fin in lavorazione': 'lavorazione', 'Rep.Fin - In lavorazione': 'lavorazione', 'In lavorazione': 'lavorazione',
     'Rep.Amm – Sospeso': 'lavorazione', 'Rep.Amm sospeso': 'lavorazione', 'Rep.Amm - Sospeso': 'lavorazione', 'Sospeso': 'lavorazione',
-    // 🔴 NEGATIVO (persi)
+    //  NEGATIVO (persi)
     'Recesso': 'negativo', 
     'Rep.Fin – Negativo': 'negativo', 'Rep.Fin negativo': 'negativo', 'Rep.Fin - Negativo': 'negativo', 'Negativo': 'negativo',
     'Annullato': 'negativo', 
@@ -426,34 +717,34 @@ export default function Home() {
   };
   
   const STATO_MAP_LA_SPA = {
-    // 🟢 POSITIVO
+    //  POSITIVO
     'Accettato': 'positivo',
     // 🟡 LAVORABILE
     'In sospeso': 'lavorabile', 'Sospeso': 'lavorabile', 'In Sospeso': 'lavorabile',
-    // 🔴 MENO (negativi)
+    //  MENO (negativi)
     'Risoluzione': 'meno', 'Non perfezionato': 'meno', 'Recesso': 'meno', 'Respinto': 'meno', 'Annullato': 'meno'
   };
   
   const STATO_MAP_LA_ENERGIA = {
-    // 🟢 POSITIVO
+    //  POSITIVO
     'Attivo': 'positivo', 'In fornitura': 'positivo', 'ATTIVO': 'positivo',
     // 🟡 LAVORABILE
     'Da attivare': 'lavorabile', 'In attivazione': 'lavorabile', 'DA ATTIVARE': 'lavorabile',
-    // 🔴 MENO
+    //  MENO
     'Cessato': 'meno', 'Disdetta': 'meno', 'CESSATO': 'meno'
   };
   
   const STATO_MAP_IVD = {
-    // 🟢 ATTIVO
+    //  ATTIVO
     'Attivo': 'attivo', 'In regola': 'attivo', 'Operativo': 'attivo',
     // 🟡 LAVORABILE
     'In attesa': 'lavorabile', 'Da completare': 'lavorabile', 'In formazione': 'lavorabile',
-    // 🔴 PERSO
+    //  PERSO
     'Cessato': 'perso', 'Dimesso': 'perso', 'Annullato': 'perso', 'Recesso': 'perso'
   };
 
   // ═══════════════════════════════════════════════════════════════════════════════
-  // 💰 LISTINI PREZZI E PUNTI FV - Per calcolo fatturato
+  //  LISTINI PREZZI E PUNTI FV - Per calcolo fatturato
   // ═══════════════════════════════════════════════════════════════════════════════
   const LISTINO_FV = {
     // ELITE 35 - Con Batteria Full Optional (Anticipo Zero)
@@ -690,18 +981,18 @@ export default function Home() {
       console.log(`📄 ${type} - Prime 200 char: ${text.substring(0, 200)}`);
       
       const data = parseCSV(text);
-      console.log(`📊 ${type} - Righe parsate: ${data.length}`);
+      console.log(`<BarChart3 size={16} /> ${type} - Righe parsate: ${data.length}`);
       if (data.length > 0) {
-        console.log(`📊 ${type} - Colonne:`, Object.keys(data[0]));
-        console.log(`📊 ${type} - Prima riga:`, data[0]);
+        console.log(`<BarChart3 size={16} /> ${type} - Colonne:`, Object.keys(data[0]));
+        console.log(`<BarChart3 size={16} /> ${type} - Prima riga:`, data[0]);
       }
       
       // IVD: NON filtriamo più, teniamo tutti (nuovi + rinnovi) e calcoliamo statistiche separate
       setReportCSVs(prev => ({ ...prev, [type]: { name: file.name, rows: data.length, data: data } }));
-      console.log(`✅ ${type} caricato con ${data.length} righe`);
+      console.log(`<CheckCircle size={16} /> ${type} caricato con ${data.length} righe`);
     };
     reader.onerror = (e) => {
-      console.error(`❌ Errore lettura ${type}:`, e);
+      console.error(`<XCircle size={16} /> Errore lettura ${type}:`, e);
     };
     reader.readAsText(file);
   };
@@ -720,7 +1011,7 @@ export default function Home() {
     };
     
     // ═══════════════════════════════════════════════════════════
-    // 📅 CALCOLO PERIODO DI RIFERIMENTO (dalle date nei CSV)
+    // <Calendar size={16} /> CALCOLO PERIODO DI RIFERIMENTO (dalle date nei CSV)
     // ═══════════════════════════════════════════════════════════
     const tutteLeDateStr = [];
     const estraiDate = (data, colonne) => {
@@ -919,7 +1210,7 @@ export default function Home() {
     };
     
     // ═══════════════════════════════════════════════════════════
-    // ☀️ PILASTRO FOTOVOLTAICO
+    // <Sun size={16} /> PILASTRO FOTOVOLTAICO
     // ═══════════════════════════════════════════════════════════
     if (reportCSVs.fv?.data?.length > 0) {
       const fvData = reportCSVs.fv.data;
@@ -933,8 +1224,8 @@ export default function Home() {
       
       result.pilastri.fv = {
         nome: 'FOTOVOLTAICO',
-        emoji: '☀️',
-        color: '#2AAA8A',
+        emoji: '<Sun size={16} />',
+        color: DS.colors.primaryLight,
         totale: fvData.length,
         funnel: {
           inseriti: fvData.length,
@@ -948,14 +1239,14 @@ export default function Home() {
         statiGroups: statiRagg.groups,
         classifiche: classifiche,
         totaleK: classifiche.k.reduce((s, [,v]) => s + v.total, 0),
-        catLabels: { c1: '🟢 Positivi', c2: '🟡 Lavoraz.', c3: '🔴 Persi' },
+        catLabels: { c1: ' Positivi', c2: '🟡 Lavoraz.', c3: ' Persi' },
         catKeys: ['positivo', 'lavorazione', 'negativo']
       };
       result.heatmapMesi.fv = heatmap;
     }
     
     // ═══════════════════════════════════════════════════════════
-    // ⚡ PILASTRO LUCE AMICA
+    // <Zap size={16} /> PILASTRO LUCE AMICA
     // ═══════════════════════════════════════════════════════════
     if (reportCSVs.energy?.data?.length > 0) {
       const laData = reportCSVs.energy.data;
@@ -976,8 +1267,8 @@ export default function Home() {
       
       result.pilastri.energy = {
         nome: 'LUCE AMICA',
-        emoji: '⚡',
-        color: '#FFD700',
+        emoji: '<Zap size={16} />',
+        color: DS.colors.accent,
         totale: laData.length,
         funnel: {
           inseriti: laData.length,
@@ -994,7 +1285,7 @@ export default function Home() {
         statiGroupsEnergia: statiEnergia.groups,
         classifiche: classifiche,
         totaleK: classifiche.k.reduce((s, [,v]) => s + v.total, 0),
-        catLabels: { c1: '🟢 Accettati', c2: '🟡 Lavorab.', c3: '🔴 Persi' },
+        catLabels: { c1: ' Accettati', c2: '🟡 Lavorab.', c3: ' Persi' },
         catKeys: ['positivo', 'lavorabile', 'meno']
       };
       result.heatmapMesi.energy = heatmap;
@@ -1162,7 +1453,7 @@ export default function Home() {
       result.pilastri.collaboratori = {
         nome: 'COLLABORATORI',
         emoji: '🎓',
-        color: '#2AAA8A',
+        color: DS.colors.primaryLight,
         funnel: {
           iscritti: collabData.iscritti,
           presenti: collabData.presenti,
@@ -1177,7 +1468,7 @@ export default function Home() {
         statiAttivati: collabData.statiAttivati,
         classifiche: collabData.classifiche || { k: [], nw: [], sdp: [] },
         totaleK: collabData.classifiche ? collabData.classifiche.k.reduce((s, [,v]) => s + v.total, 0) : 0,
-        catLabels: { c1: '📝 Iscritti', c2: '✅ Presenti', c3: '🟠 Attivati' },
+        catLabels: { c1: '📝 Iscritti', c2: '<CheckCircle size={16} /> Presenti', c3: ' Attivati' },
         catKeys: ['iscritti', 'presenti', 'attivati']
       };
     }
@@ -1228,7 +1519,7 @@ export default function Home() {
     }
     
     // ═══════════════════════════════════════════════════════════
-    // 🎯 TRACKER COACHING - Performance nuovi attivati
+    // <Target size={16} /> TRACKER COACHING - Performance nuovi attivati
     // ═══════════════════════════════════════════════════════════
     if (reportCSVs.ivd?.data?.length > 0) {
       const ivdData = reportCSVs.ivd.data;
@@ -1518,7 +1809,7 @@ export default function Home() {
     }
     
     // ═══════════════════════════════════════════════════════════════════════════════
-    // 💰 ANALISI FATTURATO - Calcolo da listini (COERENTE CON PILASTRI!)
+    //  ANALISI FATTURATO - Calcolo da listini (COERENTE CON PILASTRI!)
     // IMPORTANTE: I contratti DEVONO corrispondere ai numeri dei pilastri
     // ═══════════════════════════════════════════════════════════════════════════════
     const fatturato = {
@@ -1550,7 +1841,7 @@ export default function Home() {
       }
     };
     
-    // 💰 FATTURATO FV - TUTTI i contratti (stessa logica del pilastro!)
+    //  FATTURATO FV - TUTTI i contratti (stessa logica del pilastro!)
     if (reportCSVs.fv?.data?.length > 0) {
       const fvData = reportCSVs.fv.data;
       
@@ -1809,7 +2100,7 @@ export default function Home() {
     fatturato.la.classificaK = Object.entries(fatturato.la.perK).sort((a, b) => b[1].fatturato - a[1].fatturato);
     fatturato.la.classificaNW = Object.entries(fatturato.la.perNW).sort((a, b) => b[1].fatturato - a[1].fatturato);
     
-    // ✅ CHECK COERENZA - Verifica che i numeri battano con i pilastri
+    // <CheckCircle size={16} /> CHECK COERENZA - Verifica che i numeri battano con i pilastri
     fatturato.coerenza = {
       fv: {
         pilastroInseriti: result.pilastri.fv?.funnel?.inseriti || 0,
@@ -1846,7 +2137,7 @@ export default function Home() {
     result.fatturato = fatturato;
     
     // ═══════════════════════════════════════════════════════════════════════════════
-    // 📊 HEATMAP PER GUADAGNO FV, GUADAGNO LA E PUNTI
+    // <BarChart3 size={16} /> HEATMAP PER GUADAGNO FV, GUADAGNO LA E PUNTI
     // ═══════════════════════════════════════════════════════════════════════════════
     const calcHeatmapFatturato = (data, tipo) => {
       const mesi = Array(12).fill(0);
@@ -1932,7 +2223,7 @@ export default function Home() {
     }
     
     // ═══════════════════════════════════════════════════════════════════════════════
-    // 🎯 RIEPILOGO GENERALE - KPI con termini italiani chiari
+    // <Target size={16} /> RIEPILOGO GENERALE - KPI con termini italiani chiari
     // ═══════════════════════════════════════════════════════════════════════════════
     
     // Calcola incidenza nuovi IVD sul fatturato
@@ -2075,10 +2366,10 @@ export default function Home() {
     };
     
     // ═══════════════════════════════════════════════════════════
-    // 🏆 CALCOLO BEST PERFORMERS (K e NW per ogni categoria)
+    // <Trophy size={16} /> CALCOLO BEST PERFORMERS (K e NW per ogni categoria)
     // ═══════════════════════════════════════════════════════════
     result.bestPerformers = {
-      // ☀️ FOTOVOLTAICO
+      // <Sun size={16} /> FOTOVOLTAICO
       fv: {
         fatturato: {
           k: fatturato.fv.classificaK[0] ? { nome: fatturato.fv.classificaK[0][0], valore: fatturato.fv.classificaK[0][1].fatturato, dettaglio: `${fatturato.fv.classificaK[0][1].kw}kW | ${fatturato.fv.classificaK[0][1].punti}pt` } : null,
@@ -2103,7 +2394,7 @@ export default function Home() {
         })()
       },
       
-      // ⚡ LUCE AMICA
+      // <Zap size={16} /> LUCE AMICA
       la: {
         fatturato: {
           k: fatturato.la.classificaK[0] ? { nome: fatturato.la.classificaK[0][0], valore: Math.round(fatturato.la.classificaK[0][1].fatturato / 12), dettaglio: `${fatturato.la.classificaK[0][1].contratti} contr | ${Math.round(fatturato.la.classificaK[0][1].kwh / 1000)}MWh` } : null,
@@ -2143,7 +2434,7 @@ export default function Home() {
         })()
       },
       
-      // 🎯 TRACKER VELOCITÀ (basato su medie)
+      // <Target size={16} /> TRACKER VELOCITÀ (basato su medie)
       tracker: {
         primaLA: (() => {
           if (!result.trackerCoaching?.lista) return { k: null, nw: null };
@@ -2210,9 +2501,9 @@ export default function Home() {
     ctx.fillRect(0, 0, W, H);
     
     // Header
-    ctx.fillStyle = '#2AAA8A';
+    ctx.fillStyle = DS.colors.primaryLight;
     ctx.font = 'bold 48px Arial';
-    ctx.fillText('📊 DASHBOARD', 50, 70);
+    ctx.fillText('<BarChart3 size={16} /> DASHBOARD', 50, 70);
     ctx.fillStyle = '#fff';
     ctx.font = '24px Arial';
     ctx.fillText(`${config.emoji} ${config.label} - ${eventDate}`, 50, 110);
@@ -2220,10 +2511,10 @@ export default function Home() {
     // Stats cards
     const cardW = 400, cardH = 120, cardY = 150;
     const cardData = [
-      { label: labels.c1, value: stats.ins, color: '#2AAA8A' },
+      { label: labels.c1, value: stats.ins, color: DS.colors.primaryLight },
       { label: labels.c2, value: stats.acc, color: '#4CAF50' },
-      { label: 'Partecipanti', value: stats.part, color: '#2AAA8A' },
-      { label: 'Conversione', value: stats.conv + '%', color: '#FFD700' }
+      { label: 'Partecipanti', value: stats.part, color: DS.colors.primaryLight },
+      { label: 'Conversione', value: stats.conv + '%', color: DS.colors.accent }
     ];
     cardData.forEach((card, i) => {
       const x = 50 + i * (cardW + 30);
@@ -2250,13 +2541,13 @@ export default function Home() {
     ctx.beginPath();
     ctx.roundRect(50, podioY, 600, podioH, 20);
     ctx.fill();
-    ctx.fillStyle = '#FFD700';
+    ctx.fillStyle = DS.colors.accent;
     ctx.font = 'bold 28px Arial';
-    ctx.fillText('🏆 PODIO', 80, podioY + 40);
+    ctx.fillText('<Trophy size={16} /> PODIO', 80, podioY + 40);
     
     // Disegna podio semplificato
     const podioData = stats.top3;
-    const barColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
+    const barColors = [DS.colors.accent, '#C0C0C0', '#CD7F32'];
     const barHeights = [160, 120, 80];
     const barX = [280, 130, 430];
     podioData.forEach((p, i) => {
@@ -2265,7 +2556,7 @@ export default function Home() {
       ctx.beginPath();
       ctx.roundRect(bx, by, 140, bh, [15, 15, 0, 0]);
       ctx.fill();
-      ctx.fillStyle = '#FFFFFF';
+      ctx.fillStyle = DS.colors.white;
       ctx.font = 'bold 36px Arial';
       ctx.textAlign = 'center';
       ctx.fillText(p.v1.toString(), bx + 70, by + bh - 20);
@@ -2281,9 +2572,9 @@ export default function Home() {
     ctx.beginPath();
     ctx.roundRect(heatX, heatY, 1170, podioH, 20);
     ctx.fill();
-    ctx.fillStyle = '#2AAA8A';
+    ctx.fillStyle = DS.colors.primaryLight;
     ctx.font = 'bold 28px Arial';
-    ctx.fillText('🔥 TEMPERATURA CONTRATTI', heatX + 30, heatY + 40);
+    ctx.fillText('<TrendingUp size={16} /> TEMPERATURA CONTRATTI', heatX + 30, heatY + 40);
     
     // Griglia calendario
     const cellW = 45, cellH = 35, gridX = heatX + 30, gridY = heatY + 70;
@@ -2308,7 +2599,7 @@ export default function Home() {
       const intensity = val / maxMonthly;
       const bgColor = val === 0 ? '#F5F5F5' : 
                       intensity > 0.7 ? '#4CAF50' : 
-                      intensity > 0.4 ? '#FFD700' : '#2AAA8A';
+                      intensity > 0.4 ? DS.colors.accent : DS.colors.primaryLight;
       ctx.fillStyle = bgColor;
       ctx.beginPath();
       ctx.roundRect(cx, cy, cellW - 4, cellH - 4, 6);
@@ -2329,11 +2620,11 @@ export default function Home() {
     ctx.beginPath(); ctx.roundRect(heatX + 800, legY, 20, 20, 4); ctx.fill();
     ctx.fillStyle = '#fff'; ctx.font = '12px Arial';
     ctx.fillText('Alto', heatX + 830, legY + 15);
-    ctx.fillStyle = '#FFD700';
+    ctx.fillStyle = DS.colors.accent;
     ctx.beginPath(); ctx.roundRect(heatX + 900, legY, 20, 20, 4); ctx.fill();
     ctx.fillStyle = '#fff';
     ctx.fillText('Medio', heatX + 930, legY + 15);
-    ctx.fillStyle = '#2AAA8A';
+    ctx.fillStyle = DS.colors.primaryLight;
     ctx.beginPath(); ctx.roundRect(heatX + 1010, legY, 20, 20, 4); ctx.fill();
     ctx.fillStyle = '#fff';
     ctx.fillText('Basso', heatX + 1040, legY + 15);
@@ -2344,9 +2635,9 @@ export default function Home() {
     ctx.beginPath();
     ctx.roundRect(50, topY, 900, 320, 20);
     ctx.fill();
-    ctx.fillStyle = '#2AAA8A';
+    ctx.fillStyle = DS.colors.primaryLight;
     ctx.font = 'bold 28px Arial';
-    ctx.fillText('📈 TOP 4° - 10°', 80, topY + 40);
+    ctx.fillText('<TrendingUp size={16} /> TOP 4° - 10°', 80, topY + 40);
     
     stats.top10.slice(3, 10).forEach((p, i) => {
       const ry = topY + 70 + i * 35;
@@ -2355,13 +2646,13 @@ export default function Home() {
       ctx.beginPath();
       ctx.roundRect(150, ry, barW, 28, 6);
       ctx.fill();
-      ctx.fillStyle = '#FFD700';
+      ctx.fillStyle = DS.colors.accent;
       ctx.font = 'bold 18px Arial';
       ctx.fillText(`${i + 4}°`, 90, ry + 20);
       ctx.fillStyle = '#fff';
       ctx.font = '16px Arial';
       ctx.fillText(p.name, 160, ry + 20);
-      ctx.fillStyle = '#2AAA8A';
+      ctx.fillStyle = DS.colors.primaryLight;
       ctx.font = 'bold 20px Arial';
       ctx.textAlign = 'right';
       ctx.fillText(p.v1.toString(), 900, ry + 22);
@@ -2376,9 +2667,9 @@ export default function Home() {
     ctx.fill();
     
     // K Manager pie
-    ctx.fillStyle = '#FFD700';
+    ctx.fillStyle = DS.colors.accent;
     ctx.font = 'bold 20px Arial';
-    ctx.fillText('👑 K MANAGER', pieX + 30, pieY + 40);
+    ctx.fillText('<Crown size={16} /> K MANAGER', pieX + 30, pieY + 40);
     const totalK = pies.k.reduce((s, [,v]) => s + v, 0);
     pies.k.slice(0, 5).forEach(([name, val], i) => {
       const py = pieY + 70 + i * 28;
@@ -2392,9 +2683,9 @@ export default function Home() {
     });
     
     // NW pie
-    ctx.fillStyle = '#2AAA8A';
+    ctx.fillStyle = DS.colors.primaryLight;
     ctx.font = 'bold 20px Arial';
-    ctx.fillText('⭐ NETWORKER TOP 5', pieX + 400, pieY + 40);
+    ctx.fillText('<Star size={16} /> NETWORKER TOP 5', pieX + 400, pieY + 40);
     pies.nw.slice(0, 5).forEach(([name, val], i) => {
       const py = pieY + 70 + i * 28;
       ctx.fillStyle = PIE_COLORS[i];
@@ -2412,7 +2703,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v15.3 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v16.1 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -2449,12 +2740,12 @@ export default function Home() {
       
       // Mostra loading
       const originalBg = element.style.background;
-      element.style.background = '#FFFFFF';
+      element.style.background = DS.colors.white;
       
       const canvas = await window.html2canvas(element, {
         scale: 2, // Alta risoluzione
         useCORS: true,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: DS.colors.white,
         logging: false
       });
       
@@ -2504,7 +2795,7 @@ export default function Home() {
       
       // Mostra loading
       const loadingDiv = document.createElement('div');
-      loadingDiv.innerHTML = '<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999"><div style="background:white;padding:40px;border-radius:16px;text-align:center"><div style="font-size:48px;margin-bottom:16px">📸</div><div style="font-size:18px;font-weight:600" id="screenshot-progress">Generazione screenshot...</div></div></div>';
+      loadingDiv.innerHTML = '<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999"><div style="background:white;padding:40px;border-radius:16px;text-align:center"><div style="font-size:48px;margin-bottom:16px"><Camera size={16} /></div><div style="font-size:18px;font-weight:600" id="screenshot-progress">Generazione screenshot...</div></div></div>';
       document.body.appendChild(loadingDiv);
       
       let count = 0;
@@ -2512,7 +2803,7 @@ export default function Home() {
         const element = document.getElementById(section.id);
         if (element) {
           document.getElementById('screenshot-progress').textContent = `Screenshot ${++count}/${sections.length}: ${section.name}`;
-          const canvas = await window.html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#FFFFFF', logging: false });
+          const canvas = await window.html2canvas(element, { scale: 2, useCORS: true, backgroundColor: DS.colors.white, logging: false });
           const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
           zip.file(`${section.name}.png`, blob);
         }
@@ -2544,7 +2835,7 @@ export default function Home() {
     canvas.width = W; canvas.height = H;
     
     // Sfondo verde teal
-    ctx.fillStyle = '#2AAA8A';
+    ctx.fillStyle = DS.colors.primaryLight;
     ctx.fillRect(0, 0, W, H);
     
     // Funzione per disegnare stelle
@@ -2574,7 +2865,7 @@ export default function Home() {
       { x: 1450, y: 180, size: 9 }, { x: 400, y: 750, size: 11 }, { x: 1600, y: 800, size: 10 },
       { x: 250, y: 650, size: 8 }, { x: 1700, y: 700, size: 9 }
     ];
-    starPositions.forEach(s => drawStar(s.x, s.y, 4, s.size, s.size * 0.4, '#FFD700', 0.5));
+    starPositions.forEach(s => drawStar(s.x, s.y, 4, s.size, s.size * 0.4, DS.colors.accent, 0.5));
 
     if (mode === 'solo') {
       // ============ SOLO PODIO - CENTRATO E GRANDE ============
@@ -2588,9 +2879,9 @@ export default function Home() {
       const maxVal = Math.max(stats.top3[0]?.v1 || 1, stats.top3[1]?.v1 || 1, stats.top3[2]?.v1 || 1);
       
       const positions = [
-        { x: centerX - barW - gap, data: stats.top3[1], medal: '🥈', pos: 2, colors: ['#F5F5F5', '#C0C0C0', '#909090'], sideColor: '#707070' },
-        { x: centerX, data: stats.top3[0], medal: '🥇', pos: 1, colors: ['#FFFDE7', '#FFD700', '#20917A'], sideColor: '#CC9900' },
-        { x: centerX + barW + gap, data: stats.top3[2], medal: '🥉', pos: 3, colors: ['#E8F5F1', '#CD7F32', '#8B4513'], sideColor: '#6B3A0A' }
+        { x: centerX - barW - gap, data: stats.top3[1], medal: '2°', pos: 2, colors: ['#F5F5F5', '#C0C0C0', '#909090'], sideColor: '#707070' },
+        { x: centerX, data: stats.top3[0], medal: '1°', pos: 1, colors: ['#FFFDE7', DS.colors.accent, DS.colors.primaryDark], sideColor: '#CC9900' },
+        { x: centerX + barW + gap, data: stats.top3[2], medal: '3°', pos: 3, colors: ['#E8F5F1', '#CD7F32', '#8B4513'], sideColor: '#6B3A0A' }
       ];
       
       positions.forEach(p => {
@@ -2677,7 +2968,7 @@ export default function Home() {
         medalPositions.push({ x: p.x, y: barY + 80, pos: p.pos, medal: p.medal });
         
         // Numero alla BASE della colonna
-        ctx.fillStyle = '#FFFFFF';
+        ctx.fillStyle = DS.colors.white;
         ctx.font = `bold ${p.pos === 1 ? 120 : 90}px Arial`;
         ctx.textAlign = 'center';
         ctx.fillText(p.data.v1.toString(), p.x, podioBaseY - 30);
@@ -2687,7 +2978,7 @@ export default function Home() {
         const cognome = nameParts[0] || '';
         const nome = nameParts.slice(1).join(' ') || '';
         
-        ctx.fillStyle = '#FFFFFF';
+        ctx.fillStyle = DS.colors.white;
         ctx.font = `bold ${p.pos === 1 ? 48 : 40}px Arial`;
         ctx.fillText(cognome, p.x, barY - 90);
         ctx.font = `${p.pos === 1 ? 38 : 30}px Arial`;
@@ -2702,7 +2993,7 @@ export default function Home() {
         const dist = 200 + Math.random() * 60;
         const sx = centerX + Math.cos(angle) * dist;
         const sy = winnerY + 150 + Math.sin(angle) * dist * 0.5;
-        drawStar(sx, sy, 4, 12 + Math.random() * 10, 5, '#FFD700', 0.4 + Math.random() * 0.4);
+        drawStar(sx, sy, 4, 12 + Math.random() * 10, 5, DS.colors.accent, 0.4 + Math.random() * 0.4);
       }
       
       // MEDAGLIE SOLIDE (disegnate DOPO le stelle per stare in primo piano)
@@ -2723,7 +3014,7 @@ export default function Home() {
         ctx.fill();
         
         // Bordo medaglia
-        const medalBorder = m.pos === 1 ? '#FFD700' : m.pos === 2 ? '#A0A0A0' : '#CD7F32';
+        const medalBorder = m.pos === 1 ? DS.colors.accent : m.pos === 2 ? '#A0A0A0' : '#CD7F32';
         ctx.strokeStyle = medalBorder;
         ctx.lineWidth = 6;
         ctx.stroke();
@@ -2747,9 +3038,9 @@ export default function Home() {
       const maxVal = Math.max(stats.top3[0]?.v1 || 1, stats.top3[1]?.v1 || 1, stats.top3[2]?.v1 || 1);
       
       const positions = [
-        { x: centerX - barW - gap, data: stats.top3[1], medal: '🥈', pos: 2, colors: ['#F5F5F5', '#C0C0C0', '#909090'], sideColor: '#707070' },
-        { x: centerX, data: stats.top3[0], medal: '🥇', pos: 1, colors: ['#FFFDE7', '#FFD700', '#20917A'], sideColor: '#CC9900' },
-        { x: centerX + barW + gap, data: stats.top3[2], medal: '🥉', pos: 3, colors: ['#E8F5F1', '#CD7F32', '#8B4513'], sideColor: '#6B3A0A' }
+        { x: centerX - barW - gap, data: stats.top3[1], medal: '2°', pos: 2, colors: ['#F5F5F5', '#C0C0C0', '#909090'], sideColor: '#707070' },
+        { x: centerX, data: stats.top3[0], medal: '1°', pos: 1, colors: ['#FFFDE7', DS.colors.accent, DS.colors.primaryDark], sideColor: '#CC9900' },
+        { x: centerX + barW + gap, data: stats.top3[2], medal: '3°', pos: 3, colors: ['#E8F5F1', '#CD7F32', '#8B4513'], sideColor: '#6B3A0A' }
       ];
       
       positions.forEach(p => {
@@ -2819,7 +3110,7 @@ export default function Home() {
         medalPositions.push({ x: p.x, y: barY + 70, pos: p.pos, medal: p.medal });
         
         // Numero alla BASE della colonna
-        ctx.fillStyle = '#FFFFFF';
+        ctx.fillStyle = DS.colors.white;
         ctx.font = `bold ${p.pos === 1 ? 100 : 75}px Arial`;
         ctx.textAlign = 'center';
         ctx.fillText(p.data.v1.toString(), p.x, podioBaseY - 25);
@@ -2829,7 +3120,7 @@ export default function Home() {
         const cognome = nameParts[0] || '';
         const nome = nameParts.slice(1).join(' ') || '';
         
-        ctx.fillStyle = '#FFFFFF';
+        ctx.fillStyle = DS.colors.white;
         ctx.font = `bold ${p.pos === 1 ? 40 : 32}px Arial`;
         ctx.fillText(cognome, p.x, barY - 80);
         ctx.font = `${p.pos === 1 ? 30 : 24}px Arial`;
@@ -2844,7 +3135,7 @@ export default function Home() {
         const dist = 180 + Math.random() * 50;
         const sx = centerX + Math.cos(angle) * dist;
         const sy = winnerY + 120 + Math.sin(angle) * dist * 0.5;
-        drawStar(sx, sy, 4, 11 + Math.random() * 8, 4, '#FFD700', 0.4 + Math.random() * 0.35);
+        drawStar(sx, sy, 4, 11 + Math.random() * 8, 4, DS.colors.accent, 0.4 + Math.random() * 0.35);
       }
       
       // MEDAGLIE SOLIDE (dopo le stelle)
@@ -2865,7 +3156,7 @@ export default function Home() {
         ctx.fill();
         
         // Bordo medaglia
-        const medalBorder = m.pos === 1 ? '#FFD700' : m.pos === 2 ? '#A0A0A0' : '#CD7F32';
+        const medalBorder = m.pos === 1 ? DS.colors.accent : m.pos === 2 ? '#A0A0A0' : '#CD7F32';
         ctx.strokeStyle = medalBorder;
         ctx.lineWidth = 5;
         ctx.stroke();
@@ -2884,10 +3175,10 @@ export default function Home() {
       // Allinea in modo che l'ultima riga finisca alla base del podio
       const listStartY = podioBaseY - (numRows * rowH) + 10;
       
-      ctx.fillStyle = '#FFFFFF';
+      ctx.fillStyle = DS.colors.white;
       ctx.font = 'bold 36px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText('📊 CLASSIFICA', listX, listStartY - 25);
+      ctx.fillText('<BarChart3 size={16} /> CLASSIFICA', listX, listStartY - 25);
       
       const maxV1 = stats.maxV1;
       
@@ -2912,13 +3203,13 @@ export default function Home() {
         ctx.fill();
         
         // Posizione
-        ctx.fillStyle = '#FFD700';
+        ctx.fillStyle = DS.colors.accent;
         ctx.font = 'bold 32px Arial';
         ctx.textAlign = 'left';
         ctx.fillText(`${pos}°`, listX + 18, y + 45);
         
         // Nome
-        ctx.fillStyle = '#FFFFFF';
+        ctx.fillStyle = DS.colors.white;
         ctx.font = '26px Arial';
         ctx.fillText(p.name.toUpperCase(), listX + 80, y + 45);
         
@@ -2937,7 +3228,7 @@ export default function Home() {
     ctx.fillStyle = 'rgba(255,255,255,0.95)';
     ctx.font = '26px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`📥 ${stats.ins} Inseriti   •   ✅ ${stats.acc} Accettati   •   📈 ${stats.conv}% Conversione   •   👥 ${stats.part} Partecipanti`, W / 2, H - 28);
+    ctx.fillText(`<Download size={16} /> ${stats.ins} Inseriti   •   <CheckCircle size={16} /> ${stats.acc} Accettati   •   <TrendingUp size={16} /> ${stats.conv}% Conversione   •   <Users size={16} /> ${stats.part} Partecipanti`, W / 2, H - 28);
     
     return canvas.toDataURL('image/png');
   };
@@ -3008,10 +3299,10 @@ export default function Home() {
     
     // Background - ELEGANTE con sfumatura verde corporate
     const bg = ctx.createLinearGradient(0, 0, 0, H); 
-    bg.addColorStop(0, '#FFFFFF'); 
+    bg.addColorStop(0, DS.colors.white); 
     bg.addColorStop(0.3, 'rgba(42,170,138,0.03)'); 
     bg.addColorStop(0.7, 'rgba(42,170,138,0.05)'); 
-    bg.addColorStop(1, '#FFFFFF');
+    bg.addColorStop(1, DS.colors.white);
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
     ctx.strokeStyle = `${config.color}60`; ctx.lineWidth = 3; ctx.strokeRect(20, 20, W - 40, H - 40);
     ctx.fillStyle = config.color; ctx.fillRect(35, 35, W - 70, 4);
@@ -3052,7 +3343,7 @@ export default function Home() {
     grouped.forEach((group) => {
       const { value, members } = group;
       const isTop3 = position <= 3;
-      const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : null;
+      const medal = position === 1 ? '1°' : position === 2 ? '2°' : position === 3 ? '3°' : null;
       
       // Font size per questo gruppo
       const fontSize = isTop3 ? Math.min(baseFontSize + 2, 24) : baseFontSize;
@@ -3124,7 +3415,7 @@ export default function Home() {
     const footerY = currentY + 10;
     ctx.fillStyle = '#E0E0E0'; ctx.fillRect(45, footerY, W - 90, 2);
     ctx.fillStyle = '#666666'; ctx.font = '15px Arial';
-    ctx.fillText(`📊 ${data.length} partecipanti • ${totIns} contratti`, 50, footerY + 28);
+    ctx.fillText(`<BarChart3 size={16} /> ${data.length} partecipanti • ${totIns} contratti`, 50, footerY + 28);
     ctx.textAlign = 'right'; ctx.fillText('LEADER RANKING', W - 50, footerY + 28);
     ctx.textAlign = 'left';
     ctx.fillStyle = config.color; ctx.fillRect(35, footerY + 45, W - 70, 4);
@@ -3140,10 +3431,10 @@ export default function Home() {
     
     // Background - ELEGANTE con sfumatura verde corporate (come NW)
     const bg = ctx.createLinearGradient(0, 0, 0, H); 
-    bg.addColorStop(0, '#FFFFFF'); 
+    bg.addColorStop(0, DS.colors.white); 
     bg.addColorStop(0.3, 'rgba(42,170,138,0.03)'); 
     bg.addColorStop(0.7, 'rgba(42,170,138,0.05)'); 
-    bg.addColorStop(1, '#FFFFFF');
+    bg.addColorStop(1, DS.colors.white);
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
     ctx.strokeStyle = `${config.color}60`; ctx.lineWidth = 3; ctx.strokeRect(18, 18, W - 36, H - 36);
     ctx.strokeStyle = `${config.color}30`; ctx.lineWidth = 1; ctx.strokeRect(28, 28, W - 56, H - 56);
@@ -3190,7 +3481,7 @@ export default function Home() {
         ctx.lineWidth = 2; ctx.stroke();
       }
       
-      const centerY = y + cardH / 2, medals = ['🏆', '🥈', '🥉'];
+      const centerY = y + cardH / 2, medals = ['<Trophy size={16} />', '2°', '3°'];
       
       if (isTop3) {
         ctx.font = '38px Arial'; ctx.fillText(medals[i], 75, centerY + 14);
@@ -3217,9 +3508,9 @@ export default function Home() {
       // Progress bar
       const barX = W - 270, barW = 105;
       ctx.fillStyle = '#E0E0E0'; ctx.beginPath(); ctx.roundRect(barX, centerY - 10, barW, 18, 5); ctx.fill();
-      const barC = pctM >= 50 ? '#4CAF50' : pctM >= 20 ? '#FF8F00' : '#2AAA8A';
+      const barC = pctM >= 50 ? '#4CAF50' : pctM >= 20 ? '#FF8F00' : DS.colors.primaryLight;
       ctx.fillStyle = barC; ctx.beginPath(); ctx.roundRect(barX, centerY - 10, Math.max(barW * pctM / 100, 1), 18, 5); ctx.fill();
-      ctx.fillStyle = '#FFF'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center';
+      ctx.fillStyle = DS.colors.white; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center';
       ctx.fillText(`${pctM}%`, barX + barW / 2, centerY + 4);
       
       // Accettati - VERDE
@@ -3234,7 +3525,7 @@ export default function Home() {
     // Footer
     ctx.fillStyle = '#E0E0E0'; ctx.fillRect(55, footerY, W - 110, 1);
     ctx.fillStyle = '#999999'; ctx.font = '15px Arial';
-    ctx.fillText(`📊 ${data.length} ${config.label} • ${totIns} contratti`, 60, footerY + 28);
+    ctx.fillText(`<BarChart3 size={16} /> ${data.length} ${config.label} • ${totIns} contratti`, 60, footerY + 28);
     ctx.textAlign = 'right'; ctx.fillText('LEADER RANKING', W - 60, footerY + 28);
     ctx.textAlign = 'left';
     
@@ -3252,7 +3543,7 @@ export default function Home() {
   const handleSendToBot = async (confirmed = false) => {
     // K Manager: messaggio ironico
     if (user.role === 'k') {
-      alert('🚫 Ehi campione! Questo bottone è riservato ai Supremi Amministratori.\n\nSe vuoi l\'automazione anche per te, contatta il Genio Creatore Andrea Tiesi 🧞‍♂️\n\nNel frattempo... scarica l\'immagine e postala tu, che fa bene ai muscoli delle dita! 💪');
+      alert('🚫 Ehi campione! Questo bottone è riservato ai Supremi Amministratori.\n\nSe vuoi l\'automazione anche per te, contatta il Genio Creatore Andrea Tiesi 🧞‍♂️\n\nNel frattempo... scarica l\'immagine e postala tu, che fa bene ai muscoli delle dita! ');
       return;
     }
     
@@ -3331,7 +3622,7 @@ export default function Home() {
     
     // Se non abbiamo URL, non inviare (evita errori su Make)
     if (!imageUrl) {
-      setSendStatus('❌ Upload fallito');
+      setSendStatus('<XCircle size={16} /> Upload fallito');
       setTimeout(() => setSendStatus(''), 3000);
       return;
     }
@@ -3367,18 +3658,18 @@ export default function Home() {
         body: JSON.stringify(webhookData)
       });
       
-      setSendStatus('✅ Inviato!');
+      setSendStatus('<CheckCircle size={16} /> Inviato!');
       setTimeout(() => setSendStatus(''), 3000);
     } catch (e) { 
       console.log('Errore webhook:', e);
-      setSendStatus('❌ Errore'); 
+      setSendStatus('<XCircle size={16} /> Errore'); 
       setTimeout(() => setSendStatus(''), 3000); 
     }
   };
 
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // 📷 DOWNLOAD REPORT PNG - Semplice e funzionante
+  // <Camera size={16} /> DOWNLOAD REPORT PNG - Semplice e funzionante
   // ═══════════════════════════════════════════════════════════════════════════
   
   const downloadReportPNG = () => {
@@ -3396,19 +3687,19 @@ export default function Home() {
     const periodo = reportData.periodoRiferimento?.label || 'Report';
     
     // Background bianco
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = DS.colors.white;
     ctx.fillRect(0, 0, W, H);
     
     // Bordo verde
-    ctx.strokeStyle = '#2AAA8A';
+    ctx.strokeStyle = DS.colors.primaryLight;
     ctx.lineWidth = 6;
     ctx.strokeRect(10, 10, W - 20, H - 20);
     
     // Header verde
-    ctx.fillStyle = '#2AAA8A';
+    ctx.fillStyle = DS.colors.primaryLight;
     ctx.fillRect(30, 30, W - 60, 100);
     
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = DS.colors.white;
     ctx.font = 'bold 42px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('LEADER RANKING', W/2, 85);
@@ -3426,10 +3717,10 @@ export default function Home() {
       ctx.lineWidth = 3;
       ctx.strokeRect(50, y, W - 100, 120);
       
-      ctx.fillStyle = '#15803D';
+      ctx.fillStyle = DS.colors.fv;
       ctx.font = 'bold 24px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText('☀️ FOTOVOLTAICO', 70, y + 35);
+      ctx.fillText('<Sun size={16} /> FOTOVOLTAICO', 70, y + 35);
       
       ctx.font = 'bold 48px Arial';
       ctx.fillText(fv.funnel.positivi.toString(), 70, y + 90);
@@ -3437,7 +3728,7 @@ export default function Home() {
       ctx.fillStyle = '#666';
       ctx.fillText('Positivi', 70, y + 110);
       
-      ctx.fillStyle = '#15803D';
+      ctx.fillStyle = DS.colors.fv;
       ctx.font = 'bold 48px Arial';
       ctx.fillText(fv.funnel.pctPositivi + '%', 250, y + 90);
       ctx.font = '16px Arial';
@@ -3445,7 +3736,7 @@ export default function Home() {
       ctx.fillText('Conversione', 250, y + 110);
       
       if (reportData.fatturato?.fv) {
-        ctx.fillStyle = '#15803D';
+        ctx.fillStyle = DS.colors.fv;
         ctx.font = 'bold 36px Arial';
         ctx.textAlign = 'right';
         ctx.fillText('€' + (reportData.fatturato.fv.effettivi.totale/1000000).toFixed(2) + 'M', W - 70, y + 70);
@@ -3466,10 +3757,10 @@ export default function Home() {
       ctx.lineWidth = 3;
       ctx.strokeRect(50, y, W - 100, 120);
       
-      ctx.fillStyle = '#B45309';
+      ctx.fillStyle = DS.colors.la;
       ctx.font = 'bold 24px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText('⚡ LUCE AMICA', 70, y + 35);
+      ctx.fillText('<Zap size={16} /> LUCE AMICA', 70, y + 35);
       
       ctx.font = 'bold 48px Arial';
       ctx.fillText(la.funnel.accettati.toString(), 70, y + 90);
@@ -3477,7 +3768,7 @@ export default function Home() {
       ctx.fillStyle = '#666';
       ctx.fillText('Accettati', 70, y + 110);
       
-      ctx.fillStyle = '#B45309';
+      ctx.fillStyle = DS.colors.la;
       ctx.font = 'bold 48px Arial';
       ctx.fillText(la.funnel.pctAccettati + '%', 250, y + 90);
       ctx.font = '16px Arial';
@@ -3485,7 +3776,7 @@ export default function Home() {
       ctx.fillText('Accettazione', 250, y + 110);
       
       if (reportData.fatturato?.la?.accettati) {
-        ctx.fillStyle = '#B45309';
+        ctx.fillStyle = DS.colors.la;
         ctx.font = 'bold 36px Arial';
         ctx.textAlign = 'right';
         ctx.fillText('€' + Math.round((reportData.fatturato.la.accettati.totale || 0)/12).toLocaleString('it-IT') + '/m', W - 70, y + 70);
@@ -3506,7 +3797,7 @@ export default function Home() {
       ctx.lineWidth = 3;
       ctx.strokeRect(50, y, W - 100, 120);
       
-      ctx.fillStyle = '#7C3AED';
+      ctx.fillStyle = DS.colors.seminari;
       ctx.font = 'bold 24px Arial';
       ctx.textAlign = 'left';
       ctx.fillText('🎓 SEMINARI', 70, y + 35);
@@ -3517,14 +3808,14 @@ export default function Home() {
       ctx.fillStyle = '#666';
       ctx.fillText('Iscritti', 70, y + 110);
       
-      ctx.fillStyle = '#7C3AED';
+      ctx.fillStyle = DS.colors.seminari;
       ctx.font = 'bold 48px Arial';
       ctx.fillText(sem.funnel.presenti.toString(), 220, y + 90);
       ctx.font = '16px Arial';
       ctx.fillStyle = '#666';
       ctx.fillText('Presenti', 220, y + 110);
       
-      ctx.fillStyle = '#7C3AED';
+      ctx.fillStyle = DS.colors.seminari;
       ctx.font = 'bold 48px Arial';
       ctx.fillText(sem.funnel.pctPresenti + '%', 370, y + 90);
       ctx.font = '16px Arial';
@@ -3547,14 +3838,14 @@ export default function Home() {
       const tc = reportData.trackerCoaching;
       ctx.fillStyle = '#F0FDFA';
       ctx.fillRect(50, y, W - 100, 120);
-      ctx.strokeStyle = '#2AAA8A';
+      ctx.strokeStyle = DS.colors.primaryLight;
       ctx.lineWidth = 3;
       ctx.strokeRect(50, y, W - 100, 120);
       
       ctx.fillStyle = '#0D9488';
       ctx.font = 'bold 24px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText('👥 NUOVI IVD', 70, y + 35);
+      ctx.fillText('<Users size={16} /> NUOVI IVD', 70, y + 35);
       
       ctx.font = 'bold 48px Arial';
       ctx.fillText(tc.totale.toString(), 70, y + 90);
@@ -3582,10 +3873,10 @@ export default function Home() {
     
     // === TOTALI ===
     y += 20;
-    ctx.fillStyle = '#2AAA8A';
+    ctx.fillStyle = DS.colors.primaryLight;
     ctx.fillRect(50, y, W - 100, 150);
     
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = DS.colors.white;
     ctx.font = 'bold 20px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('TOTALI EFFETTIVI', W/2, y + 30);
@@ -3617,7 +3908,7 @@ export default function Home() {
   };
   
   // ═══════════════════════════════════════════════════════════════════════════
-  // 📽️ DOWNLOAD POWERPOINT - Presentazione professionale
+  // <FileSpreadsheet size={16} /> DOWNLOAD POWERPOINT - Presentazione professionale
   // ═══════════════════════════════════════════════════════════════════════════
   
   const downloadPowerPoint = async () => {
@@ -3628,7 +3919,7 @@ export default function Home() {
     
     // Mostra loading
     const loadingDiv = document.createElement('div');
-    loadingDiv.innerHTML = '<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999"><div style="background:white;padding:40px;border-radius:16px;text-align:center"><div style="font-size:48px;margin-bottom:16px">📽️</div><div style="font-size:18px;font-weight:600">Generazione PowerPoint...</div></div></div>';
+    loadingDiv.innerHTML = '<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999"><div style="background:white;padding:40px;border-radius:16px;text-align:center"><div style="font-size:48px;margin-bottom:16px"><FileSpreadsheet size={16} /></div><div style="font-size:18px;font-weight:600">Generazione PowerPoint...</div></div></div>';
     document.body.appendChild(loadingDiv);
     
     try {
@@ -3789,7 +4080,7 @@ export default function Home() {
   };
 
   // ═══════════════════════════════════════════════════════════════════════════════
-  // 📊 RIEPILOGO GENERALE - Design coerente con dashboard
+  // <BarChart3 size={16} /> RIEPILOGO GENERALE - Design coerente con dashboard
   // ═══════════════════════════════════════════════════════════════════════════════
   const ExecutiveSummaryComponent = ({ data, periodo }) => {
     if (!data) return null;
@@ -3803,7 +4094,7 @@ export default function Home() {
 
     return (
       <div id="section-riepilogo" style={{ 
-        background: '#FFFFFF', 
+        background: DS.colors.white, 
         borderRadius: 20, 
         padding: 24,
         marginBottom: 20,
@@ -3820,16 +4111,16 @@ export default function Home() {
           borderBottom: '1px solid #F3F4F6'
         }}>
           <div>
-            <h2 style={{ color: '#1F2937', fontSize: 20, margin: 0, fontWeight: 700 }}>
-              📊 Riepilogo Generale
+            <h2 style={{ color: DS.colors.gray800, fontSize: 20, margin: 0, fontWeight: 700 }}>
+              <BarChart3 size={16} /> Riepilogo Generale
             </h2>
-            <p style={{ color: '#6B7280', fontSize: 12, margin: '4px 0 0' }}>
-              {periodo ? `📅 Periodo: ${periodo.label}` : 'Panoramica completa risultati periodo'}
+            <p style={{ color: DS.colors.gray500, fontSize: 12, margin: '4px 0 0' }}>
+              {periodo ? `<Calendar size={16} /> Periodo: ${periodo.label}` : 'Panoramica completa risultati periodo'}
             </p>
           </div>
           
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button onClick={() => screenshotSection('section-riepilogo', 'Riepilogo_Generale')} style={{ padding: '6px 12px', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>📷</button>
+            <button onClick={() => screenshotSection('section-riepilogo', 'Riepilogo_Generale')} style={{ padding: '6px 12px', background: DS.colors.gray100, border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}><Camera size={16} /></button>
           <div style={{ display: 'flex', gap: 12 }}>
             {[
               { label: 'FV', value: data.semafori?.fv },
@@ -3851,7 +4142,7 @@ export default function Home() {
                   background: getSemaforoColor(item.value),
                   margin: '0 auto 4px'
                 }} />
-                <div style={{ fontSize: 10, color: '#6B7280', fontWeight: 500 }}>{item.label}</div>
+                <div style={{ fontSize: 10, color: DS.colors.gray500, fontWeight: 500 }}>{item.label}</div>
               </div>
             ))}
           </div>
@@ -3868,11 +4159,11 @@ export default function Home() {
             padding: 20
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-              <div style={{ fontSize: 14, color: '#15803D', fontWeight: 700 }}>☀️ Fotovoltaico</div>
+              <div style={{ fontSize: 14, color: DS.colors.fv, fontWeight: 700 }}><Sun size={16} /> Fotovoltaico</div>
               <div style={{ 
                 fontSize: 10, 
-                background: '#15803D', 
-                color: '#FFF', 
+                background: DS.colors.fv, 
+                color: DS.colors.white, 
                 padding: '2px 8px', 
                 borderRadius: 10 
               }}>{data.fv?.pctFatturato || 0}% fatt.</div>
@@ -3882,21 +4173,21 @@ export default function Home() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
               <div>
-                <div style={{ fontSize: 10, color: '#6B7280' }}>Contratti</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#1F2937' }}>{data.fv?.contratti || 0}</div>
+                <div style={{ fontSize: 10, color: DS.colors.gray500 }}>Contratti</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: DS.colors.gray800 }}>{data.fv?.contratti || 0}</div>
               </div>
               <div>
-                <div style={{ fontSize: 10, color: '#6B7280' }}>Punti</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#1F2937' }}>{(data.fv?.punti || 0).toLocaleString('it-IT')}</div>
+                <div style={{ fontSize: 10, color: DS.colors.gray500 }}>Punti</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: DS.colors.gray800 }}>{(data.fv?.punti || 0).toLocaleString('it-IT')}</div>
               </div>
             </div>
             <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #BBF7D0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                <span style={{ color: '#15803D' }}>✓ Positivi: {data.fv?.positivi || 0}</span>
-                <span style={{ color: '#DC2626' }}>✗ Persi: {data.fv?.persi || 0}</span>
+                <span style={{ color: DS.colors.fv }}>✓ Positivi: {data.fv?.positivi || 0}</span>
+                <span style={{ color: DS.colors.danger }}>✗ Persi: {data.fv?.persi || 0}</span>
               </div>
-              <div style={{ fontSize: 11, color: '#6B7280', marginTop: 4 }}>
-                Conversione: <strong style={{ color: '#15803D' }}>{data.fv?.conversionePct || 0}%</strong>
+              <div style={{ fontSize: 11, color: DS.colors.gray500, marginTop: 4 }}>
+                Conversione: <strong style={{ color: DS.colors.fv }}>{data.fv?.conversionePct || 0}%</strong>
               </div>
             </div>
           </div>
@@ -3909,11 +4200,11 @@ export default function Home() {
             padding: 20
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-              <div style={{ fontSize: 14, color: '#B45309', fontWeight: 700 }}>⚡ Luce Amica</div>
+              <div style={{ fontSize: 14, color: DS.colors.la, fontWeight: 700 }}><Zap size={16} /> Luce Amica</div>
               <div style={{ 
                 fontSize: 10, 
-                background: '#B45309', 
-                color: '#FFF', 
+                background: DS.colors.la, 
+                color: DS.colors.white, 
                 padding: '2px 8px', 
                 borderRadius: 10 
               }}>{data.la?.pctFatturato || 0}% fatt.</div>
@@ -3923,21 +4214,21 @@ export default function Home() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
               <div>
-                <div style={{ fontSize: 10, color: '#6B7280' }}>Contratti</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#1F2937' }}>{data.la?.contratti || 0}</div>
+                <div style={{ fontSize: 10, color: DS.colors.gray500 }}>Contratti</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: DS.colors.gray800 }}>{data.la?.contratti || 0}</div>
               </div>
               <div>
-                <div style={{ fontSize: 10, color: '#6B7280' }}>Punti</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#1F2937' }}>{(data.la?.punti || 0).toLocaleString('it-IT')}</div>
+                <div style={{ fontSize: 10, color: DS.colors.gray500 }}>Punti</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: DS.colors.gray800 }}>{(data.la?.punti || 0).toLocaleString('it-IT')}</div>
               </div>
             </div>
             <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #FCD34D' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                <span style={{ color: '#15803D' }}>✓ Accettati: {data.la?.accettati || 0}</span>
-                <span style={{ color: '#DC2626' }}>✗ Cessati: {data.la?.cessati || 0}</span>
+                <span style={{ color: DS.colors.fv }}>✓ Accettati: {data.la?.accettati || 0}</span>
+                <span style={{ color: DS.colors.danger }}>✗ Cessati: {data.la?.cessati || 0}</span>
               </div>
-              <div style={{ fontSize: 11, color: '#6B7280', marginTop: 4 }}>
-                Accettazione: <strong style={{ color: '#B45309' }}>{data.la?.conversionePct || 0}%</strong>
+              <div style={{ fontSize: 11, color: DS.colors.gray500, marginTop: 4 }}>
+                Accettazione: <strong style={{ color: DS.colors.la }}>{data.la?.conversionePct || 0}%</strong>
               </div>
             </div>
           </div>
@@ -3947,9 +4238,9 @@ export default function Home() {
             background: 'linear-gradient(135deg, #2AAA8A 0%, #20917A 100%)',
             borderRadius: 16,
             padding: 20,
-            color: '#FFF'
+            color: DS.colors.white
           }}>
-            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, opacity: 0.9 }}>📊 Totale</div>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, opacity: 0.9 }}><BarChart3 size={16} /> Totale</div>
             <div style={{ fontSize: 32, fontWeight: 800, marginBottom: 4 }}>
               €{((data.totale?.fatturato || 0) / 1000000).toFixed(2)}M
             </div>
@@ -3972,12 +4263,12 @@ export default function Home() {
         {/* Riga info: Seminari + Nuovi IVD + Alert */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
           {/* Seminari */}
-          <div style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#6B7280', marginBottom: 10 }}>🎓 Seminari</div>
+          <div style={{ background: DS.colors.gray50, borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: DS.colors.gray500, marginBottom: 10 }}>🎓 Seminari</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <div style={{ fontSize: 10, color: '#9CA3AF' }}>Iscritti</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: '#1F2937' }}>{data.seminari?.iscritti || 0}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: DS.colors.gray800 }}>{data.seminari?.iscritti || 0}</div>
               </div>
               <div style={{ fontSize: 20, color: '#D1D5DB' }}>→</div>
               <div>
@@ -3989,18 +4280,18 @@ export default function Home() {
                 <div style={{ fontSize: 20, fontWeight: 700, color: '#EF4444' }}>{data.seminari?.assenti || 0}</div>
               </div>
             </div>
-            <div style={{ fontSize: 11, color: '#6B7280', marginTop: 8 }}>
+            <div style={{ fontSize: 11, color: DS.colors.gray500, marginTop: 8 }}>
               Tasso presenza: <strong>{data.seminari?.pctPresenti || 0}%</strong>
             </div>
           </div>
           
           {/* Nuovi IVD */}
-          <div style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#6B7280', marginBottom: 10 }}>👥 Nuovi IVD Attivati</div>
+          <div style={{ background: DS.colors.gray50, borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: DS.colors.gray500, marginBottom: 10 }}><Users size={16} /> Nuovi IVD Attivati</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <div style={{ fontSize: 10, color: '#9CA3AF' }}>Totale</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: '#1F2937' }}>{data.nuoviIVD?.totale || 0}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: DS.colors.gray800 }}>{data.nuoviIVD?.totale || 0}</div>
               </div>
               <div>
                 <div style={{ fontSize: 10, color: '#10B981' }}>Attivi</div>
@@ -4011,29 +4302,29 @@ export default function Home() {
                 <div style={{ fontSize: 20, fontWeight: 700, color: '#EF4444' }}>{data.nuoviIVD?.inattivi || 0}</div>
               </div>
             </div>
-            <div style={{ fontSize: 11, color: '#6B7280', marginTop: 8 }}>
+            <div style={{ fontSize: 11, color: DS.colors.gray500, marginTop: 8 }}>
               Hanno prodotto: <strong>{data.nuoviIVD?.pctAttivi || 0}%</strong>
             </div>
           </div>
           
           {/* Incidenza Nuovi IVD */}
-          <div style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#6B7280', marginBottom: 10 }}>📈 Incidenza Nuovi IVD</div>
+          <div style={{ background: DS.colors.gray50, borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: DS.colors.gray500, marginBottom: 10 }}><TrendingUp size={16} /> Incidenza Nuovi IVD</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 10, color: '#9CA3AF' }}>Contratti</div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: '#3B82F6' }}>{data.nuoviIVD?.contrattiTotali || 0}</div>
-                <div style={{ fontSize: 9, color: '#6B7280' }}>{data.nuoviIVD?.pctContrattiSuTotale || 0}%</div>
+                <div style={{ fontSize: 9, color: DS.colors.gray500 }}>{data.nuoviIVD?.pctContrattiSuTotale || 0}%</div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 10, color: '#9CA3AF' }}>Fatturato</div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: '#10B981' }}>€{((data.nuoviIVD?.fatturatoTotale || 0) / 1000).toFixed(0)}K</div>
-                <div style={{ fontSize: 9, color: '#6B7280' }}>{data.nuoviIVD?.pctFatturatoSuTotale || 0}%</div>
+                <div style={{ fontSize: 9, color: DS.colors.gray500 }}>{data.nuoviIVD?.pctFatturatoSuTotale || 0}%</div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 10, color: '#9CA3AF' }}>Punti</div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: '#F59E0B' }}>{(data.nuoviIVD?.puntiTotali || 0).toLocaleString('it-IT')}</div>
-                <div style={{ fontSize: 9, color: '#6B7280' }}>{data.nuoviIVD?.pctPuntiSuTotale || 0}%</div>
+                <div style={{ fontSize: 9, color: DS.colors.gray500 }}>{data.nuoviIVD?.pctPuntiSuTotale || 0}%</div>
               </div>
             </div>
           </div>
@@ -4057,10 +4348,10 @@ export default function Home() {
             alignItems: 'center',
             gap: 10
           }}>
-            <span style={{ fontSize: 18 }}>{(data.fv?.conversionePct || 0) >= 50 ? '✅' : '⚠️'}</span>
+            <span style={{ fontSize: 18 }}>{(data.fv?.conversionePct || 0) >= 50 ? '<CheckCircle size={16} />' : '<AlertTriangle size={16} />'}</span>
             <div>
-              <div style={{ fontSize: 10, color: '#6B7280' }}>FV Persi</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#1F2937' }}>
+              <div style={{ fontSize: 10, color: DS.colors.gray500 }}>FV Persi</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: DS.colors.gray800 }}>
                 {data.alert?.fvPersi || 0} (-€{((data.alert?.fvFatturatoPerso || 0) / 1000).toFixed(0)}K)
               </div>
             </div>
@@ -4075,10 +4366,10 @@ export default function Home() {
             alignItems: 'center',
             gap: 10
           }}>
-            <span style={{ fontSize: 18 }}>{(data.alert?.laPctCessati || 0) <= 15 ? '✅' : '⚠️'}</span>
+            <span style={{ fontSize: 18 }}>{(data.alert?.laPctCessati || 0) <= 15 ? '<CheckCircle size={16} />' : '<AlertTriangle size={16} />'}</span>
             <div>
-              <div style={{ fontSize: 10, color: '#6B7280' }}>LA Cessati</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#1F2937' }}>
+              <div style={{ fontSize: 10, color: DS.colors.gray500 }}>LA Cessati</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: DS.colors.gray800 }}>
                 {data.alert?.laCessati || 0} ({data.alert?.laPctCessati || 0}%)
               </div>
             </div>
@@ -4093,10 +4384,10 @@ export default function Home() {
             alignItems: 'center',
             gap: 10
           }}>
-            <span style={{ fontSize: 18 }}>{(data.alert?.seminariPctAssenti || 0) <= 30 ? '✅' : '⚠️'}</span>
+            <span style={{ fontSize: 18 }}>{(data.alert?.seminariPctAssenti || 0) <= 30 ? '<CheckCircle size={16} />' : '<AlertTriangle size={16} />'}</span>
             <div>
-              <div style={{ fontSize: 10, color: '#6B7280' }}>Assenti Seminari</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#1F2937' }}>
+              <div style={{ fontSize: 10, color: DS.colors.gray500 }}>Assenti Seminari</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: DS.colors.gray800 }}>
                 {data.alert?.seminariAssenti || 0} ({data.alert?.seminariPctAssenti || 0}%)
               </div>
             </div>
@@ -4111,10 +4402,10 @@ export default function Home() {
             alignItems: 'center',
             gap: 10
           }}>
-            <span style={{ fontSize: 18 }}>{(data.alert?.ivdPctInattivi || 0) <= 20 ? '✅' : '⚠️'}</span>
+            <span style={{ fontSize: 18 }}>{(data.alert?.ivdPctInattivi || 0) <= 20 ? '<CheckCircle size={16} />' : '<AlertTriangle size={16} />'}</span>
             <div>
-              <div style={{ fontSize: 10, color: '#6B7280' }}>IVD Inattivi</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#1F2937' }}>
+              <div style={{ fontSize: 10, color: DS.colors.gray500 }}>IVD Inattivi</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: DS.colors.gray800 }}>
                 {data.alert?.ivdInattivi || 0} ({data.alert?.ivdPctInattivi || 0}%)
               </div>
             </div>
@@ -4125,7 +4416,7 @@ export default function Home() {
   };
 
   // ═══════════════════════════════════════════════════════════════════════════════
-  // 📈 FUNNEL ANALYSIS COMPONENT - Design coerente
+  // <TrendingUp size={16} /> FUNNEL ANALYSIS COMPONENT - Design coerente
   // ═══════════════════════════════════════════════════════════════════════════════
   const FunnelAnalysisComponent = ({ fv, la, fatturato }) => {
     if (!fv && !la) return null;
@@ -4142,7 +4433,7 @@ export default function Home() {
           alignItems: 'center'
         }}>
           <div>
-            <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 2 }}>{label}</div>
+            <div style={{ fontSize: 11, color: DS.colors.gray500, marginBottom: 2 }}>{label}</div>
             <div style={{ fontSize: 20, fontWeight: 800, color }}>{value}</div>
             {subValue && <div style={{ fontSize: 10, color: '#9CA3AF' }}>{subValue}</div>}
           </div>
@@ -4155,33 +4446,33 @@ export default function Home() {
     );
 
     return (
-      <div id="section-conversioni" style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, border: '1px solid #E5E7EB', marginBottom: 20 }}>
+      <div id="section-conversioni" style={{ background: DS.colors.white, borderRadius: 16, padding: 20, border: '1px solid #E5E7EB', marginBottom: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h3 style={{ color: '#1F2937', fontSize: 18, margin: 0, fontWeight: 700 }}>
-            📊 Analisi Conversioni
+          <h3 style={{ color: DS.colors.gray800, fontSize: 18, margin: 0, fontWeight: 700 }}>
+            <BarChart3 size={16} /> Analisi Conversioni
             <span style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 400, marginLeft: 8 }}>Passaggi di stato</span>
           </h3>
-          <button onClick={() => screenshotSection('section-conversioni', 'Analisi_Conversioni')} style={{ padding: '6px 12px', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>📷</button>
+          <button onClick={() => screenshotSection('section-conversioni', 'Analisi_Conversioni')} style={{ padding: '6px 12px', background: DS.colors.gray100, border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}><Camera size={16} /></button>
         </div>
         
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
           {/* FV Funnel */}
           {fv && (
-            <div style={{ background: '#F9FAFB', borderRadius: 16, padding: 16 }}>
+            <div style={{ background: DS.colors.gray50, borderRadius: 16, padding: 16 }}>
               <div style={{ 
                 fontSize: 14, 
                 fontWeight: 700, 
-                color: '#15803D', 
+                color: DS.colors.fv, 
                 marginBottom: 12, 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'space-between' 
               }}>
-                <span>☀️ Fotovoltaico</span>
+                <span><Sun size={16} /> Fotovoltaico</span>
                 <span style={{ 
                   fontSize: 11, 
-                  background: '#15803D', 
-                  color: '#FFF',
+                  background: DS.colors.fv, 
+                  color: DS.colors.white,
                   padding: '3px 10px', 
                   borderRadius: 10 
                 }}>
@@ -4201,29 +4492,29 @@ export default function Home() {
                 justifyContent: 'space-between', 
                 alignItems: 'center' 
               }}>
-                <span style={{ fontSize: 12, color: '#DC2626', fontWeight: 600 }}>❌ Persi: {fv.funnel.negativi}</span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: '#DC2626' }}>-€{((fatturato?.fv?.persi?.totale || 0) / 1000).toFixed(0)}K</span>
+                <span style={{ fontSize: 12, color: DS.colors.danger, fontWeight: 600 }}><XCircle size={16} /> Persi: {fv.funnel.negativi}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: DS.colors.danger }}>-€{((fatturato?.fv?.persi?.totale || 0) / 1000).toFixed(0)}K</span>
               </div>
             </div>
           )}
           
           {/* LA Funnel */}
           {la && (
-            <div style={{ background: '#F9FAFB', borderRadius: 16, padding: 16 }}>
+            <div style={{ background: DS.colors.gray50, borderRadius: 16, padding: 16 }}>
               <div style={{ 
                 fontSize: 14, 
                 fontWeight: 700, 
-                color: '#B45309', 
+                color: DS.colors.la, 
                 marginBottom: 12, 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'space-between' 
               }}>
-                <span>⚡ Luce Amica</span>
+                <span><Zap size={16} /> Luce Amica</span>
                 <span style={{ 
                   fontSize: 11, 
-                  background: '#B45309', 
-                  color: '#FFF',
+                  background: DS.colors.la, 
+                  color: DS.colors.white,
                   padding: '3px 10px', 
                   borderRadius: 10 
                 }}>
@@ -4243,8 +4534,8 @@ export default function Home() {
                 justifyContent: 'space-between', 
                 alignItems: 'center' 
               }}>
-                <span style={{ fontSize: 12, color: '#B45309', fontWeight: 600 }}>📉 Cessati: {la.funnel.accettati - la.funnel.inFornitura}</span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: '#B45309' }}>{la.funnel.accettati > 0 ? Math.round((la.funnel.accettati - la.funnel.inFornitura) / la.funnel.accettati * 100) : 0}%</span>
+                <span style={{ fontSize: 12, color: DS.colors.la, fontWeight: 600 }}>📉 Cessati: {la.funnel.accettati - la.funnel.inFornitura}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: DS.colors.la }}>{la.funnel.accettati > 0 ? Math.round((la.funnel.accettati - la.funnel.inFornitura) / la.funnel.accettati * 100) : 0}%</span>
               </div>
             </div>
           )}
@@ -4254,7 +4545,7 @@ export default function Home() {
   };
 
   // ═══════════════════════════════════════════════════════════════════════════════
-  // 👥 RETE PERFORMANCE COMPONENT - Distribuzione produttività IVD
+  // <Users size={16} /> RETE PERFORMANCE COMPONENT - Distribuzione produttività IVD
   // ═══════════════════════════════════════════════════════════════════════════════
   const RetePerformanceComponent = ({ tracker }) => {
     if (!tracker) return null;
@@ -4276,10 +4567,10 @@ export default function Home() {
     );
 
     return (
-      <div style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, border: '1px solid #E2E8F0', marginBottom: 20 }}>
+      <div style={{ background: DS.colors.white, borderRadius: 16, padding: 20, border: '1px solid #E2E8F0', marginBottom: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div>
-            <h3 style={{ color: '#1E293B', fontSize: 18, margin: 0, fontWeight: 700 }}>👥 Performance Rete Vendita</h3>
+            <h3 style={{ color: '#1E293B', fontSize: 18, margin: 0, fontWeight: 700 }}><Users size={16} /> Performance Rete Vendita</h3>
             <p style={{ color: '#94A3B8', fontSize: 12, margin: '4px 0 0' }}>Distribuzione produttività IVD ({tracker.totale} totali)</p>
           </div>
           <div style={{ display: 'flex', gap: 16 }}>
@@ -4296,25 +4587,25 @@ export default function Home() {
         
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 12 }}>📊 Distribuzione per Fascia</div>
-            <BarChart label="0 contratti" value={fasce.zero} color="#EF4444" emoji="🔴" />
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 12 }}><BarChart3 size={16} /> Distribuzione per Fascia</div>
+            <BarChart label="0 contratti" value={fasce.zero} color="#EF4444" emoji="" />
             <BarChart label="1-5 contratti" value={fasce.bassa} color="#F59E0B" emoji="🟡" />
-            <BarChart label="6-20 contratti" value={fasce.media} color="#3B82F6" emoji="🔵" />
-            <BarChart label="21-50 contratti" value={fasce.alta} color="#10B981" emoji="🟢" />
-            <BarChart label="50+ contratti" value={fasce.top} color="#8B5CF6" emoji="⭐" />
+            <BarChart label="6-20 contratti" value={fasce.media} color="#3B82F6" emoji="" />
+            <BarChart label="21-50 contratti" value={fasce.alta} color="#10B981" emoji="" />
+            <BarChart label="50+ contratti" value={fasce.top} color="#8B5CF6" emoji="<Star size={16} />" />
           </div>
           
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 12 }}>⏱️ Tempo Medio al Primo Contratto</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                <div style={{ fontSize: 9, color: '#15803D', marginBottom: 2 }}>Prima LA</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: '#15803D' }}>{tracker.medie?.la !== null ? tracker.medie.la : '-'}</div>
+                <div style={{ fontSize: 9, color: DS.colors.fv, marginBottom: 2 }}>Prima LA</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: DS.colors.fv }}>{tracker.medie?.la !== null ? tracker.medie.la : '-'}</div>
                 <div style={{ fontSize: 9, color: '#22C55E' }}>giorni</div>
               </div>
               <div style={{ background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                <div style={{ fontSize: 9, color: '#B45309', marginBottom: 2 }}>Primo FV</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: '#B45309' }}>{tracker.medie?.fv !== null ? tracker.medie.fv : '-'}</div>
+                <div style={{ fontSize: 9, color: DS.colors.la, marginBottom: 2 }}>Primo FV</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: DS.colors.la }}>{tracker.medie?.fv !== null ? tracker.medie.fv : '-'}</div>
                 <div style={{ fontSize: 9, color: '#F59E0B' }}>giorni</div>
               </div>
               <div style={{ background: '#EDE9FE', border: '1px solid #C4B5FD', borderRadius: 10, padding: 12, textAlign: 'center' }}>
@@ -4323,8 +4614,8 @@ export default function Home() {
                 <div style={{ fontSize: 9, color: '#8B5CF6' }}>giorni</div>
               </div>
               <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                <div style={{ fontSize: 9, color: '#DC2626', marginBottom: 2 }}>Primo Attivato</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: '#DC2626' }}>{tracker.medie?.attivato !== null ? tracker.medie.attivato : '-'}</div>
+                <div style={{ fontSize: 9, color: DS.colors.danger, marginBottom: 2 }}>Primo Attivato</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: DS.colors.danger }}>{tracker.medie?.attivato !== null ? tracker.medie.attivato : '-'}</div>
                 <div style={{ fontSize: 9, color: '#EF4444' }}>giorni</div>
               </div>
             </div>
@@ -4332,10 +4623,10 @@ export default function Home() {
             <div style={{ marginTop: 12 }}>
               <div style={{ fontSize: 10, color: '#64748B', marginBottom: 6 }}>% IVD che hanno completato:</div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                <span style={{ background: '#DCFCE7', color: '#15803D', padding: '3px 8px', borderRadius: 12, fontSize: 9, fontWeight: 600 }}>LA: {tracker.completamento?.la || 0}%</span>
-                <span style={{ background: '#FEF3C7', color: '#B45309', padding: '3px 8px', borderRadius: 12, fontSize: 9, fontWeight: 600 }}>FV: {tracker.completamento?.fv || 0}%</span>
+                <span style={{ background: '#DCFCE7', color: DS.colors.fv, padding: '3px 8px', borderRadius: 12, fontSize: 9, fontWeight: 600 }}>LA: {tracker.completamento?.la || 0}%</span>
+                <span style={{ background: '#FEF3C7', color: DS.colors.la, padding: '3px 8px', borderRadius: 12, fontSize: 9, fontWeight: 600 }}>FV: {tracker.completamento?.fv || 0}%</span>
                 <span style={{ background: '#EDE9FE', color: '#6D28D9', padding: '3px 8px', borderRadius: 12, fontSize: 9, fontWeight: 600 }}>Iscritto: {tracker.completamento?.iscritto || 0}%</span>
-                <span style={{ background: '#FEF2F2', color: '#DC2626', padding: '3px 8px', borderRadius: 12, fontSize: 9, fontWeight: 600 }}>Attivato: {tracker.completamento?.attivato || 0}%</span>
+                <span style={{ background: '#FEF2F2', color: DS.colors.danger, padding: '3px 8px', borderRadius: 12, fontSize: 9, fontWeight: 600 }}>Attivato: {tracker.completamento?.attivato || 0}%</span>
               </div>
             </div>
           </div>
@@ -4351,45 +4642,45 @@ export default function Home() {
     if (!reportData || !reportData.pilastri) return null;
     
     const STATO_COLORS_DISPLAY = {
-      positivo: '#4CAF50', lavorazione: '#FFD700', lavorabile: '#FFD700', 
+      positivo: '#4CAF50', lavorazione: DS.colors.accent, lavorabile: DS.colors.accent, 
       negativo: '#E53935', meno: '#E53935', attivo: '#4CAF50', perso: '#E53935', altro: '#999999'
     };
     
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         
-        {/* 🎯 EXECUTIVE SUMMARY - PRIMA DI TUTTO */}
+        {/* <Target size={16} /> EXECUTIVE SUMMARY - PRIMA DI TUTTO */}
         {reportData.executiveSummary && (
           <ExecutiveSummaryComponent data={reportData.executiveSummary} periodo={reportData.periodoRiferimento} />
         )}
         
-        {/* 🏆 BEST PERFORMERS - Migliori K e NW per categoria */}
+        {/* <Trophy size={16} /> BEST PERFORMERS - Migliori K e NW per categoria */}
         {reportData.bestPerformers && (
-          <div id="section-best" style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, border: '1px solid #E5E7EB' }}>
+          <div id="section-best" style={{ background: DS.colors.white, borderRadius: 16, padding: 20, border: '1px solid #E5E7EB' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
               <div>
-                <h3 style={{ color: '#1F2937', fontSize: 18, margin: 0, fontWeight: 700 }}>🏆 Best Performers</h3>
-                <p style={{ color: '#6B7280', fontSize: 12, margin: '4px 0 0' }}>
+                <h3 style={{ color: DS.colors.gray800, fontSize: 18, margin: 0, fontWeight: 700 }}><Trophy size={16} /> Best Performers</h3>
+                <p style={{ color: DS.colors.gray500, fontSize: 12, margin: '4px 0 0' }}>
                   I migliori K Manager e Networker per ogni categoria {reportData.periodoRiferimento ? `• ${reportData.periodoRiferimento.label}` : ''}
                 </p>
               </div>
-              <button onClick={() => screenshotSection('section-best', 'Best_Performers')} style={{ padding: '6px 12px', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>📷</button>
+              <button onClick={() => screenshotSection('section-best', 'Best_Performers')} style={{ padding: '6px 12px', background: DS.colors.gray100, border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}><Camera size={16} /></button>
             </div>
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
               {/* COLONNA K MANAGER */}
               <div style={{ background: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)', borderRadius: 16, padding: 20, border: '2px solid #FCD34D' }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#B45309', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  👑 TOP K MANAGER
+                <div style={{ fontSize: 16, fontWeight: 700, color: DS.colors.la, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Crown size={16} /> TOP K MANAGER
                 </div>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {/* FV Fatturato */}
                   {reportData.bestPerformers.fv?.fatturato?.k && (
-                    <div style={{ background: '#FFFFFF', borderRadius: 10, padding: 12, border: '1px solid #BBF7D0' }}>
-                      <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4 }}>☀️ Miglior Fatturato FV</div>
+                    <div style={{ background: DS.colors.white, borderRadius: 10, padding: 12, border: '1px solid #BBF7D0' }}>
+                      <div style={{ fontSize: 10, color: DS.colors.gray500, marginBottom: 4 }}><Sun size={16} /> Miglior Fatturato FV</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 700, color: '#15803D' }}>{reportData.bestPerformers.fv.fatturato.k.nome}</span>
+                        <span style={{ fontWeight: 700, color: DS.colors.fv }}>{reportData.bestPerformers.fv.fatturato.k.nome}</span>
                         <span style={{ fontWeight: 800, color: '#166534' }}>€{reportData.bestPerformers.fv.fatturato.k.valore.toLocaleString('it-IT')}</span>
                       </div>
                       <div style={{ fontSize: 9, color: '#9CA3AF' }}>{reportData.bestPerformers.fv.fatturato.k.dettaglio}</div>
@@ -4398,10 +4689,10 @@ export default function Home() {
                   
                   {/* LA Fatturato Mensile */}
                   {reportData.bestPerformers.la?.fatturato?.k && (
-                    <div style={{ background: '#FFFFFF', borderRadius: 10, padding: 12, border: '1px solid #FCD34D' }}>
-                      <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4 }}>⚡ Miglior Fatturato LA /mese</div>
+                    <div style={{ background: DS.colors.white, borderRadius: 10, padding: 12, border: '1px solid #FCD34D' }}>
+                      <div style={{ fontSize: 10, color: DS.colors.gray500, marginBottom: 4 }}><Zap size={16} /> Miglior Fatturato LA /mese</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 700, color: '#B45309' }}>{reportData.bestPerformers.la.fatturato.k.nome}</span>
+                        <span style={{ fontWeight: 700, color: DS.colors.la }}>{reportData.bestPerformers.la.fatturato.k.nome}</span>
                         <span style={{ fontWeight: 800, color: '#92400E' }}>€{reportData.bestPerformers.la.fatturato.k.valore.toLocaleString('it-IT')}/m</span>
                       </div>
                       <div style={{ fontSize: 9, color: '#9CA3AF' }}>{reportData.bestPerformers.la.fatturato.k.dettaglio}</div>
@@ -4410,10 +4701,10 @@ export default function Home() {
                   
                   {/* Seminari Iscritti */}
                   {reportData.bestPerformers.seminari?.iscritti?.k && (
-                    <div style={{ background: '#FFFFFF', borderRadius: 10, padding: 12, border: '1px solid #C4B5FD' }}>
-                      <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4 }}>🎓 Miglior Iscritti Seminari</div>
+                    <div style={{ background: DS.colors.white, borderRadius: 10, padding: 12, border: '1px solid #C4B5FD' }}>
+                      <div style={{ fontSize: 10, color: DS.colors.gray500, marginBottom: 4 }}>🎓 Miglior Iscritti Seminari</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 700, color: '#7C3AED' }}>{reportData.bestPerformers.seminari.iscritti.k.nome}</span>
+                        <span style={{ fontWeight: 700, color: DS.colors.seminari }}>{reportData.bestPerformers.seminari.iscritti.k.nome}</span>
                         <span style={{ fontWeight: 800, color: '#5B21B6' }}>{reportData.bestPerformers.seminari.iscritti.k.valore}</span>
                       </div>
                       <div style={{ fontSize: 9, color: '#9CA3AF' }}>{reportData.bestPerformers.seminari.iscritti.k.dettaglio}</div>
@@ -4422,10 +4713,10 @@ export default function Home() {
                   
                   {/* Seminari Presenti */}
                   {reportData.bestPerformers.seminari?.presenti?.k && (
-                    <div style={{ background: '#FFFFFF', borderRadius: 10, padding: 12, border: '1px solid #A7F3D0' }}>
-                      <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4 }}>✅ Miglior Presenti Seminari</div>
+                    <div style={{ background: DS.colors.white, borderRadius: 10, padding: 12, border: '1px solid #A7F3D0' }}>
+                      <div style={{ fontSize: 10, color: DS.colors.gray500, marginBottom: 4 }}><CheckCircle size={16} /> Miglior Presenti Seminari</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 700, color: '#059669' }}>{reportData.bestPerformers.seminari.presenti.k.nome}</span>
+                        <span style={{ fontWeight: 700, color: DS.colors.success }}>{reportData.bestPerformers.seminari.presenti.k.nome}</span>
                         <span style={{ fontWeight: 800, color: '#047857' }}>{reportData.bestPerformers.seminari.presenti.k.valore}</span>
                       </div>
                       <div style={{ fontSize: 9, color: '#9CA3AF' }}>{reportData.bestPerformers.seminari.presenti.k.dettaglio}</div>
@@ -4434,11 +4725,11 @@ export default function Home() {
                   
                   {/* FV Conversione */}
                   {reportData.bestPerformers.fv?.conversione?.k && (
-                    <div style={{ background: '#FFFFFF', borderRadius: 10, padding: 12, border: '1px solid #86EFAC' }}>
-                      <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4 }}>📈 Miglior Conversione FV</div>
+                    <div style={{ background: DS.colors.white, borderRadius: 10, padding: 12, border: '1px solid #86EFAC' }}>
+                      <div style={{ fontSize: 10, color: DS.colors.gray500, marginBottom: 4 }}><TrendingUp size={16} /> Miglior Conversione FV</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontWeight: 700, color: '#16A34A' }}>{reportData.bestPerformers.fv.conversione.k.nome}</span>
-                        <span style={{ fontWeight: 800, color: '#15803D' }}>{reportData.bestPerformers.fv.conversione.k.valore}%</span>
+                        <span style={{ fontWeight: 800, color: DS.colors.fv }}>{reportData.bestPerformers.fv.conversione.k.valore}%</span>
                       </div>
                       <div style={{ fontSize: 9, color: '#9CA3AF' }}>{reportData.bestPerformers.fv.conversione.k.dettaglio}</div>
                     </div>
@@ -4448,17 +4739,17 @@ export default function Home() {
               
               {/* COLONNA NETWORKER */}
               <div style={{ background: 'linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 100%)', borderRadius: 16, padding: 20, border: '2px solid #6EE7B7' }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#059669', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  ⭐ TOP NETWORKER
+                <div style={{ fontSize: 16, fontWeight: 700, color: DS.colors.success, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Star size={16} /> TOP NETWORKER
                 </div>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {/* FV Fatturato */}
                   {reportData.bestPerformers.fv?.fatturato?.nw && (
-                    <div style={{ background: '#FFFFFF', borderRadius: 10, padding: 12, border: '1px solid #BBF7D0' }}>
-                      <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4 }}>☀️ Miglior Fatturato FV</div>
+                    <div style={{ background: DS.colors.white, borderRadius: 10, padding: 12, border: '1px solid #BBF7D0' }}>
+                      <div style={{ fontSize: 10, color: DS.colors.gray500, marginBottom: 4 }}><Sun size={16} /> Miglior Fatturato FV</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 700, color: '#15803D' }}>{reportData.bestPerformers.fv.fatturato.nw.nome}</span>
+                        <span style={{ fontWeight: 700, color: DS.colors.fv }}>{reportData.bestPerformers.fv.fatturato.nw.nome}</span>
                         <span style={{ fontWeight: 800, color: '#166534' }}>€{reportData.bestPerformers.fv.fatturato.nw.valore.toLocaleString('it-IT')}</span>
                       </div>
                       <div style={{ fontSize: 9, color: '#9CA3AF' }}>{reportData.bestPerformers.fv.fatturato.nw.dettaglio}</div>
@@ -4467,10 +4758,10 @@ export default function Home() {
                   
                   {/* LA Fatturato Mensile */}
                   {reportData.bestPerformers.la?.fatturato?.nw && (
-                    <div style={{ background: '#FFFFFF', borderRadius: 10, padding: 12, border: '1px solid #FCD34D' }}>
-                      <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4 }}>⚡ Miglior Fatturato LA /mese</div>
+                    <div style={{ background: DS.colors.white, borderRadius: 10, padding: 12, border: '1px solid #FCD34D' }}>
+                      <div style={{ fontSize: 10, color: DS.colors.gray500, marginBottom: 4 }}><Zap size={16} /> Miglior Fatturato LA /mese</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 700, color: '#B45309' }}>{reportData.bestPerformers.la.fatturato.nw.nome}</span>
+                        <span style={{ fontWeight: 700, color: DS.colors.la }}>{reportData.bestPerformers.la.fatturato.nw.nome}</span>
                         <span style={{ fontWeight: 800, color: '#92400E' }}>€{reportData.bestPerformers.la.fatturato.nw.valore.toLocaleString('it-IT')}/m</span>
                       </div>
                       <div style={{ fontSize: 9, color: '#9CA3AF' }}>{reportData.bestPerformers.la.fatturato.nw.dettaglio}</div>
@@ -4479,10 +4770,10 @@ export default function Home() {
                   
                   {/* Seminari Iscritti */}
                   {reportData.bestPerformers.seminari?.iscritti?.nw && (
-                    <div style={{ background: '#FFFFFF', borderRadius: 10, padding: 12, border: '1px solid #C4B5FD' }}>
-                      <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4 }}>🎓 Miglior Iscritti Seminari</div>
+                    <div style={{ background: DS.colors.white, borderRadius: 10, padding: 12, border: '1px solid #C4B5FD' }}>
+                      <div style={{ fontSize: 10, color: DS.colors.gray500, marginBottom: 4 }}>🎓 Miglior Iscritti Seminari</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 700, color: '#7C3AED' }}>{reportData.bestPerformers.seminari.iscritti.nw.nome}</span>
+                        <span style={{ fontWeight: 700, color: DS.colors.seminari }}>{reportData.bestPerformers.seminari.iscritti.nw.nome}</span>
                         <span style={{ fontWeight: 800, color: '#5B21B6' }}>{reportData.bestPerformers.seminari.iscritti.nw.valore}</span>
                       </div>
                       <div style={{ fontSize: 9, color: '#9CA3AF' }}>{reportData.bestPerformers.seminari.iscritti.nw.dettaglio}</div>
@@ -4491,10 +4782,10 @@ export default function Home() {
                   
                   {/* Seminari Presenti */}
                   {reportData.bestPerformers.seminari?.presenti?.nw && (
-                    <div style={{ background: '#FFFFFF', borderRadius: 10, padding: 12, border: '1px solid #A7F3D0' }}>
-                      <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4 }}>✅ Miglior Presenti Seminari</div>
+                    <div style={{ background: DS.colors.white, borderRadius: 10, padding: 12, border: '1px solid #A7F3D0' }}>
+                      <div style={{ fontSize: 10, color: DS.colors.gray500, marginBottom: 4 }}><CheckCircle size={16} /> Miglior Presenti Seminari</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 700, color: '#059669' }}>{reportData.bestPerformers.seminari.presenti.nw.nome}</span>
+                        <span style={{ fontWeight: 700, color: DS.colors.success }}>{reportData.bestPerformers.seminari.presenti.nw.nome}</span>
                         <span style={{ fontWeight: 800, color: '#047857' }}>{reportData.bestPerformers.seminari.presenti.nw.valore}</span>
                       </div>
                       <div style={{ fontSize: 9, color: '#9CA3AF' }}>{reportData.bestPerformers.seminari.presenti.nw.dettaglio}</div>
@@ -4503,8 +4794,8 @@ export default function Home() {
                   
                   {/* Tracker Velocità LA */}
                   {reportData.bestPerformers.tracker?.primaLA?.nw && (
-                    <div style={{ background: '#FFFFFF', borderRadius: 10, padding: 12, border: '1px solid #93C5FD' }}>
-                      <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4 }}>🎯 Più Veloce 1° LA</div>
+                    <div style={{ background: DS.colors.white, borderRadius: 10, padding: 12, border: '1px solid #93C5FD' }}>
+                      <div style={{ fontSize: 10, color: DS.colors.gray500, marginBottom: 4 }}><Target size={16} /> Più Veloce 1° LA</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontWeight: 700, color: '#2563EB' }}>{reportData.bestPerformers.tracker.primaLA.nw.nome}</span>
                         <span style={{ fontWeight: 800, color: '#1D4ED8' }}>{reportData.bestPerformers.tracker.primaLA.nw.valore}g</span>
@@ -4518,36 +4809,36 @@ export default function Home() {
           </div>
         )}
         
-        {/* 📈 FUNNEL ANALYSIS */}
+        {/* <TrendingUp size={16} /> FUNNEL ANALYSIS */}
         <FunnelAnalysisComponent 
           fv={reportData.pilastri.fv} 
           la={reportData.pilastri.energy} 
           fatturato={reportData.fatturato}
         />
         
-        {/* 👥 RETE PERFORMANCE */}
+        {/* <Users size={16} /> RETE PERFORMANCE */}
         {reportData.trackerCoaching && (
           <RetePerformanceComponent tracker={reportData.trackerCoaching} />
         )}
         
         {/* CALENDARIO CON DRILL-DOWN - GRIGLIA 3x3 */}
         {Object.keys(reportData.heatmapMesi).length > 0 && (
-          <div id="section-calendario" style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, border: '1px solid #E5E7EB' }}>
+          <div id="section-calendario" style={{ background: DS.colors.white, borderRadius: 16, padding: 20, border: '1px solid #E5E7EB' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <div>
-                <h3 style={{ color: '#1F2937', fontSize: 18, margin: 0, fontWeight: 700 }}>🗓️ Calendario Attività</h3>
-                <p style={{ color: '#6B7280', fontSize: 12, margin: '4px 0 0' }}>
+                <h3 style={{ color: DS.colors.gray800, fontSize: 18, margin: 0, fontWeight: 700 }}><Calendar size={16} /> Calendario Attività</h3>
+                <p style={{ color: DS.colors.gray500, fontSize: 12, margin: '4px 0 0' }}>
                   Clicca un box per vedere il dettaglio mensile {reportData.periodoRiferimento ? `• ${reportData.periodoRiferimento.label}` : ''}
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <button onClick={() => screenshotSection('section-calendario', 'Calendario_Attivita')} style={{ padding: '6px 12px', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>📷</button>
+                <button onClick={() => screenshotSection('section-calendario', 'Calendario_Attivita')} style={{ padding: '6px 12px', background: DS.colors.gray100, border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}><Camera size={16} /></button>
                 {heatmapDrilldown && (
                   <button 
                     onClick={() => setHeatmapDrilldown(null)}
-                    style={{ padding: '8px 16px', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 8, fontSize: 12, cursor: 'pointer', color: '#374151', fontWeight: 500 }}
+                    style={{ padding: '8px 16px', background: DS.colors.gray100, border: '1px solid #E5E7EB', borderRadius: 8, fontSize: 12, cursor: 'pointer', color: DS.colors.gray700, fontWeight: 500 }}
                   >
-                    ← Torna ai mesi
+                    Torna ai mesi
                   </button>
                 )}
               </div>
@@ -4558,23 +4849,23 @@ export default function Home() {
               <>
                 {/* LEGENDA */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 16, marginBottom: 16 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 14, height: 14, borderRadius: 4, background: '#10B981' }} /><span style={{ fontSize: 11, color: '#6B7280' }}>Alto</span></div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 14, height: 14, borderRadius: 4, background: '#F59E0B' }} /><span style={{ fontSize: 11, color: '#6B7280' }}>Medio</span></div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 14, height: 14, borderRadius: 4, background: '#EF4444' }} /><span style={{ fontSize: 11, color: '#6B7280' }}>Basso</span></div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 14, height: 14, borderRadius: 4, background: '#10B981' }} /><span style={{ fontSize: 11, color: DS.colors.gray500 }}>Alto</span></div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 14, height: 14, borderRadius: 4, background: '#F59E0B' }} /><span style={{ fontSize: 11, color: DS.colors.gray500 }}>Medio</span></div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 14, height: 14, borderRadius: 4, background: '#EF4444' }} /><span style={{ fontSize: 11, color: DS.colors.gray500 }}>Basso</span></div>
                 </div>
                 
                 {/* GRIGLIA 3x3 UNIFORME */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
                   {[
-                    { key: 'fv', emoji: '☀️', label: 'Fotovoltaico', color: '#15803D', bgColor: '#F0FDF4', borderColor: '#BBF7D0' },
-                    { key: 'energy', emoji: '⚡', label: 'Luce Amica', color: '#B45309', bgColor: '#FFFBEB', borderColor: '#FCD34D' },
-                    { key: 'consultings', emoji: '🎓', label: 'Seminari', color: '#7C3AED', bgColor: '#F5F3FF', borderColor: '#C4B5FD' },
-                    { key: 'presenti', emoji: '✅', label: 'Presenti', color: '#059669', bgColor: '#ECFDF5', borderColor: '#A7F3D0' },
-                    { key: 'ivd', emoji: '👥', label: 'Attivati', color: '#EA580C', bgColor: '#FFF7ED', borderColor: '#FDBA74' },
-                    { key: 'guadagnoFV', emoji: '💰', label: 'Fatturato FV', color: '#15803D', bgColor: '#F0FDF4', borderColor: '#BBF7D0', isCurrency: true },
-                    { key: 'guadagnoLA', emoji: '💵', label: 'Fatturato LA', color: '#B45309', bgColor: '#FFFBEB', borderColor: '#FCD34D', isCurrency: true },
-                    { key: 'puntiFV', emoji: '⭐', label: 'Punti FV', color: '#7C3AED', bgColor: '#F5F3FF', borderColor: '#C4B5FD', unit: 'pt' },
-                    { key: 'puntiLA', emoji: '🏆', label: 'Punti LA', color: '#EA580C', bgColor: '#FFF7ED', borderColor: '#FDBA74', unit: 'pt' }
+                    { key: 'fv', emoji: '<Sun size={16} />', label: 'Fotovoltaico', color: DS.colors.fv, bgColor: '#F0FDF4', borderColor: '#BBF7D0' },
+                    { key: 'energy', emoji: '<Zap size={16} />', label: 'Luce Amica', color: DS.colors.la, bgColor: '#FFFBEB', borderColor: '#FCD34D' },
+                    { key: 'consultings', emoji: '🎓', label: 'Seminari', color: DS.colors.seminari, bgColor: '#F5F3FF', borderColor: '#C4B5FD' },
+                    { key: 'presenti', emoji: '<CheckCircle size={16} />', label: 'Presenti', color: DS.colors.success, bgColor: '#ECFDF5', borderColor: '#A7F3D0' },
+                    { key: 'ivd', emoji: '<Users size={16} />', label: 'Attivati', color: '#EA580C', bgColor: '#FFF7ED', borderColor: '#FDBA74' },
+                    { key: 'guadagnoFV', emoji: '', label: 'Fatturato FV', color: DS.colors.fv, bgColor: '#F0FDF4', borderColor: '#BBF7D0', isCurrency: true },
+                    { key: 'guadagnoLA', emoji: '💵', label: 'Fatturato LA', color: DS.colors.la, bgColor: '#FFFBEB', borderColor: '#FCD34D', isCurrency: true },
+                    { key: 'puntiFV', emoji: '<Star size={16} />', label: 'Punti FV', color: DS.colors.seminari, bgColor: '#F5F3FF', borderColor: '#C4B5FD', unit: 'pt' },
+                    { key: 'puntiLA', emoji: '<Trophy size={16} />', label: 'Punti LA', color: '#EA580C', bgColor: '#FFF7ED', borderColor: '#FDBA74', unit: 'pt' }
                   ].map(item => {
                     const heatData = reportData.heatmapMesi[item.key];
                     if (!heatData) return null;
@@ -4630,7 +4921,7 @@ export default function Home() {
                           <div style={{ 
                             fontSize: 10, 
                             background: item.color, 
-                            color: '#FFF', 
+                            color: DS.colors.white, 
                             padding: '2px 8px', 
                             borderRadius: 10,
                             fontWeight: 600
@@ -4644,7 +4935,7 @@ export default function Home() {
                           {mesiNomi.map((nome, idx) => {
                             const val = heatData.mesi[idx];
                             const intensity = val / maxMese;
-                            const bgColor = val === 0 ? '#E5E7EB' : intensity > 0.7 ? '#10B981' : intensity > 0.3 ? '#F59E0B' : '#EF4444';
+                            const bgColor = val === 0 ? DS.colors.gray200 : intensity > 0.7 ? '#10B981' : intensity > 0.3 ? '#F59E0B' : '#EF4444';
                             return (
                               <div 
                                 key={idx}
@@ -4663,8 +4954,8 @@ export default function Home() {
                                 onMouseOver={e => { if (val > 0) e.currentTarget.style.transform = 'scale(1.08)'; }}
                                 onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
                               >
-                                <span style={{ fontSize: 8, color: val === 0 ? '#9CA3AF' : '#FFF', fontWeight: 600 }}>{nome}</span>
-                                {val > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: '#FFF' }}>{formatValue(val)}</span>}
+                                <span style={{ fontSize: 8, color: val === 0 ? '#9CA3AF' : DS.colors.white, fontWeight: 600 }}>{nome}</span>
+                                {val > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: DS.colors.white }}>{formatValue(val)}</span>}
                               </div>
                             );
                           })}
@@ -4673,8 +4964,8 @@ export default function Home() {
                         {/* Footer con totale e top orario */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <div style={{ display: 'flex', gap: 12 }}>
-                            <span style={{ fontSize: 10, color: '#6B7280' }}>🏆 {mesiNomi[bestMeseIdx]}</span>
-                            <span style={{ fontSize: 10, color: '#6B7280' }}>🕐 {bestOrario}</span>
+                            <span style={{ fontSize: 10, color: DS.colors.gray500 }}><Trophy size={16} /> {mesiNomi[bestMeseIdx]}</span>
+                            <span style={{ fontSize: 10, color: DS.colors.gray500 }}>🕐 {bestOrario}</span>
                           </div>
                           <span style={{ fontSize: 14, fontWeight: 800, color: item.color }}>{formatTotale(totale)}</span>
                         </div>
@@ -4690,17 +4981,17 @@ export default function Home() {
                 const annoDrilldown = anno || heatData.anno || new Date().getFullYear();
                 // Usa info passata dal click o fallback a mappa default
                 const infoMap = { 
-                  fv: { emoji: '☀️', label: 'Fotovoltaico', color: '#15803D' }, 
-                  energy: { emoji: '⚡', label: 'Luce Amica', color: '#B45309' }, 
-                  consultings: { emoji: '🎓', label: 'Seminari', color: '#7C3AED' }, 
-                  presenti: { emoji: '✅', label: 'Presenti', color: '#059669' }, 
-                  ivd: { emoji: '👥', label: 'Attivati', color: '#EA580C' },
-                  guadagnoFV: { emoji: '💰', label: 'Guadagno FV', color: '#15803D', isCurrency: true },
-                  guadagnoLA: { emoji: '💵', label: 'Guadagno LA', color: '#B45309', isCurrency: true },
-                  puntiFV: { emoji: '⭐', label: 'Punti FV', color: '#7C3AED', unit: 'pt' },
-                  puntiLA: { emoji: '🏆', label: 'Punti LA', color: '#EA580C', unit: 'pt' }
+                  fv: { emoji: '<Sun size={16} />', label: 'Fotovoltaico', color: DS.colors.fv }, 
+                  energy: { emoji: '<Zap size={16} />', label: 'Luce Amica', color: DS.colors.la }, 
+                  consultings: { emoji: '🎓', label: 'Seminari', color: DS.colors.seminari }, 
+                  presenti: { emoji: '<CheckCircle size={16} />', label: 'Presenti', color: DS.colors.success }, 
+                  ivd: { emoji: '<Users size={16} />', label: 'Attivati', color: '#EA580C' },
+                  guadagnoFV: { emoji: '', label: 'Guadagno FV', color: DS.colors.fv, isCurrency: true },
+                  guadagnoLA: { emoji: '💵', label: 'Guadagno LA', color: DS.colors.la, isCurrency: true },
+                  puntiFV: { emoji: '<Star size={16} />', label: 'Punti FV', color: DS.colors.seminari, unit: 'pt' },
+                  puntiLA: { emoji: '<Trophy size={16} />', label: 'Punti LA', color: '#EA580C', unit: 'pt' }
                 };
-                const info = passedInfo || infoMap[type] || { emoji: '📊', label: type, color: '#666' };
+                const info = passedInfo || infoMap[type] || { emoji: '<BarChart3 size={16} />', label: type, color: '#666' };
                 const giorni = heatData.giorniPerMese?.[mese] || Array(31).fill(0);
                 const settimane = heatData.settimanePerMese?.[mese] || Array(5).fill(0);
                 const orari = heatData.orariPerMese?.[mese] || { notte: 0, mattinaPrima: 0, mattina: 0, pranzo: 0, pomeriggio: 0, sera: 0, notturno: 0 };
@@ -4709,7 +5000,7 @@ export default function Home() {
                 const orariArray = [
                   { label: '00-06', val: orari.notte, emoji: '🌙' },
                   { label: '06-09', val: orari.mattinaPrima, emoji: '🌅' },
-                  { label: '09-12', val: orari.mattina, emoji: '☀️' },
+                  { label: '09-12', val: orari.mattina, emoji: '<Sun size={16} />' },
                   { label: '12-15', val: orari.pranzo, emoji: '🍽️' },
                   { label: '15-18', val: orari.pomeriggio, emoji: '🌤️' },
                   { label: '18-21', val: orari.sera, emoji: '🌆' },
@@ -4753,15 +5044,15 @@ export default function Home() {
                     
                     {/* SETTIMANE */}
                     <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15 }}>
-                      <div style={{ fontSize: 12, color: '#666', fontWeight: 600, marginBottom: 10 }}>📅 SETTIMANE</div>
+                      <div style={{ fontSize: 12, color: '#666', fontWeight: 600, marginBottom: 10 }}><Calendar size={16} /> SETTIMANE</div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
                         {settimane.map((val, i) => {
                           const intensity = val / maxSettimana;
-                          const bgColor = val === 0 ? '#F0F0F0' : intensity > 0.7 ? '#4CAF50' : intensity > 0.3 ? '#FFD700' : '#FF8F00';
+                          const bgColor = val === 0 ? '#F0F0F0' : intensity > 0.7 ? '#4CAF50' : intensity > 0.3 ? DS.colors.accent : '#FF8F00';
                           return (
                             <div key={i} style={{ background: bgColor, borderRadius: 8, padding: '12px 8px', textAlign: 'center' }}>
-                              <div style={{ fontSize: 10, color: val === 0 ? '#AAA' : '#FFF' }}>Sett {i+1}</div>
-                              <div style={{ fontSize: 18, fontWeight: 700, color: val === 0 ? '#CCC' : '#FFF' }}>{val}</div>
+                              <div style={{ fontSize: 10, color: val === 0 ? '#AAA' : DS.colors.white }}>Sett {i+1}</div>
+                              <div style={{ fontSize: 18, fontWeight: 700, color: val === 0 ? '#CCC' : DS.colors.white }}>{val}</div>
                             </div>
                           );
                         })}
@@ -4774,12 +5065,12 @@ export default function Home() {
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
                         {orariArray.map((o, i) => {
                           const intensity = o.val / maxOrario;
-                          const bgColor = o.val === 0 ? '#F0F0F0' : intensity > 0.7 ? '#2AAA8A' : intensity > 0.3 ? '#4DB6AC' : '#B2DFDB';
+                          const bgColor = o.val === 0 ? '#F0F0F0' : intensity > 0.7 ? DS.colors.primaryLight : intensity > 0.3 ? '#4DB6AC' : '#B2DFDB';
                           return (
                             <div key={i} style={{ background: bgColor, borderRadius: 8, padding: '10px 4px', textAlign: 'center' }}>
                               <div style={{ fontSize: 14 }}>{o.emoji}</div>
-                              <div style={{ fontSize: 9, color: o.val === 0 ? '#AAA' : '#FFF', marginTop: 2 }}>{o.label}</div>
-                              <div style={{ fontSize: 16, fontWeight: 700, color: o.val === 0 ? '#CCC' : '#FFF' }}>{o.val}</div>
+                              <div style={{ fontSize: 9, color: o.val === 0 ? '#AAA' : DS.colors.white, marginTop: 2 }}>{o.label}</div>
+                              <div style={{ fontSize: 16, fontWeight: 700, color: o.val === 0 ? '#CCC' : DS.colors.white }}>{o.val}</div>
                             </div>
                           );
                         })}
@@ -4792,11 +5083,11 @@ export default function Home() {
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
                         {giorni.slice(0, 31).map((val, i) => {
                           const intensity = val / maxGiorno;
-                          const bgColor = val === 0 ? '#F5F5F5' : intensity > 0.7 ? '#4CAF50' : intensity > 0.3 ? '#FFD700' : '#FF8F00';
+                          const bgColor = val === 0 ? '#F5F5F5' : intensity > 0.7 ? '#4CAF50' : intensity > 0.3 ? DS.colors.accent : '#FF8F00';
                           return (
                             <div key={i} style={{ height: 36, borderRadius: 4, background: bgColor, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                              <span style={{ fontSize: 8, color: val === 0 ? '#AAA' : '#FFF' }}>{i+1}</span>
-                              {val > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: '#FFF' }}>{val}</span>}
+                              <span style={{ fontSize: 8, color: val === 0 ? '#AAA' : DS.colors.white }}>{i+1}</span>
+                              {val > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: DS.colors.white }}>{val}</span>}
                             </div>
                           );
                         })}
@@ -4811,20 +5102,20 @@ export default function Home() {
         
         {/* PILASTRO FOTOVOLTAICO */}
         {reportData.pilastri.fv && (
-          <div id="section-fv" style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
+          <div id="section-fv" style={{ background: DS.colors.white, borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 28 }}>☀️</span>
+                <span style={{ fontSize: 28 }}><Sun size={16} /></span>
                 <div>
-                  <h3 style={{ color: '#2AAA8A', fontSize: 20, margin: 0, fontWeight: 700 }}>PILASTRO FOTOVOLTAICO</h3>
+                  <h3 style={{ color: DS.colors.primaryLight, fontSize: 20, margin: 0, fontWeight: 700 }}>PILASTRO FOTOVOLTAICO</h3>
                   <p style={{ color: '#666', fontSize: 12, margin: 0 }}>Totale inseriti: {reportData.pilastri.fv.totale}</p>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <button onClick={() => screenshotSection('section-fv', 'Pilastro_FV')} style={{ padding: '6px 12px', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>📷</button>
+                <button onClick={() => screenshotSection('section-fv', 'Pilastro_FV')} style={{ padding: '6px 12px', background: DS.colors.gray100, border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}><Camera size={16} /></button>
                 {reportData.periodoRiferimento && (
                   <div style={{ background: '#F0FDF4', padding: '6px 12px', borderRadius: 8, border: '1px solid #BBF7D0' }}>
-                    <span style={{ fontSize: 11, color: '#15803D', fontWeight: 600 }}>📅 {reportData.periodoRiferimento.label}</span>
+                    <span style={{ fontSize: 11, color: DS.colors.fv, fontWeight: 600 }}><Calendar size={16} /> {reportData.periodoRiferimento.label}</span>
                   </div>
                 )}
               </div>
@@ -4833,7 +5124,7 @@ export default function Home() {
             {/* FUNNEL GRANDE - CON TUTTE LE % */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 30, marginBottom: 25, flexWrap: 'wrap', padding: '15px 0' }}>
               <div style={{ textAlign: 'center', minWidth: 100 }}>
-                <div style={{ fontSize: 48, fontWeight: 800, color: '#2AAA8A' }}>{reportData.pilastri.fv.funnel.inseriti}</div>
+                <div style={{ fontSize: 48, fontWeight: 800, color: DS.colors.primaryLight }}>{reportData.pilastri.fv.funnel.inseriti}</div>
                 <div style={{ fontSize: 13, color: '#666', marginTop: 4 }}>Inseriti</div>
               </div>
               <div style={{ fontSize: 28, color: '#D0D0D0' }}>→</div>
@@ -4842,7 +5133,7 @@ export default function Home() {
                 <div style={{ fontSize: 13, color: '#333', marginTop: 4 }}>Positivi <span style={{ fontSize: 11, color: '#4CAF50', fontWeight: 600 }}>({reportData.pilastri.fv.funnel.pctPositivi}%)</span></div>
               </div>
               <div style={{ textAlign: 'center', minWidth: 100 }}>
-                <div style={{ fontSize: 48, fontWeight: 800, color: '#FFD700' }}>{reportData.pilastri.fv.funnel.lavorazione}</div>
+                <div style={{ fontSize: 48, fontWeight: 800, color: DS.colors.accent }}>{reportData.pilastri.fv.funnel.lavorazione}</div>
                 <div style={{ fontSize: 13, color: '#333', marginTop: 4 }}>Lavoraz. <span style={{ fontSize: 11, color: '#FF8F00', fontWeight: 600 }}>({reportData.pilastri.fv.funnel.inseriti > 0 ? Math.round(reportData.pilastri.fv.funnel.lavorazione / reportData.pilastri.fv.funnel.inseriti * 100) : 0}%)</span></div>
               </div>
               <div style={{ textAlign: 'center', minWidth: 100 }}>
@@ -4853,7 +5144,7 @@ export default function Home() {
             
             {/* DETTAGLIO STATI RAGGRUPPATI PER COLORE */}
             <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, marginBottom: 20 }}>
-              <div style={{ fontSize: 12, color: '#666', marginBottom: 10, fontWeight: 600 }}>📋 DETTAGLIO STATI</div>
+              <div style={{ fontSize: 12, color: '#666', marginBottom: 10, fontWeight: 600 }}><FileText size={16} /> DETTAGLIO STATI</div>
               {(() => {
                 const statiVerdi = reportData.pilastri.fv.statiDettaglio.filter(([stato]) => {
                   const cat = Object.entries(STATO_MAP_FV).find(([k]) => k.toLowerCase() === stato.toLowerCase())?.[1] || 'altro';
@@ -4872,10 +5163,10 @@ export default function Home() {
                     {/* POSITIVI - VERDE */}
                     {statiVerdi.length > 0 && (
                       <div style={{ background: 'rgba(76,175,80,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(76,175,80,0.3)' }}>
-                        <div style={{ fontSize: 11, color: '#4CAF50', fontWeight: 600, marginBottom: 8 }}>🟢 POSITIVI ({statiVerdi.reduce((s,[,c]) => s+c, 0)})</div>
+                        <div style={{ fontSize: 11, color: '#4CAF50', fontWeight: 600, marginBottom: 8 }}> POSITIVI ({statiVerdi.reduce((s,[,c]) => s+c, 0)})</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {statiVerdi.map(([stato, count], i) => (
-                            <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #4CAF50' }}>
+                            <span key={i} style={{ background: DS.colors.white, padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #4CAF50' }}>
                               {stato} <strong style={{ color: '#4CAF50' }}>{count}</strong>
                             </span>
                           ))}
@@ -4888,7 +5179,7 @@ export default function Home() {
                         <div style={{ fontSize: 11, color: '#FF8F00', fontWeight: 600, marginBottom: 8 }}>🟡 LAVORAZIONE ({statiGialli.reduce((s,[,c]) => s+c, 0)})</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {statiGialli.map(([stato, count], i) => (
-                            <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #FFD700' }}>
+                            <span key={i} style={{ background: DS.colors.white, padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #FFD700' }}>
                               {stato} <strong style={{ color: '#FF8F00' }}>{count}</strong>
                             </span>
                           ))}
@@ -4898,10 +5189,10 @@ export default function Home() {
                     {/* NEGATIVI - ROSSO */}
                     {statiRossi.length > 0 && (
                       <div style={{ background: 'rgba(229,57,53,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(229,57,53,0.3)' }}>
-                        <div style={{ fontSize: 11, color: '#E53935', fontWeight: 600, marginBottom: 8 }}>🔴 NEGATIVI ({statiRossi.reduce((s,[,c]) => s+c, 0)})</div>
+                        <div style={{ fontSize: 11, color: '#E53935', fontWeight: 600, marginBottom: 8 }}> NEGATIVI ({statiRossi.reduce((s,[,c]) => s+c, 0)})</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {statiRossi.map(([stato, count], i) => (
-                            <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #E53935' }}>
+                            <span key={i} style={{ background: DS.colors.white, padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #E53935' }}>
                               {stato} <strong style={{ color: '#E53935' }}>{count}</strong>
                             </span>
                           ))}
@@ -4916,11 +5207,11 @@ export default function Home() {
             {/* CLASSIFICHE CON 4 COLONNE + % */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
               {[
-                { title: 'K MANAGER', emoji: '👑', data: reportData.pilastri.fv.classifiche.k, color: '#B45309' },
-                { title: 'NETWORKER', emoji: '⭐', data: reportData.pilastri.fv.classifiche.nw, color: '#15803D' },
-                { title: 'SDP', emoji: '🔵', data: reportData.pilastri.fv.classifiche.sdp, color: '#2563EB' }
+                { title: 'K MANAGER', emoji: '<Crown size={16} />', data: reportData.pilastri.fv.classifiche.k, color: DS.colors.la },
+                { title: 'NETWORKER', emoji: '<Star size={16} />', data: reportData.pilastri.fv.classifiche.nw, color: DS.colors.fv },
+                { title: 'SDP', emoji: '', data: reportData.pilastri.fv.classifiche.sdp, color: '#2563EB' }
               ].map(({ title, emoji, data, color }) => (
-                <div key={title} style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
+                <div key={title} style={{ background: DS.colors.gray50, borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
                   <div style={{ fontSize: 13, color: color, fontWeight: 700, marginBottom: 12 }}>{emoji} {title} <span style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 400 }}>({data.length})</span></div>
                   {/* Header 4 colonne */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 50px)', gap: 4, marginBottom: 8, paddingBottom: 8, borderBottom: '2px solid #E5E7EB' }}>
@@ -4946,8 +5237,8 @@ export default function Home() {
                         fontSize: 11,
                         background: i < 3 ? `${color}08` : 'transparent'
                       }}>
-                        <span style={{ color: '#1F2937', fontWeight: i < 3 ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {i < 3 ? ['🥇','🥈','🥉'][i] : `${i+1}°`} {name.length > 12 ? name.substring(0,12) + '...' : name}
+                        <span style={{ color: DS.colors.gray800, fontWeight: i < 3 ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {i < 3 ? ['1°','2°','3°'][i] : `${i+1}°`} {name.length > 12 ? name.substring(0,12) + '...' : name}
                         </span>
                         <span style={{ color: '#3B82F6', fontWeight: 600, textAlign: 'center' }}>{stats.total || 0}</span>
                         <span style={{ textAlign: 'center' }}><span style={{ color: '#10B981', fontWeight: 600 }}>{stats.positivo || 0}</span><span style={{ fontSize: 8, color: '#9CA3AF' }}> {pctPos}%</span></span>
@@ -4964,20 +5255,20 @@ export default function Home() {
         
         {/* PILASTRO LUCE AMICA */}
         {reportData.pilastri.energy && (
-          <div id="section-la" style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
+          <div id="section-la" style={{ background: DS.colors.white, borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 28 }}>⚡</span>
+                <span style={{ fontSize: 28 }}><Zap size={16} /></span>
                 <div>
-                  <h3 style={{ color: '#FFD700', fontSize: 20, margin: 0, fontWeight: 700 }}>PILASTRO LUCE AMICA</h3>
+                  <h3 style={{ color: DS.colors.accent, fontSize: 20, margin: 0, fontWeight: 700 }}>PILASTRO LUCE AMICA</h3>
                   <p style={{ color: '#666', fontSize: 12, margin: 0 }}>Totale inseriti: {reportData.pilastri.energy.totale}</p>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <button onClick={() => screenshotSection('section-la', 'Pilastro_LA')} style={{ padding: '6px 12px', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>📷</button>
+                <button onClick={() => screenshotSection('section-la', 'Pilastro_LA')} style={{ padding: '6px 12px', background: DS.colors.gray100, border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}><Camera size={16} /></button>
                 {reportData.periodoRiferimento && (
                   <div style={{ background: '#FFFBEB', padding: '6px 12px', borderRadius: 8, border: '1px solid #FCD34D' }}>
-                    <span style={{ fontSize: 11, color: '#B45309', fontWeight: 600 }}>📅 {reportData.periodoRiferimento.label}</span>
+                    <span style={{ fontSize: 11, color: DS.colors.la, fontWeight: 600 }}><Calendar size={16} /> {reportData.periodoRiferimento.label}</span>
                   </div>
                 )}
               </div>
@@ -4986,27 +5277,27 @@ export default function Home() {
             {/* FUNNEL GRANDE */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, marginBottom: 25, flexWrap: 'wrap' }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 42, fontWeight: 800, color: '#2AAA8A' }}>{reportData.pilastri.energy.funnel.inseriti}</div>
-                <div style={{ fontSize: 12, color: '#666' }}>📋 Inseriti</div>
+                <div style={{ fontSize: 42, fontWeight: 800, color: DS.colors.primaryLight }}>{reportData.pilastri.energy.funnel.inseriti}</div>
+                <div style={{ fontSize: 12, color: '#666' }}><FileText size={16} /> Inseriti</div>
               </div>
               <div style={{ fontSize: 24, color: '#E0E0E0' }}>→</div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 42, fontWeight: 800, color: '#4CAF50' }}>{reportData.pilastri.energy.funnel.accettati}</div>
-                <div style={{ fontSize: 12, color: '#4CAF50' }}>🟢 Accettati <span style={{ fontSize: 10 }}>({reportData.pilastri.energy.funnel.pctAccettati}%)</span></div>
+                <div style={{ fontSize: 12, color: '#4CAF50' }}> Accettati <span style={{ fontSize: 10 }}>({reportData.pilastri.energy.funnel.pctAccettati}%)</span></div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 42, fontWeight: 800, color: '#FFD700' }}>{reportData.pilastri.energy.funnel.lavorabili}</div>
-                <div style={{ fontSize: 12, color: '#FFD700' }}>🟡 Lavorabili <span style={{ fontSize: 10 }}>({reportData.pilastri.energy.funnel.inseriti > 0 ? Math.round(reportData.pilastri.energy.funnel.lavorabili / reportData.pilastri.energy.funnel.inseriti * 100) : 0}%)</span></div>
+                <div style={{ fontSize: 42, fontWeight: 800, color: DS.colors.accent }}>{reportData.pilastri.energy.funnel.lavorabili}</div>
+                <div style={{ fontSize: 12, color: DS.colors.accent }}>🟡 Lavorabili <span style={{ fontSize: 10 }}>({reportData.pilastri.energy.funnel.inseriti > 0 ? Math.round(reportData.pilastri.energy.funnel.lavorabili / reportData.pilastri.energy.funnel.inseriti * 100) : 0}%)</span></div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 42, fontWeight: 800, color: '#E53935' }}>{reportData.pilastri.energy.funnel.persi}</div>
-                <div style={{ fontSize: 12, color: '#E53935' }}>🔴 Persi <span style={{ fontSize: 10 }}>({reportData.pilastri.energy.funnel.inseriti > 0 ? Math.round(reportData.pilastri.energy.funnel.persi / reportData.pilastri.energy.funnel.inseriti * 100) : 0}%)</span></div>
+                <div style={{ fontSize: 12, color: '#E53935' }}> Persi <span style={{ fontSize: 10 }}>({reportData.pilastri.energy.funnel.inseriti > 0 ? Math.round(reportData.pilastri.energy.funnel.persi / reportData.pilastri.energy.funnel.inseriti * 100) : 0}%)</span></div>
               </div>
             </div>
             
             {/* DETTAGLIO STATI - STESSO STILE DI FV */}
             <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, marginBottom: 20 }}>
-              <div style={{ fontSize: 12, color: '#666', marginBottom: 10, fontWeight: 600 }}>📋 DETTAGLIO STATI</div>
+              <div style={{ fontSize: 12, color: '#666', marginBottom: 10, fontWeight: 600 }}><FileText size={16} /> DETTAGLIO STATI</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {/* CONTRATTO - Raggruppati per colore */}
                 {(() => {
@@ -5017,10 +5308,10 @@ export default function Home() {
                     {/* POSITIVI */}
                     {positivi.length > 0 && (
                       <div style={{ background: 'rgba(76,175,80,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(76,175,80,0.3)' }}>
-                        <div style={{ fontSize: 11, color: '#4CAF50', fontWeight: 600, marginBottom: 8 }}>🟢 CONTRATTO - POSITIVI ({positivi.reduce((s,[,c]) => s+c, 0)})</div>
+                        <div style={{ fontSize: 11, color: '#4CAF50', fontWeight: 600, marginBottom: 8 }}> CONTRATTO - POSITIVI ({positivi.reduce((s,[,c]) => s+c, 0)})</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {positivi.map(([stato, count], i) => (
-                            <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #4CAF50' }}>
+                            <span key={i} style={{ background: DS.colors.white, padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #4CAF50' }}>
                               {stato} <strong style={{ color: '#4CAF50' }}>{count}</strong>
                             </span>
                           ))}
@@ -5033,7 +5324,7 @@ export default function Home() {
                         <div style={{ fontSize: 11, color: '#FF8F00', fontWeight: 600, marginBottom: 8 }}>🟡 CONTRATTO - LAVORABILI ({lavorabili.reduce((s,[,c]) => s+c, 0)})</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {lavorabili.map(([stato, count], i) => (
-                            <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #FFD700' }}>
+                            <span key={i} style={{ background: DS.colors.white, padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #FFD700' }}>
                               {stato} <strong style={{ color: '#FF8F00' }}>{count}</strong>
                             </span>
                           ))}
@@ -5043,10 +5334,10 @@ export default function Home() {
                     {/* NEGATIVI */}
                     {negativi.length > 0 && (
                       <div style={{ background: 'rgba(229,57,53,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(229,57,53,0.3)' }}>
-                        <div style={{ fontSize: 11, color: '#E53935', fontWeight: 600, marginBottom: 8 }}>🔴 CONTRATTO - NEGATIVI ({negativi.reduce((s,[,c]) => s+c, 0)})</div>
+                        <div style={{ fontSize: 11, color: '#E53935', fontWeight: 600, marginBottom: 8 }}> CONTRATTO - NEGATIVI ({negativi.reduce((s,[,c]) => s+c, 0)})</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {negativi.map(([stato, count], i) => (
-                            <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #E53935' }}>
+                            <span key={i} style={{ background: DS.colors.white, padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #E53935' }}>
                               {stato} <strong style={{ color: '#E53935' }}>{count}</strong>
                             </span>
                           ))}
@@ -5073,10 +5364,10 @@ export default function Home() {
                   return (<>
                     {attivi.length > 0 && (
                       <div style={{ background: 'rgba(76,175,80,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(76,175,80,0.3)' }}>
-                        <div style={{ fontSize: 11, color: '#4CAF50', fontWeight: 600, marginBottom: 8 }}>🟢 FORNITURA - ATTIVI ({attivi.reduce((s,[,c]) => s+c, 0)})</div>
+                        <div style={{ fontSize: 11, color: '#4CAF50', fontWeight: 600, marginBottom: 8 }}> FORNITURA - ATTIVI ({attivi.reduce((s,[,c]) => s+c, 0)})</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {attivi.map(([stato, count], i) => (
-                            <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #4CAF50' }}>
+                            <span key={i} style={{ background: DS.colors.white, padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #4CAF50' }}>
                               {stato} <strong style={{ color: '#4CAF50' }}>{count}</strong>
                             </span>
                           ))}
@@ -5088,7 +5379,7 @@ export default function Home() {
                         <div style={{ fontSize: 11, color: '#FF8F00', fontWeight: 600, marginBottom: 8 }}>🟡 FORNITURA - DA ATTIVARE ({daAttivare.reduce((s,[,c]) => s+c, 0)})</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {daAttivare.map(([stato, count], i) => (
-                            <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #FFD700' }}>
+                            <span key={i} style={{ background: DS.colors.white, padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #FFD700' }}>
                               {stato} <strong style={{ color: '#FF8F00' }}>{count}</strong>
                             </span>
                           ))}
@@ -5097,10 +5388,10 @@ export default function Home() {
                     )}
                     {cessati.length > 0 && (
                       <div style={{ background: 'rgba(229,57,53,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(229,57,53,0.3)' }}>
-                        <div style={{ fontSize: 11, color: '#E53935', fontWeight: 600, marginBottom: 8 }}>🔴 FORNITURA - CESSATI ({cessati.reduce((s,[,c]) => s+c, 0)})</div>
+                        <div style={{ fontSize: 11, color: '#E53935', fontWeight: 600, marginBottom: 8 }}> FORNITURA - CESSATI ({cessati.reduce((s,[,c]) => s+c, 0)})</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {cessati.map(([stato, count], i) => (
-                            <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #E53935' }}>
+                            <span key={i} style={{ background: DS.colors.white, padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #E53935' }}>
                               {stato} <strong style={{ color: '#E53935' }}>{count}</strong>
                             </span>
                           ))}
@@ -5115,11 +5406,11 @@ export default function Home() {
             {/* CLASSIFICHE LA - CON 4 COLONNE + % */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
               {[
-                { title: 'K MANAGER', emoji: '👑', data: reportData.pilastri.energy.classifiche.k, color: '#B45309' },
-                { title: 'NETWORKER', emoji: '⭐', data: reportData.pilastri.energy.classifiche.nw, color: '#15803D' },
-                { title: 'SDP', emoji: '🔵', data: reportData.pilastri.energy.classifiche.sdp, color: '#2563EB' }
+                { title: 'K MANAGER', emoji: '<Crown size={16} />', data: reportData.pilastri.energy.classifiche.k, color: DS.colors.la },
+                { title: 'NETWORKER', emoji: '<Star size={16} />', data: reportData.pilastri.energy.classifiche.nw, color: DS.colors.fv },
+                { title: 'SDP', emoji: '', data: reportData.pilastri.energy.classifiche.sdp, color: '#2563EB' }
               ].map(({ title, emoji, data, color }) => (
-                <div key={title} style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
+                <div key={title} style={{ background: DS.colors.gray50, borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
                   <div style={{ fontSize: 13, color: color, fontWeight: 700, marginBottom: 12 }}>{emoji} {title} <span style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 400 }}>({data.length})</span></div>
                   {/* Header 4 colonne */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 50px)', gap: 4, marginBottom: 8, paddingBottom: 8, borderBottom: '2px solid #E5E7EB' }}>
@@ -5145,8 +5436,8 @@ export default function Home() {
                         fontSize: 11,
                         background: i < 3 ? `${color}08` : 'transparent'
                       }}>
-                        <span style={{ color: '#1F2937', fontWeight: i < 3 ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {i < 3 ? ['🥇','🥈','🥉'][i] : `${i+1}°`} {name.length > 12 ? name.substring(0,12) + '...' : name}
+                        <span style={{ color: DS.colors.gray800, fontWeight: i < 3 ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {i < 3 ? ['1°','2°','3°'][i] : `${i+1}°`} {name.length > 12 ? name.substring(0,12) + '...' : name}
                         </span>
                         <span style={{ color: '#3B82F6', fontWeight: 600, textAlign: 'center' }}>{stats.total || 0}</span>
                         <span style={{ textAlign: 'center' }}><span style={{ color: '#10B981', fontWeight: 600 }}>{stats.positivo || 0}</span><span style={{ fontSize: 8, color: '#9CA3AF' }}> {pctAcc}%</span></span>
@@ -5163,20 +5454,20 @@ export default function Home() {
         
         {/* PILASTRO COLLABORATORI */}
         {reportData.pilastri.collaboratori && (
-          <div id="section-collab" style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
+          <div id="section-collab" style={{ background: DS.colors.white, borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 28 }}>🎓</span>
                 <div>
-                  <h3 style={{ color: '#2AAA8A', fontSize: 20, margin: 0, fontWeight: 700 }}>PILASTRO COLLABORATORI</h3>
+                  <h3 style={{ color: DS.colors.primaryLight, fontSize: 20, margin: 0, fontWeight: 700 }}>PILASTRO COLLABORATORI</h3>
                   <p style={{ color: '#666', fontSize: 12, margin: 0 }}>Funnel: Iscritti → Presenti → Attivati</p>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <button onClick={() => screenshotSection('section-collab', 'Pilastro_Collaboratori')} style={{ padding: '6px 12px', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>📷</button>
+                <button onClick={() => screenshotSection('section-collab', 'Pilastro_Collaboratori')} style={{ padding: '6px 12px', background: DS.colors.gray100, border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}><Camera size={16} /></button>
                 {reportData.periodoRiferimento && (
                   <div style={{ background: '#F5F3FF', padding: '6px 12px', borderRadius: 8, border: '1px solid #C4B5FD' }}>
-                    <span style={{ fontSize: 11, color: '#7C3AED', fontWeight: 600 }}>📅 {reportData.periodoRiferimento.label}</span>
+                    <span style={{ fontSize: 11, color: DS.colors.seminari, fontWeight: 600 }}><Calendar size={16} /> {reportData.periodoRiferimento.label}</span>
                   </div>
                 )}
               </div>
@@ -5185,18 +5476,18 @@ export default function Home() {
             {/* FUNNEL - Usa NUOVI attivati, non totale */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, marginBottom: 25, flexWrap: 'wrap' }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 42, fontWeight: 800, color: '#2AAA8A' }}>{reportData.pilastri.collaboratori.funnel.iscritti}</div>
+                <div style={{ fontSize: 42, fontWeight: 800, color: DS.colors.primaryLight }}>{reportData.pilastri.collaboratori.funnel.iscritti}</div>
                 <div style={{ fontSize: 12, color: '#666' }}>📝 Iscritti</div>
               </div>
               <div style={{ fontSize: 24, color: '#E0E0E0' }}>→</div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 42, fontWeight: 800, color: '#4CAF50' }}>{reportData.pilastri.collaboratori.funnel.presenti}</div>
-                <div style={{ fontSize: 12, color: '#4CAF50' }}>✅ Presenti <span style={{ fontSize: 10 }}>({reportData.pilastri.collaboratori.funnel.pctPresenti}%)</span></div>
+                <div style={{ fontSize: 12, color: '#4CAF50' }}><CheckCircle size={16} /> Presenti <span style={{ fontSize: 10 }}>({reportData.pilastri.collaboratori.funnel.pctPresenti}%)</span></div>
               </div>
               <div style={{ fontSize: 24, color: '#E0E0E0' }}>→</div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 42, fontWeight: 800, color: '#FF9800' }}>{reportData.pilastri.collaboratori.ivdDettaglio?.nuovi || reportData.pilastri.collaboratori.funnel.attivati}</div>
-                <div style={{ fontSize: 12, color: '#FF9800' }}>🟠 Nuovi Attivati <span style={{ fontSize: 10 }}>({reportData.pilastri.collaboratori.funnel.presenti > 0 ? Math.round((reportData.pilastri.collaboratori.ivdDettaglio?.nuovi || reportData.pilastri.collaboratori.funnel.attivati) / reportData.pilastri.collaboratori.funnel.presenti * 100) : 0}%)</span></div>
+                <div style={{ fontSize: 12, color: '#FF9800' }}> Nuovi Attivati <span style={{ fontSize: 10 }}>({reportData.pilastri.collaboratori.funnel.presenti > 0 ? Math.round((reportData.pilastri.collaboratori.ivdDettaglio?.nuovi || reportData.pilastri.collaboratori.funnel.attivati) / reportData.pilastri.collaboratori.funnel.presenti * 100) : 0}%)</span></div>
                 {reportData.pilastri.collaboratori.ivdDettaglio?.rinnovi > 0 && (
                   <div style={{ fontSize: 10, color: '#9CA3AF', marginTop: 4 }}>+ {reportData.pilastri.collaboratori.ivdDettaglio.rinnovi} rinnovi</div>
                 )}
@@ -5207,7 +5498,7 @@ export default function Home() {
             {reportData.pilastri.collaboratori.ivdDettaglio && (
               <div style={{ background: 'linear-gradient(135deg, #FFF8E1, #FFF3E0)', borderRadius: 16, padding: 20, marginBottom: 20, border: '1px solid #FFE082' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                  <span style={{ fontSize: 20 }}>👥</span>
+                  <span style={{ fontSize: 20 }}><Users size={16} /></span>
                   <div>
                     <h4 style={{ color: '#F57C00', fontSize: 14, margin: 0, fontWeight: 700 }}>DETTAGLIO IVD ATTIVATI</h4>
                     <p style={{ color: '#8D6E63', fontSize: 10, margin: 0 }}>Nuovi, Rinnovi, Stati contratto e VipOffice</p>
@@ -5216,24 +5507,24 @@ export default function Home() {
                 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
                   {/* PRODOTTI */}
-                  <div style={{ background: '#FFFFFF', borderRadius: 12, padding: 14, border: '1px solid #E0E0E0' }}>
-                    <div style={{ fontSize: 10, color: '#9E9E9E', marginBottom: 8, fontWeight: 600 }}>📦 PRODOTTI</div>
+                  <div style={{ background: DS.colors.white, borderRadius: 12, padding: 14, border: '1px solid #E0E0E0' }}>
+                    <div style={{ fontSize: 10, color: '#9E9E9E', marginBottom: 8, fontWeight: 600 }}><Briefcase size={16} /> PRODOTTI</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: 11, color: '#666' }}>🆕 START&GO</span>
+                        <span style={{ fontSize: 11, color: '#666' }}> START&GO</span>
                         <span style={{ fontSize: 14, fontWeight: 700, color: '#4CAF50' }}>{reportData.pilastri.collaboratori.ivdDettaglio.nuoviStartGo}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: 11, color: '#666' }}>🆕 STANDARD</span>
+                        <span style={{ fontSize: 11, color: '#666' }}> STANDARD</span>
                         <span style={{ fontSize: 14, fontWeight: 700, color: '#2196F3' }}>{reportData.pilastri.collaboratori.ivdDettaglio.nuoviStandard}</span>
                       </div>
                       <div style={{ height: 1, background: '#E0E0E0', margin: '4px 0' }} />
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: 11, color: '#666' }}>🔄 Rinn. 12m</span>
+                        <span style={{ fontSize: 11, color: '#666' }}> Rinn. 12m</span>
                         <span style={{ fontSize: 14, fontWeight: 700, color: '#9C27B0' }}>{reportData.pilastri.collaboratori.ivdDettaglio.rinnoviMensili}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: 11, color: '#666' }}>🔄 Rinn. Anno</span>
+                        <span style={{ fontSize: 11, color: '#666' }}> Rinn. Anno</span>
                         <span style={{ fontSize: 14, fontWeight: 700, color: '#673AB7' }}>{reportData.pilastri.collaboratori.ivdDettaglio.rinnoviAnnuali}</span>
                       </div>
                     </div>
@@ -5244,18 +5535,18 @@ export default function Home() {
                   </div>
                   
                   {/* STATO CONTRATTO */}
-                  <div style={{ background: '#FFFFFF', borderRadius: 12, padding: 14, border: '1px solid #E0E0E0' }}>
-                    <div style={{ fontSize: 10, color: '#9E9E9E', marginBottom: 8, fontWeight: 600 }}>📋 STATO CONTRATTO</div>
+                  <div style={{ background: DS.colors.white, borderRadius: 12, padding: 14, border: '1px solid #E0E0E0' }}>
+                    <div style={{ fontSize: 10, color: '#9E9E9E', marginBottom: 8, fontWeight: 600 }}><FileText size={16} /> STATO CONTRATTO</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: 11, color: '#666' }}>✅ Accettato</span>
+                        <span style={{ fontSize: 11, color: '#666' }}><CheckCircle size={16} /> Accettato</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <span style={{ fontSize: 16, fontWeight: 700, color: '#4CAF50' }}>{reportData.pilastri.collaboratori.ivdDettaglio.accettati}</span>
                           <span style={{ fontSize: 10, color: '#4CAF50', background: '#E8F5E9', padding: '2px 6px', borderRadius: 10 }}>{reportData.pilastri.collaboratori.ivdDettaglio.pctAccettati}%</span>
                         </div>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: 11, color: '#666' }}>❌ Recesso</span>
+                        <span style={{ fontSize: 11, color: '#666' }}><XCircle size={16} /> Recesso</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <span style={{ fontSize: 16, fontWeight: 700, color: '#F44336' }}>{reportData.pilastri.collaboratori.ivdDettaglio.recessi}</span>
                           <span style={{ fontSize: 10, color: '#F44336', background: '#FFEBEE', padding: '2px 6px', borderRadius: 10 }}>{reportData.pilastri.collaboratori.ivdDettaglio.pctRecessi}%</span>
@@ -5269,18 +5560,18 @@ export default function Home() {
                   </div>
                   
                   {/* VIPOFFICE */}
-                  <div style={{ background: '#FFFFFF', borderRadius: 12, padding: 14, border: '1px solid #E0E0E0' }}>
-                    <div style={{ fontSize: 10, color: '#9E9E9E', marginBottom: 8, fontWeight: 600 }}>🖥️ STATO VIPOFFICE</div>
+                  <div style={{ background: DS.colors.white, borderRadius: 12, padding: 14, border: '1px solid #E0E0E0' }}>
+                    <div style={{ fontSize: 10, color: '#9E9E9E', marginBottom: 8, fontWeight: 600 }}><Building2 size={16} /> STATO VIPOFFICE</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: 11, color: '#666' }}>🟢 Active</span>
+                        <span style={{ fontSize: 11, color: '#666' }}> Active</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <span style={{ fontSize: 16, fontWeight: 700, color: '#4CAF50' }}>{reportData.pilastri.collaboratori.ivdDettaglio.vipActive}</span>
                           <span style={{ fontSize: 10, color: '#4CAF50', background: '#E8F5E9', padding: '2px 6px', borderRadius: 10 }}>{reportData.pilastri.collaboratori.ivdDettaglio.pctVipActive}%</span>
                         </div>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: 11, color: '#666' }}>🔴 Inactive</span>
+                        <span style={{ fontSize: 11, color: '#666' }}> Inactive</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <span style={{ fontSize: 16, fontWeight: 700, color: '#F44336' }}>{reportData.pilastri.collaboratori.ivdDettaglio.vipInactive}</span>
                           <span style={{ fontSize: 10, color: '#F44336', background: '#FFEBEE', padding: '2px 6px', borderRadius: 10 }}>{reportData.pilastri.collaboratori.ivdDettaglio.pctVipInactive}%</span>
@@ -5292,7 +5583,7 @@ export default function Home() {
                     {reportData.pilastri.collaboratori.ivdDettaglio.accettatiMaInattivi > 0 && (
                       <div style={{ marginTop: 10, padding: 8, background: '#FFF3E0', borderRadius: 8, border: '1px solid #FFB74D' }}>
                         <div style={{ fontSize: 10, color: '#E65100', fontWeight: 600 }}>
-                          ⚠️ {reportData.pilastri.collaboratori.ivdDettaglio.accettatiMaInattivi} Accettati ma INATTIVI
+                          <AlertTriangle size={16} /> {reportData.pilastri.collaboratori.ivdDettaglio.accettatiMaInattivi} Accettati ma INATTIVI
                         </div>
                         <div style={{ fontSize: 9, color: '#8D6E63', marginTop: 2 }}>Da riattivare/contattare</div>
                       </div>
@@ -5301,7 +5592,7 @@ export default function Home() {
                 </div>
                 
                 {/* Barra riepilogo totali */}
-                <div style={{ background: '#FFFFFF', borderRadius: 10, padding: 12, display: 'flex', justifyContent: 'space-around', alignItems: 'center', border: '1px solid #E0E0E0' }}>
+                <div style={{ background: DS.colors.white, borderRadius: 10, padding: 12, display: 'flex', justifyContent: 'space-around', alignItems: 'center', border: '1px solid #E0E0E0' }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: 22, fontWeight: 800, color: '#FF9800' }}>{reportData.pilastri.collaboratori.ivdDettaglio.totale}</div>
                     <div style={{ fontSize: 9, color: '#888' }}>TOTALE IVD</div>
@@ -5328,7 +5619,7 @@ export default function Home() {
             {/* DETTAGLIO STATI COLLABORATORI */}
             {reportData.pilastri.collaboratori.statiDettaglio && reportData.pilastri.collaboratori.statiDettaglio.length > 0 && (
               <div style={{ background: '#FAFAFA', borderRadius: 12, padding: 15, marginBottom: 20 }}>
-                <div style={{ fontSize: 12, color: '#666', marginBottom: 10, fontWeight: 600 }}>📋 DETTAGLIO STATI</div>
+                <div style={{ fontSize: 12, color: '#666', marginBottom: 10, fontWeight: 600 }}><FileText size={16} /> DETTAGLIO STATI</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {(() => {
                     const iscritti = reportData.pilastri.collaboratori.statiDettaglio.filter(([s]) => s.toLowerCase().includes('iscritt'));
@@ -5342,11 +5633,11 @@ export default function Home() {
                     return (<>
                       {iscritti.length > 0 && (
                         <div style={{ background: 'rgba(42,170,138,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(42,170,138,0.3)' }}>
-                          <div style={{ fontSize: 11, color: '#2AAA8A', fontWeight: 600, marginBottom: 8 }}>📝 ISCRITTI ({iscritti.reduce((s,[,c]) => s+c, 0)})</div>
+                          <div style={{ fontSize: 11, color: DS.colors.primaryLight, fontWeight: 600, marginBottom: 8 }}>📝 ISCRITTI ({iscritti.reduce((s,[,c]) => s+c, 0)})</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                             {iscritti.map(([stato, count], i) => (
-                              <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #2AAA8A' }}>
-                                {stato} <strong style={{ color: '#2AAA8A' }}>{count}</strong>
+                              <span key={i} style={{ background: DS.colors.white, padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #2AAA8A' }}>
+                                {stato} <strong style={{ color: DS.colors.primaryLight }}>{count}</strong>
                               </span>
                             ))}
                           </div>
@@ -5354,10 +5645,10 @@ export default function Home() {
                       )}
                       {presenti.length > 0 && (
                         <div style={{ background: 'rgba(76,175,80,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(76,175,80,0.3)' }}>
-                          <div style={{ fontSize: 11, color: '#4CAF50', fontWeight: 600, marginBottom: 8 }}>✅ PRESENTI ({presenti.reduce((s,[,c]) => s+c, 0)})</div>
+                          <div style={{ fontSize: 11, color: '#4CAF50', fontWeight: 600, marginBottom: 8 }}><CheckCircle size={16} /> PRESENTI ({presenti.reduce((s,[,c]) => s+c, 0)})</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                             {presenti.map(([stato, count], i) => (
-                              <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #4CAF50' }}>
+                              <span key={i} style={{ background: DS.colors.white, padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #4CAF50' }}>
                                 {stato} <strong style={{ color: '#4CAF50' }}>{count}</strong>
                               </span>
                             ))}
@@ -5366,10 +5657,10 @@ export default function Home() {
                       )}
                       {attivati.length > 0 && (
                         <div style={{ background: 'rgba(255,152,0,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(255,152,0,0.3)' }}>
-                          <div style={{ fontSize: 11, color: '#FF9800', fontWeight: 600, marginBottom: 8 }}>🟠 ATTIVATI ({attivati.reduce((s,[,c]) => s+c, 0)})</div>
+                          <div style={{ fontSize: 11, color: '#FF9800', fontWeight: 600, marginBottom: 8 }}> ATTIVATI ({attivati.reduce((s,[,c]) => s+c, 0)})</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                             {attivati.map(([stato, count], i) => (
-                              <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #FF9800' }}>
+                              <span key={i} style={{ background: DS.colors.white, padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #FF9800' }}>
                                 {stato} <strong style={{ color: '#FF9800' }}>{count}</strong>
                               </span>
                             ))}
@@ -5378,10 +5669,10 @@ export default function Home() {
                       )}
                       {altri.length > 0 && (
                         <div style={{ background: 'rgba(158,158,158,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(158,158,158,0.3)' }}>
-                          <div style={{ fontSize: 11, color: '#666', fontWeight: 600, marginBottom: 8 }}>📋 ALTRI ({altri.reduce((s,[,c]) => s+c, 0)})</div>
+                          <div style={{ fontSize: 11, color: '#666', fontWeight: 600, marginBottom: 8 }}><FileText size={16} /> ALTRI ({altri.reduce((s,[,c]) => s+c, 0)})</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                             {altri.map(([stato, count], i) => (
-                              <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #9E9E9E' }}>
+                              <span key={i} style={{ background: DS.colors.white, padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #9E9E9E' }}>
                                 {stato} <strong style={{ color: '#666' }}>{count}</strong>
                               </span>
                             ))}
@@ -5397,11 +5688,11 @@ export default function Home() {
             {/* CLASSIFICHE COLLAB CON 4 COLONNE + % */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
               {[
-                { title: 'K MANAGER', emoji: '👑', data: reportData.pilastri.collaboratori.classifiche.k, color: '#B45309' },
-                { title: 'NETWORKER', emoji: '⭐', data: reportData.pilastri.collaboratori.classifiche.nw, color: '#15803D' },
-                { title: 'SDP', emoji: '🔵', data: reportData.pilastri.collaboratori.classifiche.sdp, color: '#2563EB' }
+                { title: 'K MANAGER', emoji: '<Crown size={16} />', data: reportData.pilastri.collaboratori.classifiche.k, color: DS.colors.la },
+                { title: 'NETWORKER', emoji: '<Star size={16} />', data: reportData.pilastri.collaboratori.classifiche.nw, color: DS.colors.fv },
+                { title: 'SDP', emoji: '', data: reportData.pilastri.collaboratori.classifiche.sdp, color: '#2563EB' }
               ].map(({ title, emoji, data, color }) => (
-                <div key={title} style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
+                <div key={title} style={{ background: DS.colors.gray50, borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
                   <div style={{ fontSize: 13, color: color, fontWeight: 700, marginBottom: 12 }}>{emoji} {title} <span style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 400 }}>({data.length})</span></div>
                   {/* Header 4 colonne */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 50px)', gap: 4, marginBottom: 8, paddingBottom: 8, borderBottom: '2px solid #E5E7EB' }}>
@@ -5426,8 +5717,8 @@ export default function Home() {
                         fontSize: 11,
                         background: i < 3 ? `${color}08` : 'transparent'
                       }}>
-                        <span style={{ color: '#1F2937', fontWeight: i < 3 ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {i < 3 ? ['🥇','🥈','🥉'][i] : `${i+1}°`} {name.length > 12 ? name.substring(0,12) + '...' : name}
+                        <span style={{ color: DS.colors.gray800, fontWeight: i < 3 ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {i < 3 ? ['1°','2°','3°'][i] : `${i+1}°`} {name.length > 12 ? name.substring(0,12) + '...' : name}
                         </span>
                         <span style={{ color: '#3B82F6', fontWeight: 600, textAlign: 'center' }}>{stats.iscritti || stats.total || 0}</span>
                         <span style={{ textAlign: 'center' }}><span style={{ color: '#10B981', fontWeight: 600 }}>{stats.presenti || 0}</span><span style={{ fontSize: 8, color: '#9CA3AF' }}> {pctPres}%</span></span>
@@ -5444,17 +5735,17 @@ export default function Home() {
         
         {/* ALERT DA ATTIVARE - FULL WIDTH, PIÙ SPAZIOSO */}
         {reportData.alertDaAttivare && reportData.alertDaAttivare.totale > 0 && (
-          <div style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, border: '1px solid #E5E7EB' }}>
+          <div style={{ background: DS.colors.white, borderRadius: 16, padding: 20, border: '1px solid #E5E7EB' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontSize: 28 }}>🚨</span>
                 <div>
-                  <h3 style={{ color: '#DC2626', fontSize: 18, margin: 0, fontWeight: 700 }}>Alert Da Attivare</h3>
-                  <p style={{ color: '#6B7280', fontSize: 12, margin: '4px 0 0' }}>Contratti Luce Amica in attesa attivazione fornitura</p>
+                  <h3 style={{ color: DS.colors.danger, fontSize: 18, margin: 0, fontWeight: 700 }}>Alert Da Attivare</h3>
+                  <p style={{ color: DS.colors.gray500, fontSize: 12, margin: '4px 0 0' }}>Contratti Luce Amica in attesa attivazione fornitura</p>
                 </div>
               </div>
-              <div style={{ fontSize: 12, color: '#6B7280' }}>
-                Totale: <strong style={{ color: '#DC2626', fontSize: 16 }}>{reportData.alertDaAttivare.totale}</strong>
+              <div style={{ fontSize: 12, color: DS.colors.gray500 }}>
+                Totale: <strong style={{ color: DS.colors.danger, fontSize: 16 }}>{reportData.alertDaAttivare.totale}</strong>
               </div>
             </div>
             
@@ -5468,25 +5759,25 @@ export default function Home() {
               background: 'linear-gradient(135deg, #F0FDF4 0%, #FFFBEB 50%, #FEF2F2 100%)', 
               borderRadius: 16 
             }}>
-              <div style={{ textAlign: 'center', padding: 16, background: '#FFFFFF', borderRadius: 12, border: '2px solid #BBF7D0' }}>
-                <div style={{ fontSize: 36, fontWeight: 800, color: '#15803D' }}>{reportData.alertDaAttivare.verde.length}</div>
-                <div style={{ fontSize: 12, color: '#15803D', fontWeight: 600, marginTop: 4 }}>🟢 0-30 giorni</div>
-                <div style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Da sollecitare</div>
+              <div style={{ textAlign: 'center', padding: 16, background: DS.colors.white, borderRadius: 12, border: '2px solid #BBF7D0' }}>
+                <div style={{ fontSize: 36, fontWeight: 800, color: DS.colors.fv }}>{reportData.alertDaAttivare.verde.length}</div>
+                <div style={{ fontSize: 12, color: DS.colors.fv, fontWeight: 600, marginTop: 4 }}> 0-30 giorni</div>
+                <div style={{ fontSize: 10, color: DS.colors.gray500, marginTop: 2 }}>Da sollecitare</div>
               </div>
-              <div style={{ textAlign: 'center', padding: 16, background: '#FFFFFF', borderRadius: 12, border: '2px solid #FCD34D' }}>
-                <div style={{ fontSize: 36, fontWeight: 800, color: '#B45309' }}>{reportData.alertDaAttivare.giallo.length}</div>
-                <div style={{ fontSize: 12, color: '#B45309', fontWeight: 600, marginTop: 4 }}>🟡 31-60 giorni</div>
-                <div style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Urgente</div>
+              <div style={{ textAlign: 'center', padding: 16, background: DS.colors.white, borderRadius: 12, border: '2px solid #FCD34D' }}>
+                <div style={{ fontSize: 36, fontWeight: 800, color: DS.colors.la }}>{reportData.alertDaAttivare.giallo.length}</div>
+                <div style={{ fontSize: 12, color: DS.colors.la, fontWeight: 600, marginTop: 4 }}>🟡 31-60 giorni</div>
+                <div style={{ fontSize: 10, color: DS.colors.gray500, marginTop: 2 }}>Urgente</div>
               </div>
-              <div style={{ textAlign: 'center', padding: 16, background: '#FFFFFF', borderRadius: 12, border: '2px solid #FECACA' }}>
-                <div style={{ fontSize: 36, fontWeight: 800, color: '#DC2626' }}>{reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150).length}</div>
-                <div style={{ fontSize: 12, color: '#DC2626', fontWeight: 600, marginTop: 4 }}>🔴 61-150 giorni</div>
-                <div style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Critico</div>
+              <div style={{ textAlign: 'center', padding: 16, background: DS.colors.white, borderRadius: 12, border: '2px solid #FECACA' }}>
+                <div style={{ fontSize: 36, fontWeight: 800, color: DS.colors.danger }}>{reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150).length}</div>
+                <div style={{ fontSize: 12, color: DS.colors.danger, fontWeight: 600, marginTop: 4 }}> 61-150 giorni</div>
+                <div style={{ fontSize: 10, color: DS.colors.gray500, marginTop: 2 }}>Critico</div>
               </div>
-              <div style={{ textAlign: 'center', padding: 16, background: '#FFFFFF', borderRadius: 12, border: '2px solid #D1D5DB' }}>
-                <div style={{ fontSize: 36, fontWeight: 800, color: '#6B7280' }}>{reportData.alertDaAttivare.rosso.filter(a => a.giorni > 150).length}</div>
-                <div style={{ fontSize: 12, color: '#6B7280', fontWeight: 600, marginTop: 4 }}>⚫ Oltre 150g</div>
-                <div style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Da riformulare</div>
+              <div style={{ textAlign: 'center', padding: 16, background: DS.colors.white, borderRadius: 12, border: '2px solid #D1D5DB' }}>
+                <div style={{ fontSize: 36, fontWeight: 800, color: DS.colors.gray500 }}>{reportData.alertDaAttivare.rosso.filter(a => a.giorni > 150).length}</div>
+                <div style={{ fontSize: 12, color: DS.colors.gray500, fontWeight: 600, marginTop: 4 }}>⚫ Oltre 150g</div>
+                <div style={{ fontSize: 10, color: DS.colors.gray500, marginTop: 2 }}>Da riformulare</div>
               </div>
             </div>
             
@@ -5495,82 +5786,82 @@ export default function Home() {
               {/* VERDE 0-30g */}
               <div style={{ background: '#F0FDF4', borderRadius: 12, padding: 16, border: '1px solid #BBF7D0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <span style={{ fontSize: 13, color: '#15803D', fontWeight: 700 }}>🟢 VERDE (0-30g): {reportData.alertDaAttivare.verde.length}</span>
+                  <span style={{ fontSize: 13, color: DS.colors.fv, fontWeight: 700 }}> VERDE (0-30g): {reportData.alertDaAttivare.verde.length}</span>
                   <button onClick={() => {
                     const csv = 'Cliente;Intermediario;Giorni\n' + reportData.alertDaAttivare.verde.map(a => `${a.cliente};${a.intermediario};${a.giorni}`).join('\n');
                     const blob = new Blob([csv], {type: 'text/csv'}); const url = URL.createObjectURL(blob);
                     const link = document.createElement('a'); link.href = url; link.download = 'alert_verde_0-30g.csv'; link.click();
-                  }} style={{ padding: '6px 12px', background: '#15803D', color: '#FFF', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>📥 CSV</button>
+                  }} style={{ padding: '6px 12px', background: DS.colors.fv, color: DS.colors.white, border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}><Download size={16} /> CSV</button>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, fontSize: 10, color: '#6B7280', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #BBF7D0' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, fontSize: 10, color: DS.colors.gray500, marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #BBF7D0' }}>
                   <span style={{ fontWeight: 600 }}>Cliente</span>
                   <span style={{ fontWeight: 600 }}>Intermediario</span>
                   <span style={{ fontWeight: 600, textAlign: 'right' }}>Giorni</span>
                 </div>
                 <div style={{ maxHeight: 180, overflowY: 'auto' }}>
                   {reportData.alertDaAttivare.verde.slice(0,8).map((a,i) => (
-                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, padding: '8px 4px', fontSize: 11, background: i % 2 === 0 ? 'transparent' : '#FFFFFF', borderRadius: 4 }}>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1F2937' }}>{a.cliente}</span>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#6B7280' }}>{a.intermediario}</span>
-                      <span style={{ textAlign: 'right', color: '#15803D', fontWeight: 700 }}>{a.giorni}g</span>
+                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, padding: '8px 4px', fontSize: 11, background: i % 2 === 0 ? 'transparent' : DS.colors.white, borderRadius: 4 }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: DS.colors.gray800 }}>{a.cliente}</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: DS.colors.gray500 }}>{a.intermediario}</span>
+                      <span style={{ textAlign: 'right', color: DS.colors.fv, fontWeight: 700 }}>{a.giorni}g</span>
                     </div>
                   ))}
-                  {reportData.alertDaAttivare.verde.length > 8 && <div style={{ color: '#6B7280', fontStyle: 'italic', padding: '8px 4px', fontSize: 10 }}>...e altri {reportData.alertDaAttivare.verde.length - 8}</div>}
+                  {reportData.alertDaAttivare.verde.length > 8 && <div style={{ color: DS.colors.gray500, fontStyle: 'italic', padding: '8px 4px', fontSize: 10 }}>...e altri {reportData.alertDaAttivare.verde.length - 8}</div>}
                 </div>
               </div>
               
               {/* GIALLO 31-60g */}
               <div style={{ background: '#FFFBEB', borderRadius: 12, padding: 16, border: '1px solid #FCD34D' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <span style={{ fontSize: 13, color: '#B45309', fontWeight: 700 }}>🟡 GIALLO (31-60g): {reportData.alertDaAttivare.giallo.length}</span>
+                  <span style={{ fontSize: 13, color: DS.colors.la, fontWeight: 700 }}>🟡 GIALLO (31-60g): {reportData.alertDaAttivare.giallo.length}</span>
                   <button onClick={() => {
                     const csv = 'Cliente;Intermediario;Giorni\n' + reportData.alertDaAttivare.giallo.map(a => `${a.cliente};${a.intermediario};${a.giorni}`).join('\n');
                     const blob = new Blob([csv], {type: 'text/csv'}); const url = URL.createObjectURL(blob);
                     const link = document.createElement('a'); link.href = url; link.download = 'alert_giallo_31-60g.csv'; link.click();
-                  }} style={{ padding: '6px 12px', background: '#B45309', color: '#FFF', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>📥 CSV</button>
+                  }} style={{ padding: '6px 12px', background: DS.colors.la, color: DS.colors.white, border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}><Download size={16} /> CSV</button>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, fontSize: 10, color: '#6B7280', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #FCD34D' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, fontSize: 10, color: DS.colors.gray500, marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #FCD34D' }}>
                   <span style={{ fontWeight: 600 }}>Cliente</span>
                   <span style={{ fontWeight: 600 }}>Intermediario</span>
                   <span style={{ fontWeight: 600, textAlign: 'right' }}>Giorni</span>
                 </div>
                 <div style={{ maxHeight: 180, overflowY: 'auto' }}>
                   {reportData.alertDaAttivare.giallo.slice(0,8).map((a,i) => (
-                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, padding: '8px 4px', fontSize: 11, background: i % 2 === 0 ? 'transparent' : '#FFFFFF', borderRadius: 4 }}>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1F2937' }}>{a.cliente}</span>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#6B7280' }}>{a.intermediario}</span>
-                      <span style={{ textAlign: 'right', color: '#B45309', fontWeight: 700 }}>{a.giorni}g</span>
+                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, padding: '8px 4px', fontSize: 11, background: i % 2 === 0 ? 'transparent' : DS.colors.white, borderRadius: 4 }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: DS.colors.gray800 }}>{a.cliente}</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: DS.colors.gray500 }}>{a.intermediario}</span>
+                      <span style={{ textAlign: 'right', color: DS.colors.la, fontWeight: 700 }}>{a.giorni}g</span>
                     </div>
                   ))}
-                  {reportData.alertDaAttivare.giallo.length > 8 && <div style={{ color: '#6B7280', fontStyle: 'italic', padding: '8px 4px', fontSize: 10 }}>...e altri {reportData.alertDaAttivare.giallo.length - 8}</div>}
+                  {reportData.alertDaAttivare.giallo.length > 8 && <div style={{ color: DS.colors.gray500, fontStyle: 'italic', padding: '8px 4px', fontSize: 10 }}>...e altri {reportData.alertDaAttivare.giallo.length - 8}</div>}
                 </div>
               </div>
               
               {/* ROSSO 61-150g */}
               <div style={{ background: '#FEF2F2', borderRadius: 12, padding: 16, border: '1px solid #FECACA' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <span style={{ fontSize: 13, color: '#DC2626', fontWeight: 700 }}>🔴 ROSSO (61-150g): {reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150).length}</span>
+                  <span style={{ fontSize: 13, color: DS.colors.danger, fontWeight: 700 }}> ROSSO (61-150g): {reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150).length}</span>
                   <button onClick={() => {
                     const filtered = reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150);
                     const csv = 'Cliente;Intermediario;Giorni\n' + filtered.map(a => `${a.cliente};${a.intermediario};${a.giorni}`).join('\n');
                     const blob = new Blob([csv], {type: 'text/csv'}); const url = URL.createObjectURL(blob);
                     const link = document.createElement('a'); link.href = url; link.download = 'alert_rosso_61-150g.csv'; link.click();
-                  }} style={{ padding: '6px 12px', background: '#DC2626', color: '#FFF', border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>📥 CSV</button>
+                  }} style={{ padding: '6px 12px', background: DS.colors.danger, color: DS.colors.white, border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}><Download size={16} /> CSV</button>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, fontSize: 10, color: '#6B7280', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #FECACA' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, fontSize: 10, color: DS.colors.gray500, marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #FECACA' }}>
                   <span style={{ fontWeight: 600 }}>Cliente</span>
                   <span style={{ fontWeight: 600 }}>Intermediario</span>
                   <span style={{ fontWeight: 600, textAlign: 'right' }}>Giorni</span>
                 </div>
                 <div style={{ maxHeight: 180, overflowY: 'auto' }}>
                   {reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150).slice(0,8).map((a,i) => (
-                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, padding: '8px 4px', fontSize: 11, background: i % 2 === 0 ? 'transparent' : '#FFFFFF', borderRadius: 4 }}>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1F2937' }}>{a.cliente}</span>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#6B7280' }}>{a.intermediario}</span>
-                      <span style={{ textAlign: 'right', color: '#DC2626', fontWeight: 700 }}>{a.giorni}g</span>
+                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 50px', gap: 8, padding: '8px 4px', fontSize: 11, background: i % 2 === 0 ? 'transparent' : DS.colors.white, borderRadius: 4 }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: DS.colors.gray800 }}>{a.cliente}</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: DS.colors.gray500 }}>{a.intermediario}</span>
+                      <span style={{ textAlign: 'right', color: DS.colors.danger, fontWeight: 700 }}>{a.giorni}g</span>
                     </div>
                   ))}
-                  {reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150).length > 8 && <div style={{ color: '#6B7280', fontStyle: 'italic', padding: '8px 4px', fontSize: 10 }}>...e altri {reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150).length - 8}</div>}
+                  {reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150).length > 8 && <div style={{ color: DS.colors.gray500, fontStyle: 'italic', padding: '8px 4px', fontSize: 10 }}>...e altri {reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150).length - 8}</div>}
                 </div>
               </div>
             </div>
@@ -5579,13 +5870,13 @@ export default function Home() {
         
         {/* TRACKER COACHING - COMPLETO CON CLASSIFICA SCORE */}
         {reportData.trackerCoaching && reportData.trackerCoaching.totale > 0 && (
-          <div id="section-tracker" style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, border: '1px solid #E5E7EB' }}>
+          <div id="section-tracker" style={{ background: DS.colors.white, borderRadius: 16, padding: 20, border: '1px solid #E5E7EB' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 28 }}>🎯</span>
+                <span style={{ fontSize: 28 }}><Target size={16} /></span>
                 <div>
-                  <h3 style={{ color: '#2AAA8A', fontSize: 18, margin: 0, fontWeight: 700 }}>Tracker Coaching - Nuovi IVD Livello 1</h3>
-                  <p style={{ color: '#6B7280', fontSize: 12, margin: '4px 0 0' }}>Monitoraggio produzione propria dei {reportData.trackerCoaching.totale} nuovi attivati</p>
+                  <h3 style={{ color: DS.colors.primaryLight, fontSize: 18, margin: 0, fontWeight: 700 }}>Tracker Coaching - Nuovi IVD Livello 1</h3>
+                  <p style={{ color: DS.colors.gray500, fontSize: 12, margin: '4px 0 0' }}>Monitoraggio produzione propria dei {reportData.trackerCoaching.totale} nuovi attivati</p>
                 </div>
               </div>
               <button onClick={() => {
@@ -5595,24 +5886,24 @@ export default function Home() {
                   ).join('\n');
                 const blob = new Blob([csv], {type: 'text/csv'}); const url = URL.createObjectURL(blob);
                 const link = document.createElement('a'); link.href = url; link.download = 'classifica_produzione_propria.csv'; link.click();
-              }} style={{ padding: '8px 16px', background: '#2AAA8A', color: '#FFF', border: 'none', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>📥 Scarica CSV</button>
+              }} style={{ padding: '8px 16px', background: DS.colors.primaryLight, color: DS.colors.white, border: 'none', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}><Download size={16} /> Scarica CSV</button>
             </div>
             
             {/* FUNNEL PRODUZIONE */}
             <div style={{ background: 'linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 100%)', borderRadius: 16, padding: 20, marginBottom: 20, border: '1px solid #BBF7D0' }}>
-              <div style={{ fontSize: 12, color: '#15803D', fontWeight: 700, marginBottom: 16 }}>📊 FUNNEL PRODUZIONE NUOVI ATTIVATI</div>
+              <div style={{ fontSize: 12, color: DS.colors.fv, fontWeight: 700, marginBottom: 16 }}><BarChart3 size={16} /> FUNNEL PRODUZIONE NUOVI ATTIVATI</div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <div style={{ textAlign: 'center', padding: '12px 20px', background: '#FFFFFF', borderRadius: 12, border: '2px solid #2AAA8A' }}>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: '#2AAA8A' }}>{reportData.trackerCoaching.totale}</div>
+                <div style={{ textAlign: 'center', padding: '12px 20px', background: DS.colors.white, borderRadius: 12, border: '2px solid #2AAA8A' }}>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: DS.colors.primaryLight }}>{reportData.trackerCoaching.totale}</div>
                   <div style={{ fontSize: 10, color: '#666' }}>NUOVI ATTIVATI</div>
                 </div>
                 <div style={{ fontSize: 20, color: '#BBF7D0' }}>→</div>
-                <div style={{ textAlign: 'center', padding: '12px 20px', background: '#FFFFFF', borderRadius: 12, border: '2px solid #4CAF50' }}>
+                <div style={{ textAlign: 'center', padding: '12px 20px', background: DS.colors.white, borderRadius: 12, border: '2px solid #4CAF50' }}>
                   <div style={{ fontSize: 28, fontWeight: 800, color: '#4CAF50' }}>{reportData.trackerCoaching.funnel?.vipActive || Math.round(reportData.trackerCoaching.totale * 0.8)}</div>
                   <div style={{ fontSize: 10, color: '#666' }}>ACTIVE VipOffice</div>
                 </div>
                 <div style={{ fontSize: 20, color: '#BBF7D0' }}>→</div>
-                <div style={{ textAlign: 'center', padding: '12px 20px', background: '#FFFFFF', borderRadius: 12, border: '2px solid #10B981' }}>
+                <div style={{ textAlign: 'center', padding: '12px 20px', background: DS.colors.white, borderRadius: 12, border: '2px solid #10B981' }}>
                   <div style={{ fontSize: 28, fontWeight: 800, color: '#10B981' }}>{reportData.trackerCoaching.ivdConContratti}</div>
                   <div style={{ fontSize: 10, color: '#666' }}>CON PRODUZIONE</div>
                   <div style={{ fontSize: 9, color: '#10B981', marginTop: 4 }}>{Math.round(reportData.trackerCoaching.ivdConContratti / reportData.trackerCoaching.totale * 100)}%</div>
@@ -5621,11 +5912,11 @@ export default function Home() {
               {/* Sotto-funnel produzione */}
               <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 16 }}>
                 <div style={{ textAlign: 'center', padding: '8px 16px', background: '#ECFDF5', borderRadius: 8 }}>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: '#15803D' }}>{reportData.trackerCoaching.funnel?.conLA || reportData.trackerCoaching.puntiStats?.contrattiLA || 0}</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: DS.colors.fv }}>{reportData.trackerCoaching.funnel?.conLA || reportData.trackerCoaching.puntiStats?.contrattiLA || 0}</div>
                   <div style={{ fontSize: 9, color: '#666' }}>con LA</div>
                 </div>
                 <div style={{ textAlign: 'center', padding: '8px 16px', background: '#FFFBEB', borderRadius: 8 }}>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: '#B45309' }}>{reportData.trackerCoaching.funnel?.conFV || reportData.trackerCoaching.puntiStats?.contrattiFV || 0}</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: DS.colors.la }}>{reportData.trackerCoaching.funnel?.conFV || reportData.trackerCoaching.puntiStats?.contrattiFV || 0}</div>
                   <div style={{ fontSize: 9, color: '#666' }}>con FV</div>
                 </div>
                 <div style={{ textAlign: 'center', padding: '8px 16px', background: '#F5F3FF', borderRadius: 8 }}>
@@ -5642,55 +5933,55 @@ export default function Home() {
             {/* METRICHE VELOCITÀ + PRODUZIONE PROPRIA */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 20 }}>
               <div style={{ background: '#F0FDF4', borderRadius: 12, padding: 16, textAlign: 'center', border: '2px solid #BBF7D0' }}>
-                <div style={{ fontSize: 10, color: '#15803D', fontWeight: 600, marginBottom: 4 }}>⚡ Prima LA</div>
-                <div style={{ fontSize: 28, fontWeight: 800, color: '#15803D' }}>{reportData.trackerCoaching.medie.la !== null ? reportData.trackerCoaching.medie.la : '-'}</div>
-                <div style={{ fontSize: 10, color: '#6B7280' }}>giorni</div>
+                <div style={{ fontSize: 10, color: DS.colors.fv, fontWeight: 600, marginBottom: 4 }}><Zap size={16} /> Prima LA</div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: DS.colors.fv }}>{reportData.trackerCoaching.medie.la !== null ? reportData.trackerCoaching.medie.la : '-'}</div>
+                <div style={{ fontSize: 10, color: DS.colors.gray500 }}>giorni</div>
                 <div style={{ fontSize: 10, color: '#10B981', fontWeight: 600, marginTop: 4 }}>{reportData.trackerCoaching.completamento.la}%</div>
               </div>
               <div style={{ background: '#FFFBEB', borderRadius: 12, padding: 16, textAlign: 'center', border: '2px solid #FCD34D' }}>
-                <div style={{ fontSize: 10, color: '#B45309', fontWeight: 600, marginBottom: 4 }}>☀️ Primo FV</div>
-                <div style={{ fontSize: 28, fontWeight: 800, color: '#B45309' }}>{reportData.trackerCoaching.medie.fv !== null ? reportData.trackerCoaching.medie.fv : '-'}</div>
-                <div style={{ fontSize: 10, color: '#6B7280' }}>giorni</div>
+                <div style={{ fontSize: 10, color: DS.colors.la, fontWeight: 600, marginBottom: 4 }}><Sun size={16} /> Primo FV</div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: DS.colors.la }}>{reportData.trackerCoaching.medie.fv !== null ? reportData.trackerCoaching.medie.fv : '-'}</div>
+                <div style={{ fontSize: 10, color: DS.colors.gray500 }}>giorni</div>
                 <div style={{ fontSize: 10, color: '#F59E0B', fontWeight: 600, marginTop: 4 }}>{reportData.trackerCoaching.completamento.fv}%</div>
               </div>
               <div style={{ background: '#F5F3FF', borderRadius: 12, padding: 16, textAlign: 'center', border: '2px solid #C4B5FD' }}>
                 <div style={{ fontSize: 10, color: '#6D28D9', fontWeight: 600, marginBottom: 4 }}>🎓 1° Iscritto</div>
                 <div style={{ fontSize: 28, fontWeight: 800, color: '#6D28D9' }}>{reportData.trackerCoaching.medie.iscritto !== null ? reportData.trackerCoaching.medie.iscritto : '-'}</div>
-                <div style={{ fontSize: 10, color: '#6B7280' }}>giorni</div>
+                <div style={{ fontSize: 10, color: DS.colors.gray500 }}>giorni</div>
                 <div style={{ fontSize: 10, color: '#8B5CF6', fontWeight: 600, marginTop: 4 }}>{reportData.trackerCoaching.completamento.iscritto}%</div>
               </div>
               <div style={{ background: '#FFF7ED', borderRadius: 12, padding: 16, textAlign: 'center', border: '2px solid #FDBA74' }}>
-                <div style={{ fontSize: 10, color: '#EA580C', fontWeight: 600, marginBottom: 4 }}>👥 1° Attivato</div>
+                <div style={{ fontSize: 10, color: '#EA580C', fontWeight: 600, marginBottom: 4 }}><Users size={16} /> 1° Attivato</div>
                 <div style={{ fontSize: 28, fontWeight: 800, color: '#EA580C' }}>{reportData.trackerCoaching.medie.attivato !== null ? reportData.trackerCoaching.medie.attivato : '-'}</div>
-                <div style={{ fontSize: 10, color: '#6B7280' }}>giorni</div>
+                <div style={{ fontSize: 10, color: DS.colors.gray500 }}>giorni</div>
                 <div style={{ fontSize: 10, color: '#F97316', fontWeight: 600, marginTop: 4 }}>{reportData.trackerCoaching.completamento.attivato}%</div>
               </div>
               <div style={{ background: 'linear-gradient(135deg, #2AAA8A 0%, #20917A 100%)', borderRadius: 12, padding: 16, textAlign: 'center' }}>
-                <div style={{ fontSize: 10, color: '#FFF', fontWeight: 600, marginBottom: 4 }}>⭐ PROD. PROPRIA</div>
-                <div style={{ fontSize: 28, fontWeight: 800, color: '#FFF' }}>{reportData.trackerCoaching.puntiStats?.media || 0}</div>
+                <div style={{ fontSize: 10, color: DS.colors.white, fontWeight: 600, marginBottom: 4 }}><Star size={16} /> PROD. PROPRIA</div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: DS.colors.white }}>{reportData.trackerCoaching.puntiStats?.media || 0}</div>
                 <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.8)' }}>pt/IVD</div>
                 <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.9)', marginTop: 4 }}>({reportData.trackerCoaching.puntiStats?.mediaProduttivi || 0} se produttivo)</div>
               </div>
             </div>
             
             {/* CLASSIFICA COMPLETA PRODUZIONE PROPRIA */}
-            <div style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
+            <div style={{ background: DS.colors.gray50, borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <div style={{ fontSize: 14, color: '#374151', fontWeight: 700 }}>🏆 Classifica Produzione Propria ({reportData.trackerCoaching.ivdConContratti} IVD produttivi)</div>
-                <div style={{ fontSize: 10, color: '#6B7280', fontStyle: 'italic' }}>Ordinata per PUNTI • Score = bonus velocità</div>
+                <div style={{ fontSize: 14, color: DS.colors.gray700, fontWeight: 700 }}><Trophy size={16} /> Classifica Produzione Propria ({reportData.trackerCoaching.ivdConContratti} IVD produttivi)</div>
+                <div style={{ fontSize: 10, color: DS.colors.gray500, fontStyle: 'italic' }}>Ordinata per PUNTI • Score = bonus velocità</div>
               </div>
               {/* Header */}
               <div style={{ display: 'grid', gridTemplateColumns: '30px 1fr 70px 50px 50px 55px 55px 55px 55px 70px', gap: 6, marginBottom: 8, paddingBottom: 8, borderBottom: '2px solid #E5E7EB' }}>
-                <span style={{ fontSize: 9, color: '#6B7280', fontWeight: 600 }}>#</span>
-                <span style={{ fontSize: 9, color: '#6B7280', fontWeight: 600 }}>NOME</span>
-                <span style={{ fontSize: 9, color: '#2AAA8A', fontWeight: 600, textAlign: 'center' }}>PUNTI ⬇️</span>
-                <span style={{ fontSize: 9, color: '#15803D', fontWeight: 600, textAlign: 'center' }}>%LA</span>
-                <span style={{ fontSize: 9, color: '#B45309', fontWeight: 600, textAlign: 'center' }}>%FV</span>
-                <span style={{ fontSize: 9, color: '#15803D', fontWeight: 600, textAlign: 'center' }}>1°LA</span>
-                <span style={{ fontSize: 9, color: '#B45309', fontWeight: 600, textAlign: 'center' }}>1°FV</span>
+                <span style={{ fontSize: 9, color: DS.colors.gray500, fontWeight: 600 }}>#</span>
+                <span style={{ fontSize: 9, color: DS.colors.gray500, fontWeight: 600 }}>NOME</span>
+                <span style={{ fontSize: 9, color: DS.colors.primaryLight, fontWeight: 600, textAlign: 'center' }}>PUNTI ⬇️</span>
+                <span style={{ fontSize: 9, color: DS.colors.fv, fontWeight: 600, textAlign: 'center' }}>%LA</span>
+                <span style={{ fontSize: 9, color: DS.colors.la, fontWeight: 600, textAlign: 'center' }}>%FV</span>
+                <span style={{ fontSize: 9, color: DS.colors.fv, fontWeight: 600, textAlign: 'center' }}>1°LA</span>
+                <span style={{ fontSize: 9, color: DS.colors.la, fontWeight: 600, textAlign: 'center' }}>1°FV</span>
                 <span style={{ fontSize: 9, color: '#6D28D9', fontWeight: 600, textAlign: 'center' }}>1°ISCR</span>
                 <span style={{ fontSize: 9, color: '#EA580C', fontWeight: 600, textAlign: 'center' }}>1°ATT</span>
-                <span style={{ fontSize: 9, color: '#DC2626', fontWeight: 600, textAlign: 'center' }}>SCORE</span>
+                <span style={{ fontSize: 9, color: DS.colors.danger, fontWeight: 600, textAlign: 'center' }}>SCORE</span>
               </div>
               <div style={{ maxHeight: 400, overflowY: 'auto' }}>
                 {reportData.trackerCoaching.lista.filter(t => t.puntiTotali > 0).map((t, i) => {
@@ -5703,58 +5994,58 @@ export default function Home() {
                     gap: 6, 
                     padding: '8px 4px', 
                     fontSize: 11, 
-                    background: i < 3 ? `rgba(42,170,138,${0.15 - i * 0.04})` : haAllMilestones ? 'rgba(16,185,129,0.08)' : i % 2 === 0 ? 'transparent' : '#FFFFFF',
+                    background: i < 3 ? `rgba(42,170,138,${0.15 - i * 0.04})` : haAllMilestones ? 'rgba(16,185,129,0.08)' : i % 2 === 0 ? 'transparent' : DS.colors.white,
                     borderRadius: 4,
                     borderLeft: haAllMilestones ? '3px solid #10B981' : 'none'
                   }}>
-                    <span style={{ fontWeight: i < 3 ? 700 : 400, color: '#1F2937' }}>
-                      {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}`}
+                    <span style={{ fontWeight: i < 3 ? 700 : 400, color: DS.colors.gray800 }}>
+                      {<PositionBadge position={i+1} size="sm" />}
                     </span>
-                    <span style={{ color: '#1F2937', fontWeight: i < 3 ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {t.nome} {haAllMilestones && '⭐'}
+                    <span style={{ color: DS.colors.gray800, fontWeight: i < 3 ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {t.nome} {haAllMilestones && '<Star size={16} />'}
                     </span>
-                    <span style={{ textAlign: 'center', color: '#2AAA8A', fontWeight: 700 }}>{t.puntiTotali.toLocaleString('it-IT')}</span>
-                    <span style={{ textAlign: 'center', color: '#15803D', fontWeight: 500 }}>{t.pctLA}%</span>
-                    <span style={{ textAlign: 'center', color: '#B45309', fontWeight: 500 }}>{t.pctFV}%</span>
-                    <span style={{ textAlign: 'center', color: t.giorniLA !== null ? '#15803D' : '#D1D5DB', fontWeight: t.giorniLA !== null ? 600 : 400 }}>{t.giorniLA !== null ? `${t.giorniLA}g` : '-'}</span>
-                    <span style={{ textAlign: 'center', color: t.giorniFV !== null ? '#B45309' : '#D1D5DB', fontWeight: t.giorniFV !== null ? 600 : 400 }}>{t.giorniFV !== null ? `${t.giorniFV}g` : '-'}</span>
+                    <span style={{ textAlign: 'center', color: DS.colors.primaryLight, fontWeight: 700 }}>{t.puntiTotali.toLocaleString('it-IT')}</span>
+                    <span style={{ textAlign: 'center', color: DS.colors.fv, fontWeight: 500 }}>{t.pctLA}%</span>
+                    <span style={{ textAlign: 'center', color: DS.colors.la, fontWeight: 500 }}>{t.pctFV}%</span>
+                    <span style={{ textAlign: 'center', color: t.giorniLA !== null ? DS.colors.fv : '#D1D5DB', fontWeight: t.giorniLA !== null ? 600 : 400 }}>{t.giorniLA !== null ? `${t.giorniLA}g` : '-'}</span>
+                    <span style={{ textAlign: 'center', color: t.giorniFV !== null ? DS.colors.la : '#D1D5DB', fontWeight: t.giorniFV !== null ? 600 : 400 }}>{t.giorniFV !== null ? `${t.giorniFV}g` : '-'}</span>
                     <span style={{ textAlign: 'center', color: t.giorniIscritto !== null ? '#6D28D9' : '#D1D5DB', fontWeight: t.giorniIscritto !== null ? 600 : 400 }}>{t.giorniIscritto !== null ? `${t.giorniIscritto}g` : '-'}</span>
                     <span style={{ textAlign: 'center', color: t.giorniAttivato !== null ? '#EA580C' : '#D1D5DB', fontWeight: t.giorniAttivato !== null ? 600 : 400 }}>{t.giorniAttivato !== null ? `${t.giorniAttivato}g` : '-'}</span>
-                    <span style={{ textAlign: 'center', color: '#DC2626', fontWeight: 700 }}>{t.score?.toLocaleString('it-IT') || 0}</span>
+                    <span style={{ textAlign: 'center', color: DS.colors.danger, fontWeight: 700 }}>{t.score?.toLocaleString('it-IT') || 0}</span>
                   </div>
                   );
                 })}
               </div>
               <div style={{ marginTop: 12, padding: '10px 14px', background: 'linear-gradient(135deg, #F0FDF4, #ECFDF5)', borderRadius: 8, fontSize: 10, color: '#065F46', border: '1px solid #BBF7D0' }}>
-                <strong>📊 Ordinamento:</strong> per PUNTI totali (chi produce di più) • <strong>⭐ Stella:</strong> ha completato tutte e 4 le milestone • <strong>Score:</strong> Punti × Velocità (bonus per chi parte veloce)
+                <strong><BarChart3 size={16} /> Ordinamento:</strong> per PUNTI totali (chi produce di più) • <strong><Star size={16} /> Stella:</strong> ha completato tutte e 4 le milestone • <strong>Score:</strong> Punti × Velocità (bonus per chi parte veloce)
               </div>
             </div>
             
             {/* ALERT */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 16 }}>
               <div style={{ background: '#FEF2F2', borderRadius: 8, padding: 12, border: '1px solid #FECACA' }}>
-                <div style={{ fontSize: 11, color: '#DC2626', fontWeight: 600 }}>⚠️ {reportData.trackerCoaching.ivdInattivi} ACTIVE senza produzione</div>
-                <div style={{ fontSize: 10, color: '#6B7280', marginTop: 4 }}>Da seguire con coaching</div>
+                <div style={{ fontSize: 11, color: DS.colors.danger, fontWeight: 600 }}><AlertTriangle size={16} /> {reportData.trackerCoaching.ivdInattivi} ACTIVE senza produzione</div>
+                <div style={{ fontSize: 10, color: DS.colors.gray500, marginTop: 4 }}>Da seguire con coaching</div>
               </div>
               <div style={{ background: '#FFFBEB', borderRadius: 8, padding: 12, border: '1px solid #FCD34D' }}>
-                <div style={{ fontSize: 11, color: '#B45309', fontWeight: 600 }}>📊 Totale punti: {(reportData.trackerCoaching.puntiStats?.totale || 0).toLocaleString('it-IT')}</div>
-                <div style={{ fontSize: 10, color: '#6B7280', marginTop: 4 }}>LA: {Math.round((reportData.trackerCoaching.puntiStats?.totaleLA || 0) / (reportData.trackerCoaching.puntiStats?.totale || 1) * 100)}% | FV: {Math.round((reportData.trackerCoaching.puntiStats?.totaleFV || 0) / (reportData.trackerCoaching.puntiStats?.totale || 1) * 100)}%</div>
+                <div style={{ fontSize: 11, color: DS.colors.la, fontWeight: 600 }}><BarChart3 size={16} /> Totale punti: {(reportData.trackerCoaching.puntiStats?.totale || 0).toLocaleString('it-IT')}</div>
+                <div style={{ fontSize: 10, color: DS.colors.gray500, marginTop: 4 }}>LA: {Math.round((reportData.trackerCoaching.puntiStats?.totaleLA || 0) / (reportData.trackerCoaching.puntiStats?.totale || 1) * 100)}% | FV: {Math.round((reportData.trackerCoaching.puntiStats?.totaleFV || 0) / (reportData.trackerCoaching.puntiStats?.totale || 1) * 100)}%</div>
               </div>
             </div>
           </div>
         )}
         
-        {/* 💰 ANALISI FATTURATO */}
+        {/*  ANALISI FATTURATO */}
         {reportData.fatturato && (reportData.fatturato.fv.inseriti.contratti > 0 || reportData.fatturato.la.inseriti.contratti > 0) && (
-          <div id="section-fatturato" style={{ background: '#FFFFFF', borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
+          <div id="section-fatturato" style={{ background: DS.colors.white, borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <div>
-                <h3 style={{ color: '#2AAA8A', fontSize: 18, margin: 0, fontWeight: 700 }}>💰 ANALISI FATTURATO LEADER</h3>
+                <h3 style={{ color: DS.colors.primaryLight, fontSize: 18, margin: 0, fontWeight: 700 }}> ANALISI FATTURATO LEADER</h3>
                 <p style={{ color: '#666', fontSize: 11, margin: '5px 0 0' }}>Fatturato e punti generati (Inseriti vs Effettivi)</p>
               </div>
               {/* Badge coerenza + Screenshot */}
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <button onClick={() => screenshotSection('section-fatturato', 'Analisi_Fatturato')} style={{ padding: '6px 12px', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>📷</button>
+                <button onClick={() => screenshotSection('section-fatturato', 'Analisi_Fatturato')} style={{ padding: '6px 12px', background: DS.colors.gray100, border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}><Camera size={16} /></button>
                 <span style={{ 
                   padding: '4px 10px', 
                   borderRadius: 20, 
@@ -5764,7 +6055,7 @@ export default function Home() {
                   color: reportData.fatturato.coerenza?.fv?.ok ? '#2E7D32' : '#C62828',
                   border: `1px solid ${reportData.fatturato.coerenza?.fv?.ok ? '#A5D6A7' : '#EF9A9A'}`
                 }}>
-                  {reportData.fatturato.coerenza?.fv?.ok ? '✅' : '⚠️'} FV: {reportData.fatturato.coerenza?.fv?.fatturatoInseriti || 0}/{reportData.fatturato.coerenza?.fv?.pilastroInseriti || 0}
+                  {reportData.fatturato.coerenza?.fv?.ok ? '<CheckCircle size={16} />' : '<AlertTriangle size={16} />'} FV: {reportData.fatturato.coerenza?.fv?.fatturatoInseriti || 0}/{reportData.fatturato.coerenza?.fv?.pilastroInseriti || 0}
                 </span>
                 <span style={{ 
                   padding: '4px 10px', 
@@ -5775,7 +6066,7 @@ export default function Home() {
                   color: reportData.fatturato.coerenza?.la?.ok ? '#2E7D32' : '#C62828',
                   border: `1px solid ${reportData.fatturato.coerenza?.la?.ok ? '#A5D6A7' : '#EF9A9A'}`
                 }}>
-                  {reportData.fatturato.coerenza?.la?.ok ? '✅' : '⚠️'} LA: {reportData.fatturato.coerenza?.la?.fatturatoInseriti || 0}/{reportData.fatturato.coerenza?.la?.pilastroInseriti || 0}
+                  {reportData.fatturato.coerenza?.la?.ok ? '<CheckCircle size={16} />' : '<AlertTriangle size={16} />'} LA: {reportData.fatturato.coerenza?.la?.fatturatoInseriti || 0}/{reportData.fatturato.coerenza?.la?.pilastroInseriti || 0}
                 </span>
               </div>
             </div>
@@ -5783,17 +6074,17 @@ export default function Home() {
             {/* Alert se non coerente */}
             {(!reportData.fatturato.coerenza?.fv?.ok || !reportData.fatturato.coerenza?.la?.ok) && (
               <div style={{ background: '#FFF3E0', border: '1px solid #FFB74D', borderRadius: 8, padding: 10, marginBottom: 15, fontSize: 11, color: '#E65100' }}>
-                ⚠️ <strong>Attenzione:</strong> I numeri potrebbero non corrispondere esattamente ai pilastri. 
+                <AlertTriangle size={16} /> <strong>Attenzione:</strong> I numeri potrebbero non corrispondere esattamente ai pilastri. 
                 FV: Positivi {reportData.fatturato.coerenza?.fv?.fatturatoEffettivi}/{reportData.fatturato.coerenza?.fv?.pilastroPositivi} | 
                 LA: Accettati {reportData.fatturato.coerenza?.la?.fatturatoAccettati}/{reportData.fatturato.coerenza?.la?.pilastroAccettati}
               </div>
             )}
             
             {/* RIEPILOGO FV - INSERITI vs EFFETTIVI */}
-            <div style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, marginBottom: 15, border: '1px solid #E5E7EB' }}>
+            <div style={{ background: DS.colors.white, borderRadius: 16, padding: 20, marginBottom: 15, border: '1px solid #E5E7EB' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-                <span style={{ fontSize: 14, color: '#15803D', fontWeight: 700 }}>☀️ FOTOVOLTAICO</span>
-                <span style={{ fontSize: 9, color: '#6B7280' }}>
+                <span style={{ fontSize: 14, color: DS.colors.fv, fontWeight: 700 }}><Sun size={16} /> FOTOVOLTAICO</span>
+                <span style={{ fontSize: 9, color: DS.colors.gray500 }}>
                   Pilastro: {reportData.fatturato.coerenza?.fv?.pilastroInseriti} ins / {reportData.fatturato.coerenza?.fv?.pilastroPositivi} pos / {reportData.fatturato.coerenza?.fv?.pilastroLavorazione} lav / {reportData.fatturato.coerenza?.fv?.pilastroPersi} persi
                 </span>
               </div>
@@ -5801,159 +6092,159 @@ export default function Home() {
               {/* Riga 1: Confronto INSERITI vs EFFETTIVI */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 15 }}>
                 {/* Inseriti (Potenziale) */}
-                <div style={{ textAlign: 'center', padding: 12, background: '#F9FAFB', borderRadius: 10, border: '1px solid #E5E7EB' }}>
-                  <div style={{ fontSize: 9, color: '#6B7280', marginBottom: 3 }}>📋 INSERITI (Potenziale)</div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: '#1F2937' }}>€{reportData.fatturato.fv.inseriti.totale.toLocaleString('it-IT')}</div>
+                <div style={{ textAlign: 'center', padding: 12, background: DS.colors.gray50, borderRadius: 10, border: '1px solid #E5E7EB' }}>
+                  <div style={{ fontSize: 9, color: DS.colors.gray500, marginBottom: 3 }}><FileText size={16} /> INSERITI (Potenziale)</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: DS.colors.gray800 }}>€{reportData.fatturato.fv.inseriti.totale.toLocaleString('it-IT')}</div>
                   <div style={{ fontSize: 10, color: reportData.fatturato.coerenza?.fv?.pilastroInseriti === reportData.fatturato.fv.inseriti.contratti ? '#10B981' : '#F59E0B', fontWeight: 600 }}>{reportData.fatturato.fv.inseriti.contratti} contratti</div>
                 </div>
                 
                 {/* Effettivi (Positivi) */}
                 <div style={{ textAlign: 'center', padding: 12, background: '#F0FDF4', borderRadius: 10, border: '1px solid #BBF7D0' }}>
-                  <div style={{ fontSize: 9, color: '#15803D', marginBottom: 3 }}>✅ EFFETTIVI (Positivi)</div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: '#15803D' }}>€{reportData.fatturato.fv.effettivi.totale.toLocaleString('it-IT')}</div>
+                  <div style={{ fontSize: 9, color: DS.colors.fv, marginBottom: 3 }}><CheckCircle size={16} /> EFFETTIVI (Positivi)</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: DS.colors.fv }}>€{reportData.fatturato.fv.effettivi.totale.toLocaleString('it-IT')}</div>
                   <div style={{ fontSize: 10, color: reportData.fatturato.coerenza?.fv?.pilastroPositivi === reportData.fatturato.fv.effettivi.contratti ? '#10B981' : '#F59E0B', fontWeight: 600 }}>{reportData.fatturato.fv.effettivi.contratti} contratti</div>
                 </div>
                 
                 {/* In Lavorazione */}
                 <div style={{ textAlign: 'center', padding: 12, background: '#FFFBEB', borderRadius: 10, border: '1px solid #FCD34D' }}>
-                  <div style={{ fontSize: 9, color: '#B45309', marginBottom: 3 }}>⏳ DA SBLOCCARE</div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: '#B45309' }}>€{reportData.fatturato.fv.lavorazione.totale.toLocaleString('it-IT')}</div>
+                  <div style={{ fontSize: 9, color: DS.colors.la, marginBottom: 3 }}>⏳ DA SBLOCCARE</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: DS.colors.la }}>€{reportData.fatturato.fv.lavorazione.totale.toLocaleString('it-IT')}</div>
                   <div style={{ fontSize: 10, color: reportData.fatturato.coerenza?.fv?.pilastroLavorazione === reportData.fatturato.fv.lavorazione.contratti ? '#10B981' : '#F59E0B', fontWeight: 600 }}>{reportData.fatturato.fv.lavorazione.contratti} contratti</div>
                 </div>
                 
                 {/* Persi */}
                 <div style={{ textAlign: 'center', padding: 12, background: '#FEF2F2', borderRadius: 10, border: '1px solid #FECACA' }}>
-                  <div style={{ fontSize: 9, color: '#DC2626', marginBottom: 3 }}>❌ PERSI</div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: '#DC2626' }}>€{reportData.fatturato.fv.persi.totale.toLocaleString('it-IT')}</div>
-                  <div style={{ fontSize: 10, color: '#6B7280' }}>{reportData.fatturato.fv.persi.contratti} contratti</div>
+                  <div style={{ fontSize: 9, color: DS.colors.danger, marginBottom: 3 }}><XCircle size={16} /> PERSI</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: DS.colors.danger }}>€{reportData.fatturato.fv.persi.totale.toLocaleString('it-IT')}</div>
+                  <div style={{ fontSize: 10, color: DS.colors.gray500 }}>{reportData.fatturato.fv.persi.contratti} contratti</div>
                 </div>
               </div>
               
               {/* Riga 2: Dettagli tecnici */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
                 <div style={{ textAlign: 'center', padding: 8, background: '#F0FDF4', borderRadius: 8 }}>
-                  <div style={{ fontSize: 9, color: '#6B7280' }}>⚡ kWp INSTALLATI</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: '#15803D' }}>{reportData.fatturato.fv.effettivi.kw}</div>
+                  <div style={{ fontSize: 9, color: DS.colors.gray500 }}><Zap size={16} /> kWp INSTALLATI</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: DS.colors.fv }}>{reportData.fatturato.fv.effettivi.kw}</div>
                 </div>
                 <div style={{ textAlign: 'center', padding: 8, background: '#F5F3FF', borderRadius: 8 }}>
-                  <div style={{ fontSize: 9, color: '#6B7280' }}>🔋 kWh BATTERIE</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: '#7C3AED' }}>{reportData.fatturato.fv.effettivi.kwh}</div>
+                  <div style={{ fontSize: 9, color: DS.colors.gray500 }}>🔋 kWh BATTERIE</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: DS.colors.seminari }}>{reportData.fatturato.fv.effettivi.kwh}</div>
                 </div>
                 <div style={{ textAlign: 'center', padding: 8, background: '#FFFBEB', borderRadius: 8 }}>
-                  <div style={{ fontSize: 9, color: '#6B7280' }}>⭐ PUNTI EFFETTIVI</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: '#B45309' }}>{reportData.fatturato.fv.effettivi.punti.toLocaleString('it-IT')}</div>
+                  <div style={{ fontSize: 9, color: DS.colors.gray500 }}><Star size={16} /> PUNTI EFFETTIVI</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: DS.colors.la }}>{reportData.fatturato.fv.effettivi.punti.toLocaleString('it-IT')}</div>
                 </div>
                 <div style={{ textAlign: 'center', padding: 8, background: '#D1FAE5', borderRadius: 8, border: '1px solid #6EE7B7' }}>
-                  <div style={{ fontSize: 9, color: '#065F46' }}>✅ PUNTI ACCETTATI</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: '#059669' }}>{(reportData.fatturato.fv.accettatiPunti?.punti || reportData.fatturato.fv.effettivi.punti).toLocaleString('it-IT')}</div>
+                  <div style={{ fontSize: 9, color: '#065F46' }}><CheckCircle size={16} /> PUNTI ACCETTATI</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: DS.colors.success }}>{(reportData.fatturato.fv.accettatiPunti?.punti || reportData.fatturato.fv.effettivi.punti).toLocaleString('it-IT')}</div>
                   {reportData.fatturato.fv.accettatiPunti?.aacContratti > 0 && (
-                    <div style={{ fontSize: 8, color: '#6B7280' }}>+{reportData.fatturato.fv.accettatiPunti.aacContratti} AAC</div>
+                    <div style={{ fontSize: 8, color: DS.colors.gray500 }}>+{reportData.fatturato.fv.accettatiPunti.aacContratti} AAC</div>
                   )}
                 </div>
               </div>
             </div>
             
             {/* RIEPILOGO LA - FATTURATO + PUNTI */}
-            <div style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, marginBottom: 20, border: '1px solid #E5E7EB' }}>
+            <div style={{ background: DS.colors.white, borderRadius: 16, padding: 20, marginBottom: 20, border: '1px solid #E5E7EB' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-                <span style={{ fontSize: 14, color: '#B45309', fontWeight: 700 }}>⚡ LUCE AMICA</span>
-                <span style={{ fontSize: 9, color: '#6B7280' }}>
+                <span style={{ fontSize: 14, color: DS.colors.la, fontWeight: 700 }}><Zap size={16} /> LUCE AMICA</span>
+                <span style={{ fontSize: 9, color: DS.colors.gray500 }}>
                   Pilastro: {reportData.fatturato.coerenza?.la?.pilastroInseriti} ins / {reportData.fatturato.coerenza?.la?.pilastroAccettati} acc / {reportData.fatturato.coerenza?.la?.pilastroInFornitura} attivi
                 </span>
               </div>
               
               {/* Riga 1: FATTURATO POTENZIALE (basato su Accettati Contratto) */}
               <div style={{ marginBottom: 15 }}>
-                <div style={{ fontSize: 10, color: '#B45309', fontWeight: 600, marginBottom: 8 }}>💰 FATTURATO POTENZIALE (Stato Contratto = Accettato)</div>
+                <div style={{ fontSize: 10, color: DS.colors.la, fontWeight: 600, marginBottom: 8 }}> FATTURATO POTENZIALE (Stato Contratto = Accettato)</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
-                  <div style={{ textAlign: 'center', padding: 12, background: '#F9FAFB', borderRadius: 10, border: '1px solid #E5E7EB' }}>
-                    <div style={{ fontSize: 9, color: '#6B7280', marginBottom: 3 }}>📋 INSERITI</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#1F2937' }}>€{Math.round(reportData.fatturato.la.inseriti.totale).toLocaleString('it-IT')}</div>
-                    <div style={{ fontSize: 10, color: '#6B7280' }}>{reportData.fatturato.la.inseriti.contratti} contr.</div>
+                  <div style={{ textAlign: 'center', padding: 12, background: DS.colors.gray50, borderRadius: 10, border: '1px solid #E5E7EB' }}>
+                    <div style={{ fontSize: 9, color: DS.colors.gray500, marginBottom: 3 }}><FileText size={16} /> INSERITI</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: DS.colors.gray800 }}>€{Math.round(reportData.fatturato.la.inseriti.totale).toLocaleString('it-IT')}</div>
+                    <div style={{ fontSize: 10, color: DS.colors.gray500 }}>{reportData.fatturato.la.inseriti.contratti} contr.</div>
                   </div>
                   <div style={{ textAlign: 'center', padding: 12, background: '#FFFBEB', borderRadius: 10, border: '1px solid #FCD34D' }}>
-                    <div style={{ fontSize: 9, color: '#B45309', marginBottom: 3 }}>✅ POTENZIALE/ANNO</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#B45309' }}>€{Math.round(reportData.fatturato.la.accettatiPunti.totale).toLocaleString('it-IT')}</div>
+                    <div style={{ fontSize: 9, color: DS.colors.la, marginBottom: 3 }}><CheckCircle size={16} /> POTENZIALE/ANNO</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: DS.colors.la }}>€{Math.round(reportData.fatturato.la.accettatiPunti.totale).toLocaleString('it-IT')}</div>
                     <div style={{ fontSize: 10, color: reportData.fatturato.coerenza?.la?.pilastroAccettati === reportData.fatturato.la.accettatiPunti.contratti ? '#10B981' : '#F59E0B', fontWeight: 600 }}>{reportData.fatturato.la.accettatiPunti.contratti} accettati</div>
                   </div>
                   <div style={{ textAlign: 'center', padding: 12, background: '#FEF3C7', borderRadius: 10 }}>
-                    <div style={{ fontSize: 9, color: '#B45309', marginBottom: 3 }}>📅 POTENZ./MESE</div>
+                    <div style={{ fontSize: 9, color: DS.colors.la, marginBottom: 3 }}><Calendar size={16} /> POTENZ./MESE</div>
                     <div style={{ fontSize: 18, fontWeight: 800, color: '#92400E' }}>€{Math.round(reportData.fatturato.la.accettatiPunti.totale / 12).toLocaleString('it-IT')}</div>
-                    <div style={{ fontSize: 10, color: '#6B7280' }}>/mese</div>
+                    <div style={{ fontSize: 10, color: DS.colors.gray500 }}>/mese</div>
                   </div>
                   <div style={{ textAlign: 'center', padding: 12, background: '#F0FDF4', borderRadius: 10 }}>
-                    <div style={{ fontSize: 9, color: '#15803D', marginBottom: 3 }}>🍃 kWh GREEN</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#15803D' }}>{reportData.fatturato.la.accettatiPunti.kwh.toLocaleString('it-IT')}</div>
-                    <div style={{ fontSize: 10, color: '#6B7280' }}>/anno</div>
+                    <div style={{ fontSize: 9, color: DS.colors.fv, marginBottom: 3 }}>🍃 kWh GREEN</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: DS.colors.fv }}>{reportData.fatturato.la.accettatiPunti.kwh.toLocaleString('it-IT')}</div>
+                    <div style={{ fontSize: 10, color: DS.colors.gray500 }}>/anno</div>
                   </div>
                 </div>
               </div>
               
               {/* Riga 2: FATTURATO EFFETTIVO (basato su Attivi Fornitura - ad oggi) */}
               <div style={{ marginBottom: 15 }}>
-                <div style={{ fontSize: 10, color: '#15803D', fontWeight: 600, marginBottom: 8 }}>💰 FATTURATO EFFETTIVO AD OGGI (Stato Fornitura = Attivo/In fornitura)</div>
+                <div style={{ fontSize: 10, color: DS.colors.fv, fontWeight: 600, marginBottom: 8 }}> FATTURATO EFFETTIVO AD OGGI (Stato Fornitura = Attivo/In fornitura)</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
                   <div style={{ textAlign: 'center', padding: 12, background: '#F0FDF4', borderRadius: 10, border: '1px solid #BBF7D0' }}>
-                    <div style={{ fontSize: 9, color: '#15803D', marginBottom: 3 }}>✅ ATTIVI OGGI</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#15803D' }}>{reportData.fatturato.la.attiviEffettivi.contratti}</div>
-                    <div style={{ fontSize: 10, color: '#6B7280' }}>in fornitura</div>
+                    <div style={{ fontSize: 9, color: DS.colors.fv, marginBottom: 3 }}><CheckCircle size={16} /> ATTIVI OGGI</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: DS.colors.fv }}>{reportData.fatturato.la.attiviEffettivi.contratti}</div>
+                    <div style={{ fontSize: 10, color: DS.colors.gray500 }}>in fornitura</div>
                   </div>
                   <div style={{ textAlign: 'center', padding: 12, background: '#DCFCE7', borderRadius: 10, border: '1px solid #86EFAC' }}>
-                    <div style={{ fontSize: 9, color: '#15803D', marginBottom: 3 }}>💰 EFFETTIVO/ANNO</div>
+                    <div style={{ fontSize: 9, color: DS.colors.fv, marginBottom: 3 }}> EFFETTIVO/ANNO</div>
                     <div style={{ fontSize: 18, fontWeight: 800, color: '#166534' }}>€{Math.round(reportData.fatturato.la.attiviEffettivi.totale).toLocaleString('it-IT')}</div>
-                    <div style={{ fontSize: 10, color: '#6B7280' }}>ricorrente</div>
+                    <div style={{ fontSize: 10, color: DS.colors.gray500 }}>ricorrente</div>
                   </div>
                   <div style={{ textAlign: 'center', padding: 12, background: '#F0FDF4', borderRadius: 10 }}>
-                    <div style={{ fontSize: 9, color: '#15803D', marginBottom: 3 }}>📅 EFFETT./MESE</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#15803D' }}>€{Math.round(reportData.fatturato.la.attiviEffettivi.totale / 12).toLocaleString('it-IT')}</div>
-                    <div style={{ fontSize: 10, color: '#6B7280' }}>/mese</div>
+                    <div style={{ fontSize: 9, color: DS.colors.fv, marginBottom: 3 }}><Calendar size={16} /> EFFETT./MESE</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: DS.colors.fv }}>€{Math.round(reportData.fatturato.la.attiviEffettivi.totale / 12).toLocaleString('it-IT')}</div>
+                    <div style={{ fontSize: 10, color: DS.colors.gray500 }}>/mese</div>
                   </div>
                   <div style={{ textAlign: 'center', padding: 12, background: '#F0FDF4', borderRadius: 10 }}>
-                    <div style={{ fontSize: 9, color: '#15803D', marginBottom: 3 }}>🍃 kWh GREEN</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#15803D' }}>{reportData.fatturato.la.attiviEffettivi.kwh.toLocaleString('it-IT')}</div>
-                    <div style={{ fontSize: 10, color: '#6B7280' }}>/anno</div>
+                    <div style={{ fontSize: 9, color: DS.colors.fv, marginBottom: 3 }}>🍃 kWh GREEN</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: DS.colors.fv }}>{reportData.fatturato.la.attiviEffettivi.kwh.toLocaleString('it-IT')}</div>
+                    <div style={{ fontSize: 10, color: DS.colors.gray500 }}>/anno</div>
                   </div>
                 </div>
               </div>
               
               {/* Riga 3: PUNTI (basati su Accettato Contratto - anche se poi cessa, pagano!) */}
               <div>
-                <div style={{ fontSize: 10, color: '#B45309', fontWeight: 600, marginBottom: 8 }}>⭐ PUNTI LA (Stato Contratto = Accettato) - anche se poi cessa, pagano!</div>
+                <div style={{ fontSize: 10, color: DS.colors.la, fontWeight: 600, marginBottom: 8 }}><Star size={16} /> PUNTI LA (Stato Contratto = Accettato) - anche se poi cessa, pagano!</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-                  <div style={{ textAlign: 'center', padding: 12, background: '#F9FAFB', borderRadius: 10, border: '1px solid #E5E7EB' }}>
-                    <div style={{ fontSize: 9, color: '#6B7280', marginBottom: 3 }}>📋 INSERITI</div>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#1F2937' }}>{reportData.fatturato.la.inseriti.punti.toLocaleString('it-IT')}</div>
-                    <div style={{ fontSize: 10, color: '#6B7280' }}>{reportData.fatturato.la.inseriti.contratti} contratti</div>
+                  <div style={{ textAlign: 'center', padding: 12, background: DS.colors.gray50, borderRadius: 10, border: '1px solid #E5E7EB' }}>
+                    <div style={{ fontSize: 9, color: DS.colors.gray500, marginBottom: 3 }}><FileText size={16} /> INSERITI</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: DS.colors.gray800 }}>{reportData.fatturato.la.inseriti.punti.toLocaleString('it-IT')}</div>
+                    <div style={{ fontSize: 10, color: DS.colors.gray500 }}>{reportData.fatturato.la.inseriti.contratti} contratti</div>
                   </div>
                   <div style={{ textAlign: 'center', padding: 12, background: '#FFFBEB', borderRadius: 10, border: '1px solid #FCD34D' }}>
-                    <div style={{ fontSize: 9, color: '#B45309', marginBottom: 3 }}>✅ ACCETTATI (punti)</div>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#B45309' }}>{reportData.fatturato.la.accettatiPunti.punti.toLocaleString('it-IT')}</div>
+                    <div style={{ fontSize: 9, color: DS.colors.la, marginBottom: 3 }}><CheckCircle size={16} /> ACCETTATI (punti)</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: DS.colors.la }}>{reportData.fatturato.la.accettatiPunti.punti.toLocaleString('it-IT')}</div>
                     <div style={{ fontSize: 10, color: reportData.fatturato.coerenza?.la?.pilastroAccettati === reportData.fatturato.la.accettatiPunti.contratti ? '#10B981' : '#F59E0B', fontWeight: 600 }}>{reportData.fatturato.la.accettatiPunti.contratti} contratti</div>
                   </div>
-                  <div style={{ textAlign: 'center', padding: 12, background: '#F9FAFB', borderRadius: 10 }}>
-                    <div style={{ fontSize: 9, color: '#6B7280', marginBottom: 3 }}>📊 % CONVERSIONE</div>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#1F2937' }}>{reportData.fatturato.la.inseriti.contratti > 0 ? Math.round(reportData.fatturato.la.accettatiPunti.contratti / reportData.fatturato.la.inseriti.contratti * 100) : 0}%</div>
-                    <div style={{ fontSize: 10, color: '#6B7280' }}>punti guadagnati</div>
+                  <div style={{ textAlign: 'center', padding: 12, background: DS.colors.gray50, borderRadius: 10 }}>
+                    <div style={{ fontSize: 9, color: DS.colors.gray500, marginBottom: 3 }}><BarChart3 size={16} /> % CONVERSIONE</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: DS.colors.gray800 }}>{reportData.fatturato.la.inseriti.contratti > 0 ? Math.round(reportData.fatturato.la.accettatiPunti.contratti / reportData.fatturato.la.inseriti.contratti * 100) : 0}%</div>
+                    <div style={{ fontSize: 10, color: DS.colors.gray500 }}>punti guadagnati</div>
                   </div>
                 </div>
               </div>
             </div>
             
             {/* TOTALE COMPLESSIVO LEADER */}
-            <div style={{ background: 'linear-gradient(135deg, #2AAA8A 0%, #20917A 100%)', borderRadius: 16, padding: 20, marginBottom: 10, color: '#FFF', textAlign: 'center' }}>
+            <div style={{ background: 'linear-gradient(135deg, #2AAA8A 0%, #20917A 100%)', borderRadius: 16, padding: 20, marginBottom: 10, color: DS.colors.white, textAlign: 'center' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 15 }}>
                 <div>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }}>💰 FATTURATO TOTALE EFFETTIVO</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }}> FATTURATO TOTALE EFFETTIVO</div>
                   <div style={{ fontSize: 36, fontWeight: 800 }}>€{(reportData.fatturato.fv.effettivi.totale + reportData.fatturato.la.attiviEffettivi.totale).toLocaleString('it-IT')}</div>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>FV positivi + LA attivi annuo</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }}>⭐ PUNTI TOTALI EFFETTIVI</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }}><Star size={16} /> PUNTI TOTALI EFFETTIVI</div>
                   <div style={{ fontSize: 36, fontWeight: 800 }}>{ (reportData.fatturato.fv.effettivi.punti + reportData.fatturato.la.accettatiPunti.punti).toLocaleString('it-IT')}</div>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>FV positivi + LA accettati</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }}>📊 PUNTI TOTALI INSERITI</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }}><BarChart3 size={16} /> PUNTI TOTALI INSERITI</div>
                   <div style={{ fontSize: 36, fontWeight: 800 }}>{ (reportData.fatturato.fv.inseriti.punti + reportData.fatturato.la.inseriti.punti).toLocaleString('it-IT')}</div>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>potenziale</div>
                 </div>
@@ -5973,12 +6264,12 @@ export default function Home() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 20, marginTop: 20 }}>
               {/* Classifica K Manager FV */}
               <div style={{ background: '#F8F8F8', borderRadius: 16, padding: 20 }}>
-                <div style={{ fontSize: 13, color: '#2AAA8A', fontWeight: 700, marginBottom: 12 }}>👑 TOP K MANAGER - FV Effettivo <span style={{ fontSize: 10, color: '#999', fontWeight: 400 }}>({reportData.fatturato.fv.classificaK.length})</span></div>
+                <div style={{ fontSize: 13, color: DS.colors.primaryLight, fontWeight: 700, marginBottom: 12 }}><Crown size={16} /> TOP K MANAGER - FV Effettivo <span style={{ fontSize: 10, color: '#999', fontWeight: 400 }}>({reportData.fatturato.fv.classificaK.length})</span></div>
                 <div style={{ maxHeight: 400, overflowY: 'auto', paddingRight: 8 }}>
                   {reportData.fatturato.fv.classificaK.map(([nome, dati], i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 8px', borderBottom: '1px solid #E8E8E8', fontSize: 12, background: i < 3 ? 'rgba(42,170,138,0.05)' : 'transparent', borderRadius: 8, marginBottom: 2 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-                        <span style={{ width: 24, height: 24, borderRadius: '50%', background: i < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: i < 3 ? '#FFF' : '#666', flexShrink: 0 }}>{i + 1}</span>
+                        <span style={{ width: 24, height: 24, borderRadius: '50%', background: i < 3 ? [DS.colors.accent, '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: i < 3 ? DS.colors.white : '#666', flexShrink: 0 }}>{i + 1}</span>
                         <span style={{ fontWeight: i < 3 ? 700 : 500, color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>{nome}</span>
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 10 }}>
@@ -5992,12 +6283,12 @@ export default function Home() {
               
               {/* Classifica Networker FV */}
               <div style={{ background: '#F8F8F8', borderRadius: 16, padding: 20 }}>
-                <div style={{ fontSize: 13, color: '#9C27B0', fontWeight: 700, marginBottom: 12 }}>⭐ TOP NETWORKER - FV Effettivo <span style={{ fontSize: 10, color: '#999', fontWeight: 400 }}>({reportData.fatturato.fv.classificaNW.length})</span></div>
+                <div style={{ fontSize: 13, color: '#9C27B0', fontWeight: 700, marginBottom: 12 }}><Star size={16} /> TOP NETWORKER - FV Effettivo <span style={{ fontSize: 10, color: '#999', fontWeight: 400 }}>({reportData.fatturato.fv.classificaNW.length})</span></div>
                 <div style={{ maxHeight: 400, overflowY: 'auto', paddingRight: 8 }}>
                   {reportData.fatturato.fv.classificaNW.map(([nome, dati], i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 8px', borderBottom: '1px solid #E8E8E8', fontSize: 12, background: i < 3 ? 'rgba(156,39,176,0.05)' : 'transparent', borderRadius: 8, marginBottom: 2 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-                        <span style={{ width: 24, height: 24, borderRadius: '50%', background: i < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: i < 3 ? '#FFF' : '#666', flexShrink: 0 }}>{i + 1}</span>
+                        <span style={{ width: 24, height: 24, borderRadius: '50%', background: i < 3 ? [DS.colors.accent, '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: i < 3 ? DS.colors.white : '#666', flexShrink: 0 }}>{i + 1}</span>
                         <span style={{ fontWeight: i < 3 ? 700 : 500, color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>{nome}</span>
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 10 }}>
@@ -6011,12 +6302,12 @@ export default function Home() {
               
               {/* Classifica K Manager LA */}
               <div style={{ background: '#F8F8F8', borderRadius: 16, padding: 20 }}>
-                <div style={{ fontSize: 13, color: '#FF9800', fontWeight: 700, marginBottom: 12 }}>👑 TOP K MANAGER - LA Accettati <span style={{ fontSize: 10, color: '#999', fontWeight: 400 }}>({reportData.fatturato.la.classificaK.length})</span></div>
+                <div style={{ fontSize: 13, color: '#FF9800', fontWeight: 700, marginBottom: 12 }}><Crown size={16} /> TOP K MANAGER - LA Accettati <span style={{ fontSize: 10, color: '#999', fontWeight: 400 }}>({reportData.fatturato.la.classificaK.length})</span></div>
                 <div style={{ maxHeight: 400, overflowY: 'auto', paddingRight: 8 }}>
                   {reportData.fatturato.la.classificaK.map(([nome, dati], i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 8px', borderBottom: '1px solid #E8E8E8', fontSize: 12, background: i < 3 ? 'rgba(255,152,0,0.05)' : 'transparent', borderRadius: 8, marginBottom: 2 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-                        <span style={{ width: 24, height: 24, borderRadius: '50%', background: i < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: i < 3 ? '#FFF' : '#666', flexShrink: 0 }}>{i + 1}</span>
+                        <span style={{ width: 24, height: 24, borderRadius: '50%', background: i < 3 ? [DS.colors.accent, '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: i < 3 ? DS.colors.white : '#666', flexShrink: 0 }}>{i + 1}</span>
                         <span style={{ fontWeight: i < 3 ? 700 : 500, color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>{nome}</span>
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 10 }}>
@@ -6030,12 +6321,12 @@ export default function Home() {
               
               {/* Classifica Networker LA */}
               <div style={{ background: '#F8F8F8', borderRadius: 16, padding: 20 }}>
-                <div style={{ fontSize: 13, color: '#4CAF50', fontWeight: 700, marginBottom: 12 }}>⭐ TOP NETWORKER - LA Accettati <span style={{ fontSize: 10, color: '#999', fontWeight: 400 }}>({reportData.fatturato.la.classificaNW.length})</span></div>
+                <div style={{ fontSize: 13, color: '#4CAF50', fontWeight: 700, marginBottom: 12 }}><Star size={16} /> TOP NETWORKER - LA Accettati <span style={{ fontSize: 10, color: '#999', fontWeight: 400 }}>({reportData.fatturato.la.classificaNW.length})</span></div>
                 <div style={{ maxHeight: 400, overflowY: 'auto', paddingRight: 8 }}>
                   {reportData.fatturato.la.classificaNW.map(([nome, dati], i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 8px', borderBottom: '1px solid #E8E8E8', fontSize: 12, background: i < 3 ? 'rgba(76,175,80,0.05)' : 'transparent', borderRadius: 8, marginBottom: 2 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-                        <span style={{ width: 24, height: 24, borderRadius: '50%', background: i < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: i < 3 ? '#FFF' : '#666', flexShrink: 0 }}>{i + 1}</span>
+                        <span style={{ width: 24, height: 24, borderRadius: '50%', background: i < 3 ? [DS.colors.accent, '#C0C0C0', '#CD7F32'][i] : '#E0E0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: i < 3 ? DS.colors.white : '#666', flexShrink: 0 }}>{i + 1}</span>
                         <span style={{ fontWeight: i < 3 ? 700 : 500, color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>{nome}</span>
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 10 }}>
@@ -6050,67 +6341,32 @@ export default function Home() {
           </div>
         )}
         
-        {/* SEZIONE DOWNLOAD & EXPORT */}
-        <div style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, border: '1px solid #E5E7EB' }}>
-          <div style={{ marginBottom: 20 }}>
-            <h3 style={{ color: '#1F2937', fontSize: 18, margin: 0, fontWeight: 700 }}>📥 Download & Export</h3>
-            <p style={{ color: '#6B7280', fontSize: 12, margin: '4px 0 0' }}>
-              Scarica report per presentazioni e riunioni {reportData.periodoRiferimento ? `• ${reportData.periodoRiferimento.label}` : ''}
+        {/* SEZIONE ESPORTA SCREENSHOT */}
+        <div style={{ 
+          background: DS.colors.white, 
+          borderRadius: DS.radius.lg, 
+          padding: DS.space.xl, 
+          border: `1px solid ${DS.colors.gray200}`,
+          textAlign: 'center'
+        }}>
+          <div style={{ marginBottom: DS.space.lg }}>
+            <h3 style={{ color: DS.colors.gray800, fontSize: DS.font.h3.size, margin: 0, fontWeight: DS.font.h3.weight, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: DS.space.sm }}>
+              <Camera size={20} color={DS.colors.primary} />
+              Esporta per Presentazione
+            </h3>
+            <p style={{ color: DS.colors.gray500, fontSize: DS.font.caption.size, margin: `${DS.space.sm}px 0 0` }}>
+              Genera PNG alta risoluzione di tutte le sezioni del Report
             </p>
           </div>
           
-          {/* Bottoni Download */}
-          <div style={{ display: 'flex', gap: 15, flexWrap: 'wrap' }}>
-            <button 
-              onClick={downloadReportPNG}
-              style={{ 
-                padding: '16px 28px', 
-                background: 'linear-gradient(135deg, #2AAA8A 0%, #20917A 100%)', 
-                color: '#FFFFFF', 
-                border: 'none', 
-                borderRadius: 12, 
-                fontSize: 15, 
-                fontWeight: 600, 
-                cursor: 'pointer', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 12, 
-                boxShadow: '0 4px 15px rgba(42,170,138,0.35)',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <span style={{ fontSize: 24 }}>📷</span>
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontWeight: 700 }}>Scarica Immagine PNG</div>
-                <div style={{ fontSize: 11, opacity: 0.85 }}>Report completo per condivisione</div>
-              </div>
-            </button>
-            
-            <button 
-              onClick={downloadPowerPoint}
-              style={{ 
-                padding: '16px 28px', 
-                background: 'linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%)', 
-                color: '#FFFFFF', 
-                border: 'none', 
-                borderRadius: 12, 
-                fontSize: 15, 
-                fontWeight: 600, 
-                cursor: 'pointer', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 12, 
-                boxShadow: '0 4px 15px rgba(59,130,246,0.35)',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <span style={{ fontSize: 24 }}>📽️</span>
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontWeight: 700 }}>Scarica PowerPoint</div>
-                <div style={{ fontSize: 11, opacity: 0.85 }}>Slide per presentazioni</div>
-              </div>
-            </button>
-          </div>
+          <Button 
+            onClick={screenshotAllSections}
+            variant="primary"
+            size="lg"
+            icon={Download}
+          >
+            Scarica Tutte le Slide (ZIP)
+          </Button>
         </div>
       </div>
     );
@@ -6131,7 +6387,7 @@ export default function Home() {
         to { opacity: 1; transform: translateY(0); }
       }
       .login-card { animation: fadeInUp 0.6s ease-out; }
-      .login-input:focus { border-color: '#2AAA8A'; box-shadow: 0 0 0 3px rgba(42,170,138,0.15); outline: none; }
+      .login-input:focus { border-color: DS.colors.primaryLight; box-shadow: 0 0 0 3px rgba(42,170,138,0.15); outline: none; }
       .login-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(42,170,138,0.35); }
     `}</style>
   </Head>
@@ -6166,7 +6422,7 @@ export default function Home() {
         {/* Logo TOP MANAGER */}
         <div style={{ textAlign: 'center', marginBottom: 35 }}>
           <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-1px', marginBottom: 8 }}>
-            <span style={{ color: '#2AAA8A' }}>LEADER</span>
+            <span style={{ color: DS.colors.primaryLight }}>LEADER</span>
             <span style={{ color: '#1a1a2e', fontWeight: 300, marginLeft: 10 }}>RANKING</span>
           </div>
           <div style={{ fontSize: 12, color: '#888', letterSpacing: '3px', textTransform: 'uppercase' }}>Top Manager Analytics</div>
@@ -6201,7 +6457,7 @@ export default function Home() {
               borderRadius: 12, 
               border: 'none', 
               background: 'linear-gradient(135deg, #2AAA8A 0%, #1E8A6E 100%)', 
-              color: '#FFFFFF', 
+              color: DS.colors.white, 
               fontSize: 16, 
               fontWeight: 700, 
               cursor: 'pointer', 
@@ -6218,17 +6474,17 @@ export default function Home() {
         </div>
         
         {/* Footer versione */}
-        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v15.3</p>
+        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v16.1</p>
       </div>
     </div></>);
 
   // HOMEPAGE - TABS SEMPRE VISIBILI (senza area CSV)
   if (!csvData && (user.role === 'admin' || user.role === 'assistente' || user.role === 'k')) return (<><Head><title>Leader Ranking</title><meta name="viewport" content="width=device-width,initial-scale=1" /></Head>
     <div style={{ minHeight: '100vh', background: darkMode ? '#1a1a2e' : '#F8F9FA', fontFamily: '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif', transition: 'background 0.3s ease' }}>
-      <header style={{ background: darkMode ? '#16213e' : '#FFFFFF', padding: '12px 25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${darkMode ? '#0f3460' : '#E0E0E0'}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+      <header style={{ background: darkMode ? '#16213e' : DS.colors.white, padding: '12px 25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${darkMode ? '#0f3460' : '#E0E0E0'}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ color: '#2AAA8A', fontWeight: 800, fontSize: 18 }}>LEADER</span>
-          <span style={{ fontWeight: 300, fontSize: 18, color: darkMode ? '#FFF' : '#333' }}>RANKING</span>
+          <span style={{ color: DS.colors.primaryLight, fontWeight: 800, fontSize: 18 }}>LEADER</span>
+          <span style={{ fontWeight: 300, fontSize: 18, color: darkMode ? DS.colors.white : '#333' }}>RANKING</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           {/* Toggle Dark/Light Mode */}
@@ -6237,7 +6493,7 @@ export default function Home() {
             style={{ 
               padding: '8px 14px', 
               background: darkMode ? 'linear-gradient(135deg, #FFD700, #FFC107)' : 'linear-gradient(135deg, #1F2937, #374151)', 
-              color: darkMode ? '#333' : '#FFF', 
+              color: darkMode ? '#333' : DS.colors.white, 
               border: 'none', 
               borderRadius: 8, 
               fontSize: 12, 
@@ -6249,27 +6505,27 @@ export default function Home() {
               boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
             }}
           >
-            {darkMode ? '☀️ Light' : '🌙 Dark'}
+            {darkMode ? '<Sun size={16} /> Light' : 'Dark'}
           </button>
           {/* User info card */}
           <div style={{ 
             display: 'flex', 
             alignItems: 'center', 
             gap: 10, 
-            background: darkMode ? '#0f3460' : '#F9FAFB', 
+            background: darkMode ? '#0f3460' : DS.colors.gray50, 
             padding: '8px 14px', 
             borderRadius: 10, 
-            border: `1px solid ${darkMode ? '#1a3a5c' : '#E5E7EB'}` 
+            border: `1px solid ${darkMode ? '#1a3a5c' : DS.colors.gray200}` 
           }}>
             <span style={{ fontSize: 13, color: darkMode ? '#CCC' : '#4B5563', fontWeight: 500 }}>Ciao, {user.name}</span>
-            <span style={{ padding: '4px 10px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', color: '#FFF', borderRadius: 6, fontSize: 11, fontWeight: 600 }}>{user.role.toUpperCase()}</span>
+            <span style={{ padding: '4px 10px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', color: DS.colors.white, borderRadius: 6, fontSize: 11, fontWeight: 600 }}>{user.role.toUpperCase()}</span>
           </div>
           <button style={{ 
             padding: '8px 16px', 
             fontSize: 12, 
-            background: darkMode ? 'transparent' : '#FFF', 
-            border: `1px solid ${darkMode ? '#444' : '#E5E7EB'}`, 
-            color: darkMode ? '#AAA' : '#6B7280',
+            background: darkMode ? 'transparent' : DS.colors.white, 
+            border: `1px solid ${darkMode ? '#444' : DS.colors.gray200}`, 
+            color: darkMode ? '#AAA' : DS.colors.gray500,
             borderRadius: 8,
             cursor: 'pointer',
             fontWeight: 500,
@@ -6285,8 +6541,8 @@ export default function Home() {
             onClick={() => setActiveTab('dashboard')}
             style={{ 
               padding: '20px', 
-              background: activeTab === 'dashboard' ? 'linear-gradient(135deg, #2AAA8A 0%, #20917A 100%)' : darkMode ? '#16213e' : '#FFFFFF', 
-              color: activeTab === 'dashboard' ? '#FFF' : darkMode ? '#AAA' : '#666666',
+              background: activeTab === 'dashboard' ? 'linear-gradient(135deg, #2AAA8A 0%, #20917A 100%)' : darkMode ? '#16213e' : DS.colors.white, 
+              color: activeTab === 'dashboard' ? DS.colors.white : darkMode ? '#AAA' : '#666666',
               border: activeTab === 'dashboard' ? 'none' : `1px solid ${darkMode ? '#0f3460' : '#E0E0E0'}`,
               borderRadius: 16, 
               fontSize: 16, 
@@ -6295,12 +6551,12 @@ export default function Home() {
               transition: 'all 0.3s ease',
               boxShadow: activeTab === 'dashboard' ? '0 8px 25px rgba(42,170,138,0.35)' : '0 2px 8px rgba(0,0,0,0.05)'
             }}
-          >📊 DASHBOARD</button>
+          ><BarChart3 size={16} /> DASHBOARD</button>
           <button 
             onClick={() => setActiveTab('report')}
             style={{ 
               padding: '20px', 
-              background: activeTab === 'report' ? 'linear-gradient(135deg, #FFD700, #FFC107)' : darkMode ? '#16213e' : '#FFFFFF', 
+              background: activeTab === 'report' ? 'linear-gradient(135deg, #FFD700, #FFC107)' : darkMode ? '#16213e' : DS.colors.white, 
               color: activeTab === 'report' ? '#333' : darkMode ? '#AAA' : '#666666',
               border: activeTab === 'report' ? 'none' : `1px solid ${darkMode ? '#0f3460' : '#E0E0E0'}`,
               borderRadius: 16, 
@@ -6310,19 +6566,19 @@ export default function Home() {
               transition: 'all 0.3s ease',
               boxShadow: activeTab === 'report' ? '0 8px 25px rgba(255,215,0,0.35)' : '0 2px 8px rgba(0,0,0,0.05)'
             }}
-          >📈 REPORT</button>
+          ><TrendingUp size={16} /> REPORT</button>
         </div>
         
         {/* CONTENUTO TAB */}
         {activeTab === 'dashboard' && (
-          <div style={{ background: '#FFFFFF', borderRadius: 24, padding: 50, textAlign: 'center', border: '1px solid #E8E8E8', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
+          <div style={{ background: DS.colors.white, borderRadius: 24, padding: 50, textAlign: 'center', border: '1px solid #E8E8E8', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
             <h2 style={{ color: '#1a1a2e', fontSize: 28, marginBottom: 8, fontWeight: 700, letterSpacing: '-0.5px' }}>Dashboard Classifiche</h2>
             <p style={{ color: '#888', fontSize: 14, marginBottom: 35 }}>Carica un file CSV per visualizzare classifiche e statistiche in tempo reale</p>
             
             <div style={{ maxWidth: 480, margin: '0 auto' }}>
               <div 
                 style={{ 
-                  border: `2px dashed ${isDragging ? '#2AAA8A' : '#D0D0D0'}`, 
+                  border: `2px dashed ${isDragging ? DS.colors.primaryLight : '#D0D0D0'}`, 
                   borderRadius: 20, 
                   padding: 50,
                   background: isDragging ? 'rgba(42,170,138,0.05)' : 'linear-gradient(135deg, #FAFAFA, #F5F5F5)',
@@ -6346,8 +6602,8 @@ export default function Home() {
               <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 30 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: '#FF9800' }} /><span style={{ fontSize: 12, color: '#666' }}>IVD</span></div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: '#2196F3' }} /><span style={{ fontSize: 12, color: '#666' }}>SDP</span></div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: '#2AAA8A' }} /><span style={{ fontSize: 12, color: '#666' }}>Networker</span></div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: '#FFD700' }} /><span style={{ fontSize: 12, color: '#666' }}>K Manager</span></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: DS.colors.primaryLight }} /><span style={{ fontSize: 12, color: '#666' }}>Networker</span></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: DS.colors.accent }} /><span style={{ fontSize: 12, color: '#666' }}>K Manager</span></div>
               </div>
             </div>
           </div>
@@ -6356,46 +6612,23 @@ export default function Home() {
         {activeTab === 'report' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {/* UPLOAD CSV PER REPORT - TOP MANAGER STYLE */}
-            <div style={{ background: '#FFFFFF', borderRadius: 24, padding: 35, border: '1px solid #E8E8E8', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 25 }}>
-                <div>
-                  <h2 style={{ color: '#1a1a2e', fontSize: 24, marginBottom: 6, fontWeight: 700, letterSpacing: '-0.5px' }}>Report Aggregato</h2>
-                  <p style={{ color: '#888', fontSize: 13, margin: 0 }}>Carica i CSV per generare report dettagliati con classifiche e statistiche</p>
-                </div>
-                {reportData && (
-                  <button 
-                    onClick={screenshotAllSections}
-                    style={{ 
-                      padding: '12px 20px', 
-                      background: 'linear-gradient(135deg, #2AAA8A, #20917A)', 
-                      color: '#FFF', 
-                      border: 'none', 
-                      borderRadius: 10, 
-                      fontSize: 13, 
-                      fontWeight: 600, 
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      boxShadow: '0 4px 15px rgba(42,170,138,0.3)'
-                    }}
-                  >
-                    📷 Scarica Tutte le Slide
-                  </button>
-                )}
+            <div style={{ background: DS.colors.white, borderRadius: DS.radius.xl, padding: DS.space['3xl'], border: `1px solid ${DS.colors.gray200}`, boxShadow: DS.shadow.sm }}>
+              <div style={{ marginBottom: DS.space.xl }}>
+                <h2 style={{ color: DS.colors.gray800, fontSize: DS.font.h1.size, marginBottom: DS.space.sm, fontWeight: DS.font.h1.weight }}>Report Aggregato</h2>
+                <p style={{ color: DS.colors.gray500, fontSize: DS.font.body.size, margin: 0 }}>Carica i CSV per generare report dettagliati con classifiche e statistiche</p>
               </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 15, marginBottom: 25 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: DS.space.lg, marginBottom: DS.space.xl }}>
                 {/* IVD */}
                 <div style={{ background: reportCSVs.ivd ? 'linear-gradient(135deg, rgba(76,175,80,0.08), rgba(76,175,80,0.02))' : 'linear-gradient(135deg, #FAFAFA, #F5F5F5)', borderRadius: 16, padding: 20, border: reportCSVs.ivd ? '2px solid #4CAF50' : '1px solid #E8E8E8', transition: 'all 0.2s ease' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                     <div style={{ width: 36, height: 36, borderRadius: 10, background: '#FF9800', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ fontSize: 16, filter: 'brightness(10)' }}>📋</span>
+                      <span style={{ fontSize: 16, filter: 'brightness(10)' }}><FileText size={16} /></span>
                     </div>
                     <span style={{ color: '#1a1a2e', fontWeight: 600, fontSize: 14 }}>IVD Attivati</span>
                   </div>
                   <input type="file" accept=".csv" id="csv-ivd-rep" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('ivd', e.target.files[0]); }} />
-                  <label htmlFor="csv-ivd-rep" style={{ display: 'block', cursor: 'pointer', padding: '12px', background: reportCSVs.ivd ? 'rgba(76,175,80,0.1)' : '#FFF', borderRadius: 10, textAlign: 'center', color: reportCSVs.ivd ? '#4CAF50' : '#888', fontSize: 13, fontWeight: 500, border: '1px dashed #D0D0D0' }}>
+                  <label htmlFor="csv-ivd-rep" style={{ display: 'block', cursor: 'pointer', padding: '12px', background: reportCSVs.ivd ? 'rgba(76,175,80,0.1)' : DS.colors.white, borderRadius: 10, textAlign: 'center', color: reportCSVs.ivd ? '#4CAF50' : '#888', fontSize: 13, fontWeight: 500, border: '1px dashed #D0D0D0' }}>
                     {reportCSVs.ivd ? `✓ ${reportCSVs.ivd.rows} righe caricate` : 'Carica CSV'}
                   </label>
                 </div>
@@ -6403,13 +6636,13 @@ export default function Home() {
                 {/* Luce Amica */}
                 <div style={{ background: reportCSVs.energy ? 'linear-gradient(135deg, rgba(76,175,80,0.08), rgba(76,175,80,0.02))' : 'linear-gradient(135deg, #FAFAFA, #F5F5F5)', borderRadius: 16, padding: 20, border: reportCSVs.energy ? '2px solid #4CAF50' : '1px solid #E8E8E8', transition: 'all 0.2s ease' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: '#FFD700', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ fontSize: 16 }}>⚡</span>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: DS.colors.accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: 16 }}><Zap size={16} /></span>
                     </div>
                     <span style={{ color: '#1a1a2e', fontWeight: 600, fontSize: 14 }}>Luce Amica</span>
                   </div>
                   <input type="file" accept=".csv" id="csv-energy-rep" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('energy', e.target.files[0]); }} />
-                  <label htmlFor="csv-energy-rep" style={{ display: 'block', cursor: 'pointer', padding: '12px', background: reportCSVs.energy ? 'rgba(76,175,80,0.1)' : '#FFF', borderRadius: 10, textAlign: 'center', color: reportCSVs.energy ? '#4CAF50' : '#888', fontSize: 13, fontWeight: 500, border: '1px dashed #D0D0D0' }}>
+                  <label htmlFor="csv-energy-rep" style={{ display: 'block', cursor: 'pointer', padding: '12px', background: reportCSVs.energy ? 'rgba(76,175,80,0.1)' : DS.colors.white, borderRadius: 10, textAlign: 'center', color: reportCSVs.energy ? '#4CAF50' : '#888', fontSize: 13, fontWeight: 500, border: '1px dashed #D0D0D0' }}>
                     {reportCSVs.energy ? `✓ ${reportCSVs.energy.rows} righe caricate` : 'Carica CSV'}
                   </label>
                 </div>
@@ -6417,13 +6650,13 @@ export default function Home() {
                 {/* FV */}
                 <div style={{ background: reportCSVs.fv ? 'linear-gradient(135deg, rgba(76,175,80,0.08), rgba(76,175,80,0.02))' : 'linear-gradient(135deg, #FAFAFA, #F5F5F5)', borderRadius: 16, padding: 20, border: reportCSVs.fv ? '2px solid #4CAF50' : '1px solid #E8E8E8', transition: 'all 0.2s ease' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: '#2AAA8A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ fontSize: 16, filter: 'brightness(10)' }}>☀️</span>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: DS.colors.primaryLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: 16, filter: 'brightness(10)' }}><Sun size={16} /></span>
                     </div>
                     <span style={{ color: '#1a1a2e', fontWeight: 600, fontSize: 14 }}>Fotovoltaico</span>
                   </div>
                   <input type="file" accept=".csv" id="csv-fv-rep" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('fv', e.target.files[0]); }} />
-                  <label htmlFor="csv-fv-rep" style={{ display: 'block', cursor: 'pointer', padding: '12px', background: reportCSVs.fv ? 'rgba(76,175,80,0.1)' : '#FFF', borderRadius: 10, textAlign: 'center', color: reportCSVs.fv ? '#4CAF50' : '#888', fontSize: 13, fontWeight: 500, border: '1px dashed #D0D0D0' }}>
+                  <label htmlFor="csv-fv-rep" style={{ display: 'block', cursor: 'pointer', padding: '12px', background: reportCSVs.fv ? 'rgba(76,175,80,0.1)' : DS.colors.white, borderRadius: 10, textAlign: 'center', color: reportCSVs.fv ? '#4CAF50' : '#888', fontSize: 13, fontWeight: 500, border: '1px dashed #D0D0D0' }}>
                     {reportCSVs.fv ? `✓ ${reportCSVs.fv.rows} righe caricate` : 'Carica CSV'}
                   </label>
                 </div>
@@ -6437,7 +6670,7 @@ export default function Home() {
                     <span style={{ color: '#1a1a2e', fontWeight: 600, fontSize: 14 }}>Seminari</span>
                   </div>
                   <input type="file" accept=".csv" id="csv-cons-rep" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processReportCSV('consultings', e.target.files[0]); }} />
-                  <label htmlFor="csv-cons-rep" style={{ display: 'block', cursor: 'pointer', padding: '12px', background: reportCSVs.consultings ? 'rgba(76,175,80,0.1)' : '#FFF', borderRadius: 10, textAlign: 'center', color: reportCSVs.consultings ? '#4CAF50' : '#888', fontSize: 13, fontWeight: 500, border: '1px dashed #D0D0D0' }}>
+                  <label htmlFor="csv-cons-rep" style={{ display: 'block', cursor: 'pointer', padding: '12px', background: reportCSVs.consultings ? 'rgba(76,175,80,0.1)' : DS.colors.white, borderRadius: 10, textAlign: 'center', color: reportCSVs.consultings ? '#4CAF50' : '#888', fontSize: 13, fontWeight: 500, border: '1px dashed #D0D0D0' }}>
                     {reportCSVs.consultings ? `✓ ${reportCSVs.consultings.rows} righe caricate` : 'Carica CSV'}
                   </label>
                 </div>
@@ -6445,12 +6678,12 @@ export default function Home() {
               
               <div style={{ display: 'flex', gap: 12 }}>
                 <button 
-                  style={{ flex: 2, padding: '16px 24px', background: Object.values(reportCSVs).some(v => v) ? 'linear-gradient(135deg, #2AAA8A, #1E8A6E)' : '#E8E8E8', color: Object.values(reportCSVs).some(v => v) ? '#FFF' : '#AAA', border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 600, cursor: Object.values(reportCSVs).some(v => v) ? 'pointer' : 'not-allowed', boxShadow: Object.values(reportCSVs).some(v => v) ? '0 8px 25px rgba(42,170,138,0.3)' : 'none', transition: 'all 0.2s ease' }} 
+                  style={{ flex: 2, padding: '16px 24px', background: Object.values(reportCSVs).some(v => v) ? 'linear-gradient(135deg, #2AAA8A, #1E8A6E)' : '#E8E8E8', color: Object.values(reportCSVs).some(v => v) ? DS.colors.white : '#AAA', border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 600, cursor: Object.values(reportCSVs).some(v => v) ? 'pointer' : 'not-allowed', boxShadow: Object.values(reportCSVs).some(v => v) ? '0 8px 25px rgba(42,170,138,0.3)' : 'none', transition: 'all 0.2s ease' }} 
                   onClick={() => setReportData(generateReportData())}
                   disabled={!Object.values(reportCSVs).some(v => v)}
                 >GENERA REPORT</button>
                 <button 
-                  style={{ flex: 1, padding: '16px 24px', background: '#FFF', color: '#888', border: '1px solid #E0E0E0', borderRadius: 14, fontSize: 14, fontWeight: 500, cursor: 'pointer' }} 
+                  style={{ flex: 1, padding: '16px 24px', background: DS.colors.white, color: '#888', border: '1px solid #E0E0E0', borderRadius: 14, fontSize: 14, fontWeight: 500, cursor: 'pointer' }} 
                   onClick={clearReportCSVs}
                 >Reset</button>
               </div>
@@ -6463,21 +6696,21 @@ export default function Home() {
           </div>
         )}
       </main>
-      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v15.3 • Leader Ranking</footer>
+      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v16.1 • Leader Ranking</footer>
     </div></>);
 
   // PREVIEW
   if (showPreview && previewImage) return (<><Head><title>Anteprima</title></Head>
     <div style={S.previewWrap}><div style={S.previewModal}>
-      <h2 style={{ color: '#333333', marginBottom: 5 }}>📸 Anteprima 1080x1080</h2>
-      <p style={{ color: '#666666', fontSize: 13, marginBottom: 15 }}>✅ {getData().length} partecipanti • {getClassificaTotal()} contratti</p>
+      <h2 style={{ color: '#333333', marginBottom: 5 }}><Camera size={16} /> Anteprima 1080x1080</h2>
+      <p style={{ color: '#666666', fontSize: 13, marginBottom: 15 }}><CheckCircle size={16} /> {getData().length} partecipanti • {getClassificaTotal()} contratti</p>
       <div style={S.previewImg}><img src={previewImage} style={{ maxWidth: '100%', maxHeight: '55vh' }} /></div>
       <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 15, flexWrap: 'wrap' }}>
         <button style={{ ...S.btn, flex: 1, minWidth: 100, background: '#F5F5F5', border: '1px solid #E0E0E0', color: '#333333' }} onClick={() => setShowPreview(false)}>✕ Chiudi</button>
-        <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'linear-gradient(135deg, #2AAA8A, #20917A)', color: '#FFFFFF' }} onClick={download}>📥 SCARICA</button>
-        <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'linear-gradient(135deg,#FFD700,#FFC107)', color: '#333333' }} onClick={handleSendToBot}>🤖 INVIA A BOT</button>
+        <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'linear-gradient(135deg, #2AAA8A, #20917A)', color: DS.colors.white }} onClick={download}><Download size={16} /> SCARICA</button>
+        <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'linear-gradient(135deg,#FFD700,#FFC107)', color: '#333333' }} onClick={handleSendToBot}><Share2 size={16} /> INVIA A BOT</button>
       </div>
-      {sendStatus && <p style={{ textAlign: 'center', marginTop: 10, color: sendStatus.includes('✅') ? '#4CAF50' : sendStatus.includes('❌') ? '#f44' : '#FFD700' }}>{sendStatus}</p>}
+      {sendStatus && <p style={{ textAlign: 'center', marginTop: 10, color: sendStatus.includes('<CheckCircle size={16} />') ? '#4CAF50' : sendStatus.includes('<XCircle size={16} />') ? '#f44' : DS.colors.accent }}>{sendStatus}</p>}
     </div></div></>);
 
   // DASHBOARD
@@ -6486,7 +6719,7 @@ export default function Home() {
       <header style={{ ...S.header, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', padding: '12px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button style={{ ...S.menuBtn, padding: 8 }} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>☰</button>
-          <span style={{ fontWeight: 800, color: '#2AAA8A', fontSize: 18 }}>LEADER</span>
+          <span style={{ fontWeight: 800, color: DS.colors.primaryLight, fontSize: 18 }}>LEADER</span>
           <span style={{ fontWeight: 300, color: '#333333', fontSize: 18 }}>RANKING</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -6495,7 +6728,7 @@ export default function Home() {
             style={{ 
               padding: '8px 16px', 
               fontSize: 12, 
-              background: '#F9FAFB', 
+              background: DS.colors.gray50, 
               border: '1px solid #E5E7EB', 
               color: '#4B5563', 
               borderRadius: 8,
@@ -6506,11 +6739,11 @@ export default function Home() {
               gap: 6
             }} 
             onClick={() => { setCsvData(null); setRankings(null); setFilteredData(null); setReportData(null); }}
-          >← INDIETRO</button>
+          >INDIETRO</button>
           <span style={{ 
             padding: '6px 12px', 
             background: 'linear-gradient(135deg, #2AAA8A, #20917A)', 
-            color: '#FFF', 
+            color: DS.colors.white, 
             borderRadius: 8, 
             fontSize: 11, 
             fontWeight: 600 
@@ -6521,7 +6754,7 @@ export default function Home() {
             background: 'transparent', 
             border: '1px solid #E5E7EB',
             borderRadius: 8,
-            color: '#6B7280',
+            color: DS.colors.gray500,
             cursor: 'pointer',
             fontWeight: 500
           }} onClick={() => { setUser(null); setCsvData(null); setRankings(null); }}>Esci</button>
@@ -6529,27 +6762,27 @@ export default function Home() {
       </header>
       <main style={{ display: 'flex' }}>
         <aside style={{ ...S.sidebar, ...(mobileMenuOpen ? { transform: 'translateX(0)' } : {}) }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}><span style={{ fontSize: 12, color: '#999999', letterSpacing: 1 }}>📊 CLASSIFICHE</span><button style={{ background: 'none', border: 'none', color: '#333333', fontSize: 18, cursor: 'pointer' }} onClick={() => setMobileMenuOpen(false)}>✕</button></div>
-          {rankings ? (<><p style={S.catLabel}>IVD</p><button style={{ ...S.menuItem, ...(selectedRanking === 'ivd_inseriti' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('ivd_inseriti'); setMobileMenuOpen(false); }}>🟠 {labels.c1} ({rankings.ivd_inseriti.length})</button><button style={{ ...S.menuItem, ...(selectedRanking === 'ivd_accettati' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('ivd_accettati'); setMobileMenuOpen(false); }}>🟢 {labels.c2} ({rankings.ivd_accettati.length})</button><p style={S.catLabel}>SDP</p><button style={{ ...S.menuItem, ...(selectedRanking === 'sdp_inseriti' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('sdp_inseriti'); setMobileMenuOpen(false); }}>🔵 {labels.c1} ({rankings.sdp_inseriti.length})</button><button style={{ ...S.menuItem, ...(selectedRanking === 'sdp_accettati' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('sdp_accettati'); setMobileMenuOpen(false); }}>🟢 {labels.c2} ({rankings.sdp_accettati.length})</button><p style={S.catLabel}>MANAGER</p><button style={{ ...S.menuItem, ...(selectedRanking === 'nw' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('nw'); setMobileMenuOpen(false); }}>⭐ Networker ({rankings.nw.length})</button><button style={{ ...S.menuItem, ...(selectedRanking === 'k' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('k'); setMobileMenuOpen(false); }}>👑 K Manager ({rankings.k.length})</button></>) : <p style={{ color: '#999999', fontSize: 12 }}>Carica CSV</p>}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}><span style={{ fontSize: 12, color: '#999999', letterSpacing: 1 }}><BarChart3 size={16} /> CLASSIFICHE</span><button style={{ background: 'none', border: 'none', color: '#333333', fontSize: 18, cursor: 'pointer' }} onClick={() => setMobileMenuOpen(false)}>✕</button></div>
+          {rankings ? (<><p style={S.catLabel}>IVD</p><button style={{ ...S.menuItem, ...(selectedRanking === 'ivd_inseriti' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('ivd_inseriti'); setMobileMenuOpen(false); }}> {labels.c1} ({rankings.ivd_inseriti.length})</button><button style={{ ...S.menuItem, ...(selectedRanking === 'ivd_accettati' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('ivd_accettati'); setMobileMenuOpen(false); }}> {labels.c2} ({rankings.ivd_accettati.length})</button><p style={S.catLabel}>SDP</p><button style={{ ...S.menuItem, ...(selectedRanking === 'sdp_inseriti' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('sdp_inseriti'); setMobileMenuOpen(false); }}> {labels.c1} ({rankings.sdp_inseriti.length})</button><button style={{ ...S.menuItem, ...(selectedRanking === 'sdp_accettati' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('sdp_accettati'); setMobileMenuOpen(false); }}> {labels.c2} ({rankings.sdp_accettati.length})</button><p style={S.catLabel}>MANAGER</p><button style={{ ...S.menuItem, ...(selectedRanking === 'nw' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('nw'); setMobileMenuOpen(false); }}><Star size={16} /> Networker ({rankings.nw.length})</button><button style={{ ...S.menuItem, ...(selectedRanking === 'k' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('k'); setMobileMenuOpen(false); }}><Crown size={16} /> K Manager ({rankings.k.length})</button></>) : <p style={{ color: '#999999', fontSize: 12 }}>Carica CSV</p>}
           <div style={S.divider} />
-          {(user.role === 'admin' || user.role === 'assistente') && (<><p style={S.catLabel}>⚙️ FILTRI</p><label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', color: '#333333' }}><input type="checkbox" checked={excludeK} onChange={toggleExcludeK} style={{ accentColor: '#2AAA8A' }} /> Escludi K</label><div style={S.divider} /><p style={S.catLabel}>📅 PERIODO</p><button style={{ ...S.periodBtn, ...(!selectedMonth ? { background: 'rgba(124,77,255,0.2)', color: '#2AAA8A' } : {}) }} onClick={handleShowAll}>📋 Tutti ({csvData?.length || 0})</button>{availableMonths.length > 0 && (<select style={S.select} value={selectedMonth} onChange={e => handleMonthChange(e.target.value)}><option value="">-- Mese --</option>{availableMonths.map(m => <option key={m} value={m}>{m}</option>)}</select>)}{weeks.length > 0 && (<select style={S.select} value={selectedWeek?.num || ''} onChange={e => handleWeekChange(e.target.value)}><option value="">-- Settimana --</option>{weeks.map(w => <option key={w.num} value={w.num}>{w.label}</option>)}</select>)}<div style={S.divider} /><p style={S.catLabel}>📊 TIPO CLASSIFICA</p><select style={S.select} value={periodType} onChange={e => setPeriodType(e.target.value)}><option value="progressiva">📈 Progressiva (mese in corso)</option><option value="settimanale">📅 Settimanale</option><option value="finale">🏆 Finale mese</option></select><div style={S.divider} /><p style={S.catLabel}>🏷️ ETICHETTE</p><select style={S.select} value={eventName} onChange={e => setEventName(e.target.value)}>{EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select><input style={S.inputSm} value={eventDate} onChange={e => setEventDate(e.target.value)} placeholder="Periodo" /></>)}
+          {(user.role === 'admin' || user.role === 'assistente') && (<><p style={S.catLabel}>⚙️ FILTRI</p><label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', color: '#333333' }}><input type="checkbox" checked={excludeK} onChange={toggleExcludeK} style={{ accentColor: DS.colors.primaryLight }} /> Escludi K</label><div style={S.divider} /><p style={S.catLabel}><Calendar size={16} /> PERIODO</p><button style={{ ...S.periodBtn, ...(!selectedMonth ? { background: 'rgba(124,77,255,0.2)', color: DS.colors.primaryLight } : {}) }} onClick={handleShowAll}><FileText size={16} /> Tutti ({csvData?.length || 0})</button>{availableMonths.length > 0 && (<select style={S.select} value={selectedMonth} onChange={e => handleMonthChange(e.target.value)}><option value="">-- Mese --</option>{availableMonths.map(m => <option key={m} value={m}>{m}</option>)}</select>)}{weeks.length > 0 && (<select style={S.select} value={selectedWeek?.num || ''} onChange={e => handleWeekChange(e.target.value)}><option value="">-- Settimana --</option>{weeks.map(w => <option key={w.num} value={w.num}>{w.label}</option>)}</select>)}<div style={S.divider} /><p style={S.catLabel}><BarChart3 size={16} /> TIPO CLASSIFICA</p><select style={S.select} value={periodType} onChange={e => setPeriodType(e.target.value)}><option value="progressiva"><TrendingUp size={16} /> Progressiva (mese in corso)</option><option value="settimanale"><Calendar size={16} /> Settimanale</option><option value="finale"><Trophy size={16} /> Finale mese</option></select><div style={S.divider} /><p style={S.catLabel}>🏷️ ETICHETTE</p><select style={S.select} value={eventName} onChange={e => setEventName(e.target.value)}>{EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select><input style={S.inputSm} value={eventDate} onChange={e => setEventDate(e.target.value)} placeholder="Periodo" /></>)}
         </aside>
         {mobileMenuOpen && <div style={S.overlay} onClick={() => setMobileMenuOpen(false)} />}
         <section style={S.content}>
-          {(user.role === 'admin' || user.role === 'assistente') && (<div style={{ ...S.uploadBox, ...(isDragging ? { borderColor: '#2AAA8A', background: 'rgba(124,77,255,0.1)' } : {}) }} onDragOver={e => { e.preventDefault(); setIsDragging(true); }} onDragLeave={e => { e.preventDefault(); setIsDragging(false); }} onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.csv')) processFile(f); }}><input type="file" accept=".csv" id="csv" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processFile(e.target.files[0]); }} /><label htmlFor="csv" style={{ cursor: 'pointer', padding: '10px 20px', background: 'rgba(124,77,255,0.1)', borderRadius: 8, color: '#2AAA8A', fontWeight: 600 }}>{filteredData ? `✅ ${filteredData.length} righe caricate` : '📤 Carica CSV'}</label></div>)}
+          {(user.role === 'admin' || user.role === 'assistente') && (<div style={{ ...S.uploadBox, ...(isDragging ? { borderColor: DS.colors.primaryLight, background: 'rgba(124,77,255,0.1)' } : {}) }} onDragOver={e => { e.preventDefault(); setIsDragging(true); }} onDragLeave={e => { e.preventDefault(); setIsDragging(false); }} onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f?.name.endsWith('.csv')) processFile(f); }}><input type="file" accept=".csv" id="csv" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processFile(e.target.files[0]); }} /><label htmlFor="csv" style={{ cursor: 'pointer', padding: '10px 20px', background: 'rgba(124,77,255,0.1)', borderRadius: 8, color: DS.colors.primaryLight, fontWeight: 600 }}>{filteredData ? `<CheckCircle size={16} /> ${filteredData.length} righe caricate` : '📤 Carica CSV'}</label></div>)}
           
           {/* TABS - Dashboard e Classifiche (Report è nella Homepage) */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 20, background: '#FFFFFF', padding: 8, borderRadius: 12, border: '1px solid #E0E0E0' }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 20, background: DS.colors.white, padding: 8, borderRadius: 12, border: '1px solid #E0E0E0' }}>
             <button 
-              style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'dashboard' ? '#2AAA8A' : 'transparent', color: activeTab === 'dashboard' ? '#fff' : '#666666', border: 'none', opacity: rankings ? 1 : 0.5 }} 
+              style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'dashboard' ? DS.colors.primaryLight : 'transparent', color: activeTab === 'dashboard' ? '#fff' : '#666666', border: 'none', opacity: rankings ? 1 : 0.5 }} 
               onClick={() => rankings && setActiveTab('dashboard')}
               disabled={!rankings}
-            >📊 Dashboard</button>
+            ><BarChart3 size={16} /> Dashboard</button>
             <button 
-              style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'classifiche' ? '#2AAA8A' : 'transparent', color: activeTab === 'classifiche' ? '#fff' : '#666666', border: 'none', opacity: rankings ? 1 : 0.5 }} 
+              style={{ ...S.btn, flex: 1, padding: '12px 20px', background: activeTab === 'classifiche' ? DS.colors.primaryLight : 'transparent', color: activeTab === 'classifiche' ? '#fff' : '#666666', border: 'none', opacity: rankings ? 1 : 0.5 }} 
               onClick={() => rankings && setActiveTab('classifiche')}
               disabled={!rankings}
-            >🏆 Classifiche</button>
+            ><Trophy size={16} /> Classifiche</button>
           </div>
           
           {/* DASHBOARD TAB */}
@@ -6572,7 +6805,7 @@ export default function Home() {
                 {/* STATS CARDS - PIU GRANDI */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
                   <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.25), rgba(255,107,53,0.08))', borderRadius: 16, padding: '18px 12px', textAlign: 'center', border: '1px solid rgba(255,107,53,0.4)' }}>
-                    <div style={{ fontSize: 36, fontWeight: 800, color: '#2AAA8A' }}>{animatedStats.ins}</div>
+                    <div style={{ fontSize: 36, fontWeight: 800, color: DS.colors.primaryLight }}>{animatedStats.ins}</div>
                     <div style={{ fontSize: 11, color: '#444444', textTransform: 'uppercase', marginTop: 4 }}>{labels.c1}</div>
                   </div>
                   <div style={{ background: 'linear-gradient(135deg, rgba(76,175,80,0.25), rgba(76,175,80,0.08))', borderRadius: 16, padding: '18px 12px', textAlign: 'center', border: '1px solid rgba(76,175,80,0.4)' }}>
@@ -6580,11 +6813,11 @@ export default function Home() {
                     <div style={{ fontSize: 11, color: '#444444', textTransform: 'uppercase', marginTop: 4 }}>{labels.c2}</div>
                   </div>
                   <div style={{ background: 'linear-gradient(135deg, rgba(124,77,255,0.25), rgba(124,77,255,0.08))', borderRadius: 16, padding: '18px 12px', textAlign: 'center', border: '1px solid rgba(124,77,255,0.4)' }}>
-                    <div style={{ fontSize: 36, fontWeight: 800, color: '#2AAA8A' }}>{animatedStats.part}</div>
+                    <div style={{ fontSize: 36, fontWeight: 800, color: DS.colors.primaryLight }}>{animatedStats.part}</div>
                     <div style={{ fontSize: 11, color: '#444444', textTransform: 'uppercase', marginTop: 4 }}>Partecipanti</div>
                   </div>
                   <div style={{ background: 'linear-gradient(135deg, rgba(255,215,0,0.25), rgba(255,215,0,0.08))', borderRadius: 16, padding: '18px 12px', textAlign: 'center', border: '1px solid rgba(255,215,0,0.4)' }}>
-                    <div style={{ fontSize: 36, fontWeight: 800, color: '#FFD700' }}>{animatedStats.conv}%</div>
+                    <div style={{ fontSize: 36, fontWeight: 800, color: DS.colors.accent }}>{animatedStats.conv}%</div>
                     <div style={{ fontSize: 11, color: '#444444', textTransform: 'uppercase', marginTop: 4 }}>Conversione</div>
                   </div>
                 </div>
@@ -6592,48 +6825,48 @@ export default function Home() {
                 {/* PODIO + TOP 7 affiancati - PIU GRANDI */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 15 }}>
                   {/* PODIO */}
-                  <div style={{ background: '#FAFAFA', borderRadius: 20, padding: 20, border: '1px solid #F0F0F0' }}>
-                    <h3 style={{ color: '#FFD700', fontSize: 16, marginBottom: 15, textAlign: 'center' }}>🏆 PODIO</h3>
-                    <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 10, height: 170 }}>
+                  <div style={{ background: DS.colors.gray50, borderRadius: DS.radius.xl, padding: DS.space.xl, border: `1px solid ${DS.colors.gray100}` }}>
+                    <h3 style={{ color: DS.colors.accent, fontSize: DS.font.h3.size, marginBottom: DS.space.lg, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: DS.space.sm }}><Trophy size={18} color={DS.colors.accent} /> PODIO</h3>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: DS.space.md, height: 170 }}>
                       {/* 2° */}
                       <div style={{ textAlign: 'center', flex: 1 }}>
-                        <div style={{ fontSize: 12, color: '#333333', fontWeight: 600, marginBottom: 8, lineHeight: 1.3 }}>{stats.top3[1]?.name || '-'}</div>
+                        <div style={{ fontSize: DS.font.caption.size, color: DS.colors.gray700, fontWeight: 600, marginBottom: DS.space.sm, lineHeight: 1.3 }}>{stats.top3[1]?.name || '-'}</div>
                         <div style={{ background: 'linear-gradient(180deg, #E8E8E8, #A0A0A0)', borderRadius: '10px 10px 0 0', height: 90, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                          <span style={{ fontSize: 24, fontWeight: 800, color: '#333' }}>🥈</span>
-                          <span style={{ fontSize: 18, fontWeight: 700, color: '#333' }}>{stats.top3[1]?.v1 || 0}</span>
+                          <PositionBadge position={2} size="lg" />
+                          <span style={{ fontSize: 18, fontWeight: 700, color: DS.colors.gray800, marginTop: DS.space.xs }}>{stats.top3[1]?.v1 || 0}</span>
                         </div>
                       </div>
                       {/* 1° */}
                       <div style={{ textAlign: 'center', flex: 1 }}>
-                        <div style={{ fontSize: 14, color: '#FFD700', fontWeight: 700, marginBottom: 8, lineHeight: 1.3 }}>{stats.top3[0]?.name || '-'}</div>
-                        <div style={{ background: 'linear-gradient(180deg, #FFE082, #FFD700)', borderRadius: '10px 10px 0 0', height: 130, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 25px rgba(255,215,0,0.4)' }}>
-                          <span style={{ fontSize: 32, fontWeight: 800, color: '#333' }}>🥇</span>
-                          <span style={{ fontSize: 24, fontWeight: 700, color: '#333' }}>{stats.top3[0]?.v1 || 0}</span>
+                        <div style={{ fontSize: DS.font.body.size, color: DS.colors.accent, fontWeight: 700, marginBottom: DS.space.sm, lineHeight: 1.3 }}>{stats.top3[0]?.name || '-'}</div>
+                        <div style={{ background: `linear-gradient(180deg, ${DS.colors.accentLight}, ${DS.colors.accent})`, borderRadius: '10px 10px 0 0', height: 130, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 25px ${DS.colors.accent}40` }}>
+                          <PositionBadge position={1} size="lg" />
+                          <span style={{ fontSize: 24, fontWeight: 700, color: DS.colors.gray800, marginTop: DS.space.xs }}>{stats.top3[0]?.v1 || 0}</span>
                         </div>
                       </div>
                       {/* 3° */}
                       <div style={{ textAlign: 'center', flex: 1 }}>
-                        <div style={{ fontSize: 12, color: '#333333', fontWeight: 600, marginBottom: 8, lineHeight: 1.3 }}>{stats.top3[2]?.name || '-'}</div>
-                        <div style={{ background: 'linear-gradient(180deg, #B2DFDB, #CD7F32)', borderRadius: '10px 10px 0 0', height: 65, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                          <span style={{ fontSize: 20, fontWeight: 800, color: '#333' }}>🥉</span>
-                          <span style={{ fontSize: 14, fontWeight: 700, color: '#333' }}>{stats.top3[2]?.v1 || 0}</span>
+                        <div style={{ fontSize: DS.font.caption.size, color: DS.colors.gray700, fontWeight: 600, marginBottom: DS.space.sm, lineHeight: 1.3 }}>{stats.top3[2]?.name || '-'}</div>
+                        <div style={{ background: `linear-gradient(180deg, #B2DFDB, ${DS.colors.bronze})`, borderRadius: '10px 10px 0 0', height: 65, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                          <PositionBadge position={3} size="lg" />
+                          <span style={{ fontSize: DS.font.body.size, fontWeight: 700, color: DS.colors.gray800, marginTop: DS.space.xs }}>{stats.top3[2]?.v1 || 0}</span>
                         </div>
                       </div>
                     </div>
                   </div>
 
                   {/* TOP 4-10 */}
-                  <div style={{ background: '#FAFAFA', borderRadius: 20, padding: 20, border: '1px solid #F0F0F0' }}>
-                    <h3 style={{ color: '#2AAA8A', fontSize: 16, marginBottom: 12 }}>📈 TOP 4° - 10°</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ background: DS.colors.gray50, borderRadius: DS.radius.xl, padding: DS.space.xl, border: `1px solid ${DS.colors.gray100}` }}>
+                    <h3 style={{ color: DS.colors.primary, fontSize: DS.font.h3.size, marginBottom: DS.space.md, display: 'flex', alignItems: 'center', gap: DS.space.sm }}><TrendingUp size={18} color={DS.colors.primary} /> TOP 4° - 10°</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: DS.space.sm }}>
                       {stats.top10.slice(3, 10).map((p, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{ width: 28, fontSize: 13, color: '#666666', fontWeight: 600 }}>{i + 4}°</span>
-                          <div style={{ flex: 1, height: 28, background: '#F5F5F5', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
-                            <div style={{ width: `${(p.v1 / stats.maxV1) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #2AAA8A, #4DB6AC)', borderRadius: 6 }} />
-                            <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: '#333333', fontWeight: 500 }}>{p.name}</span>
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: DS.space.md }}>
+                          <span style={{ width: 28, fontSize: DS.font.body.size, color: DS.colors.gray500, fontWeight: 600 }}>{i + 4}°</span>
+                          <div style={{ flex: 1, height: 28, background: DS.colors.gray100, borderRadius: DS.radius.sm, overflow: 'hidden', position: 'relative' }}>
+                            <div style={{ width: `${(p.v1 / stats.maxV1) * 100}%`, height: '100%', background: `linear-gradient(90deg, ${DS.colors.primary}, ${DS.colors.primaryLight})`, borderRadius: DS.radius.sm }} />
+                            <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', fontSize: DS.font.caption.size, color: DS.colors.gray700, fontWeight: 500 }}>{p.name}</span>
                           </div>
-                          <span style={{ width: 28, fontSize: 14, fontWeight: 700, color: '#2AAA8A', textAlign: 'right' }}>{p.v1}</span>
+                          <span style={{ width: 28, fontSize: DS.font.body.size, fontWeight: 700, color: DS.colors.primary, textAlign: 'right' }}>{p.v1}</span>
                         </div>
                       ))}
                     </div>
@@ -6656,7 +6889,7 @@ export default function Home() {
                     <div>
                       <div style={{ fontSize: 12, color: '#666666', marginBottom: 5 }}>CONVERSIONE</div>
                       <div style={{ display: 'flex', gap: 15 }}>
-                        <div><span style={{ fontSize: 16, fontWeight: 700, color: '#2AAA8A' }}>{stats.ins}</span><span style={{ fontSize: 10, color: '#999999', marginLeft: 4 }}>ins</span></div>
+                        <div><span style={{ fontSize: 16, fontWeight: 700, color: DS.colors.primaryLight }}>{stats.ins}</span><span style={{ fontSize: 10, color: '#999999', marginLeft: 4 }}>ins</span></div>
                         <div><span style={{ fontSize: 16, fontWeight: 700, color: '#4CAF50' }}>{stats.acc}</span><span style={{ fontSize: 10, color: '#999999', marginLeft: 4 }}>acc</span></div>
                       </div>
                     </div>
@@ -6666,12 +6899,12 @@ export default function Home() {
                   {!stats.isMonthly ? (
                     // HEATMAP SETTIMANALE
                     <div style={{ background: '#FCFCFC', borderRadius: 16, padding: 15, border: '1px solid #F5F5F5' }}>
-                      <div style={{ fontSize: 12, color: '#666666', marginBottom: 8 }}>🗓️ ATTIVITÀ SETTIMANALE</div>
+                      <div style={{ fontSize: 12, color: '#666666', marginBottom: 8 }}><Calendar size={16} /> ATTIVITÀ SETTIMANALE</div>
                       <div style={{ display: 'flex', gap: 6 }}>
                         {dayNames.map((day, i) => {
                           const val = stats.weeklyData[i];
                           const intensity = val / maxWeekly;
-                          const bgColor = val === 0 ? '#F5F5F5' : intensity > 0.7 ? '#4CAF50' : intensity > 0.4 ? '#FFD700' : '#2AAA8A';
+                          const bgColor = val === 0 ? '#F5F5F5' : intensity > 0.7 ? '#4CAF50' : intensity > 0.4 ? DS.colors.accent : DS.colors.primaryLight;
                           return (
                             <div key={day} style={{ flex: 1, textAlign: 'center' }}>
                               <div style={{ fontSize: 9, color: '#999999', marginBottom: 4 }}>{day}</div>
@@ -6682,15 +6915,15 @@ export default function Home() {
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 10 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#4CAF50' }} /><span style={{ fontSize: 9, color: '#666666' }}>Alto (&gt;70%)</span></div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#FFD700' }} /><span style={{ fontSize: 9, color: '#666666' }}>Medio</span></div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#2AAA8A' }} /><span style={{ fontSize: 9, color: '#666666' }}>Basso</span></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: DS.colors.accent }} /><span style={{ fontSize: 9, color: '#666666' }}>Medio</span></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: DS.colors.primaryLight }} /><span style={{ fontSize: 9, color: '#666666' }}>Basso</span></div>
                       </div>
                     </div>
                   ) : (
                     // HEATMAP MENSILE - Griglia Calendario WOW
                     <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.08), rgba(255,107,53,0.02))', borderRadius: 16, padding: 15, border: '1px solid rgba(255,107,53,0.2)', gridColumn: 'span 2' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                        <div style={{ fontSize: 14, color: '#2AAA8A', fontWeight: 600 }}>🔥 TEMPERATURA CONTRATTI</div>
+                        <div style={{ fontSize: 14, color: DS.colors.primaryLight, fontWeight: 600 }}><TrendingUp size={16} /> TEMPERATURA CONTRATTI</div>
                         <div style={{ fontSize: 10, color: '#666666' }}>Giorni caldi del mese</div>
                       </div>
                       {(() => {
@@ -6718,7 +6951,7 @@ export default function Home() {
                                 const intensity = val / maxM;
                                 const bgColor = val === 0 ? '#F5F5F5' : 
                                                intensity > 0.7 ? '#4CAF50' : 
-                                               intensity > 0.4 ? '#FFD700' : '#E53935';
+                                               intensity > 0.4 ? DS.colors.accent : '#E53935';
                                 const isHot = intensity > 0.7 && val > 0;
                                 return (
                                   <div key={i} style={{ 
@@ -6735,15 +6968,15 @@ export default function Home() {
                                   }}>
                                     <span style={{ fontSize: 10, color: val === 0 ? '#AAAAAA' : '#fff', fontWeight: val > 0 ? 600 : 400 }}>{i + 1}</span>
                                     {val > 0 && <span style={{ fontSize: 8, color: '#333333', fontWeight: 700 }}>{val}</span>}
-                                    {isHot && <span style={{ position: 'absolute', top: -4, right: -2, fontSize: 8 }}>🔥</span>}
+                                    {isHot && <span style={{ position: 'absolute', top: -4, right: -2, fontSize: 8 }}><TrendingUp size={16} /></span>}
                                   </div>
                                 );
                               })}
                             </div>
                             {/* Legenda */}
                             <div style={{ display: 'flex', justifyContent: 'center', gap: 15, marginTop: 12 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#4CAF50', boxShadow: '0 0 6px rgba(76,175,80,0.5)' }} /><span style={{ fontSize: 10, color: '#666666' }}>🔥 Caldo</span></div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#FFD700' }} /><span style={{ fontSize: 10, color: '#666666' }}>Tiepido</span></div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#4CAF50', boxShadow: '0 0 6px rgba(76,175,80,0.5)' }} /><span style={{ fontSize: 10, color: '#666666' }}><TrendingUp size={16} /> Caldo</span></div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: DS.colors.accent }} /><span style={{ fontSize: 10, color: '#666666' }}>Tiepido</span></div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#E53935' }} /><span style={{ fontSize: 10, color: '#666666' }}>Freddo</span></div>
                             </div>
                           </div>
@@ -6788,7 +7021,7 @@ export default function Home() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             <MiniPie data={pies.k} total={totalK} colors={PIE_COLORS_K} size={65} />
                             <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 12, color: '#FFD700', fontWeight: 600, marginBottom: 6 }}>👑 K MANAGER</div>
+                              <div style={{ fontSize: 12, color: DS.colors.accent, fontWeight: 600, marginBottom: 6 }}><Crown size={16} /> K MANAGER</div>
                               {pies.k.slice(0, 5).map(([name, val], i) => (
                                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#444444', marginBottom: 2 }}>
                                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -6809,7 +7042,7 @@ export default function Home() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             <MiniPie data={pies.stati} total={totalStati} colors={pies.stati.map(([s]) => STATO_COLORS[s] || '#666666')} size={65} />
                             <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 12, color: '#4CAF50', fontWeight: 600, marginBottom: 6 }}>📋 STATI</div>
+                              <div style={{ fontSize: 12, color: '#4CAF50', fontWeight: 600, marginBottom: 6 }}><FileText size={16} /> STATI</div>
                               {pies.stati.slice(0, 4).map(([name, val], i) => (
                                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#444444', marginBottom: 2 }}>
                                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -6827,7 +7060,7 @@ export default function Home() {
                       {/* BARRA NW TOP 5 - BLU */}
                       {pies.nw.length > 0 && (
                         <div style={{ background: 'linear-gradient(135deg, rgba(33,150,243,0.08), rgba(33,150,243,0.02))', borderRadius: 16, padding: 15, border: '2px solid rgba(33,150,243,0.3)', gridColumn: pies.k.length > 0 && pies.stati.length > 0 ? 'span 2' : 'span 1' }}>
-                          <div style={{ fontSize: 12, color: '#2196F3', fontWeight: 600, marginBottom: 10 }}>⭐ TOP 5 NETWORKER</div>
+                          <div style={{ fontSize: 12, color: '#2196F3', fontWeight: 600, marginBottom: 10 }}><Star size={16} /> TOP 5 NETWORKER</div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                             {pies.nw.slice(0, 5).map(([name, val], i) => {
                               const maxNw = pies.nw[0]?.[1] || 1;
@@ -6875,7 +7108,7 @@ export default function Home() {
                                 return (
                                   <tr key={i} style={{ borderBottom: '1px solid rgba(42,170,138,0.15)', background: i < 3 ? 'rgba(42,170,138,0.15)' : 'transparent' }}>
                                     <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: i < 3 ? 700 : 400, fontSize: 11, color: '#333' }}>
-                                      {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}°`}
+                                      {<PositionBadge position={i+1} size="sm" />}
                                     </td>
                                     <td style={{ padding: '8px 4px', fontWeight: i < 3 ? 600 : 400, color: '#333', fontSize: 11, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</td>
                                     <td style={{ padding: '8px 4px', textAlign: 'center', color: '#333', fontWeight: 700, fontSize: 13 }}>{tot}</td>
@@ -6891,66 +7124,60 @@ export default function Home() {
                   
                   return (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-                      <ClassificaTable title="K MANAGER" emoji="👑" data={pies.k} color="#FFD700" />
-                      <ClassificaTable title="NETWORKER" emoji="⭐" data={pies.nw} color='#2AAA8A' />
-                      <ClassificaTable title="SDP" emoji="🔵" data={rankings?.sdp_inseriti || []} color="#2196F3" />
-                      <ClassificaTable title="IVD" emoji="🟠" data={rankings?.ivd_inseriti || []} color="#FF9800" />
+                      <ClassificaTable title="K MANAGER" emoji="<Crown size={16} />" data={pies.k} color=DS.colors.accent />
+                      <ClassificaTable title="NETWORKER" emoji="<Star size={16} />" data={pies.nw} color=DS.colors.primaryLight />
+                      <ClassificaTable title="SDP" emoji="" data={rankings?.sdp_inseriti || []} color="#2196F3" />
+                      <ClassificaTable title="IVD" emoji="" data={rankings?.ivd_inseriti || []} color="#FF9800" />
                     </div>
                   );
                 })()}
 
-                {/* BOTTONE SCREENSHOT TUTTE LE SLIDE */}
+                {/* BOTTONI DOWNLOAD SLIDE */}
                 <div style={{ 
-                  background: 'linear-gradient(135deg, rgba(42,170,138,0.15), rgba(42,170,138,0.05))', 
-                  borderRadius: 16, 
-                  padding: 20, 
-                  border: '1px solid rgba(42,170,138,0.3)',
-                  textAlign: 'center'
+                  background: `${DS.colors.primary}10`, 
+                  borderRadius: DS.radius.lg, 
+                  padding: DS.space.xl, 
+                  border: `1px solid ${DS.colors.primary}30`
                 }}>
-                  <div style={{ fontSize: 14, color: '#2AAA8A', fontWeight: 700, marginBottom: 8 }}>📷 Esporta per Presentazione</div>
-                  <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 16 }}>Genera PNG alta risoluzione di tutte le sezioni del Report</div>
-                  <button 
-                    onClick={screenshotAllSections}
-                    style={{ 
-                      padding: '14px 28px', 
-                      background: 'linear-gradient(135deg, #2AAA8A, #20917A)', 
-                      color: '#FFF', 
-                      border: 'none', 
-                      borderRadius: 10, 
-                      fontSize: 14, 
-                      fontWeight: 600, 
-                      cursor: 'pointer',
-                      boxShadow: '0 4px 15px rgba(42,170,138,0.3)'
-                    }}
-                  >
-                    📷 Scarica Tutte le Slide (ZIP)
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: DS.space.sm, marginBottom: DS.space.sm }}>
+                    <Image size={18} color={DS.colors.primary} />
+                    <span style={{ fontSize: DS.font.h3.size, color: DS.colors.primary, fontWeight: 700 }}>Scarica per Slide</span>
+                  </div>
+                  <div style={{ fontSize: DS.font.caption.size, color: DS.colors.gray500, marginBottom: DS.space.lg }}>PNG 1920x1080 (16:9) - Sfondo verde corporate</div>
+                  <div style={{ display: 'flex', gap: DS.space.md, flexWrap: 'wrap' }}>
+                    <Button onClick={() => downloadSlidePNG('full')} variant="primary" icon={BarChart3}>
+                      Podio + Classifica
+                    </Button>
+                    <Button onClick={() => downloadSlidePNG('solo')} variant="accent" icon={Trophy}>
+                      Solo Podio
+                    </Button>
+                  </div>
                 </div>
               </div>
             );
           })()}
 
           {/* CLASSIFICHE TAB */}
-          {rankings && activeTab === 'classifiche' ? (<div style={S.rankCard}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 15 }}><div><h2 style={{ color: config.color, fontSize: 18, margin: 0 }}>{config.emoji} {config.label}</h2><p style={{ color: '#666666', fontSize: 12, marginTop: 4 }}>{getData().length} partecipanti • {getClassificaTotal()} contratti • {eventDate}</p></div><div style={{ display: 'flex', gap: 15 }}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: config.color }}>{getClassificaTotal()}</div><div style={{ fontSize: 9, color: '#999999' }}>{labels.c1}</div></div><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</div><div style={{ fontSize: 9, color: '#999999' }}>{labels.c2}</div></div></div></div><div style={{ overflowX: 'auto', maxHeight: '50vh', overflowY: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 300 }}><thead><tr style={{ borderBottom: '1px solid #E0E0E0' }}><th style={S.th}>#</th><th style={{ ...S.th, textAlign: 'left' }}>Nome</th><th style={S.th}>{labels.c1}</th>{isExclusive() && <><th style={S.th}>%</th><th style={S.th}>{labels.c2}</th></>}</tr></thead><tbody>{getData().map(([name, s], i) => { const p = s.v1 > 0 ? Math.round(s.v2 / s.v1 * 100) : 0; return (<tr key={name} style={{ borderBottom: '1px solid #F5F5F5', ...(i < 3 ? { background: `${config.color}10` } : {}) }}><td style={{ padding: 10, textAlign: 'center' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td><td style={{ padding: 10, fontWeight: i < 3 ? 700 : 500, fontSize: 13 }}>{name}</td><td style={{ padding: 10, textAlign: 'center', color: config.color, fontWeight: 700 }}>{s.v1}</td>{isExclusive() && <><td style={{ padding: 10, textAlign: 'center', color: p >= 50 ? '#4CAF50' : '#FFD700', fontSize: 12 }}>{p}%</td><td style={{ padding: 10, textAlign: 'center', color: '#4CAF50', fontWeight: 700 }}>{s.v2}</td></>}</tr>); })}</tbody></table></div>{(user.role === 'admin' || user.role === 'assistente') && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}>📸 PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg, #2AAA8A, #4DB6AC)' }} onClick={() => handleSendToBot()}>🤖 Invia a Bot</button>{sendStatus && <span style={{ fontSize: 13, color: sendStatus.includes('✅') ? '#4CAF50' : sendStatus.includes('❌') ? '#f44' : '#FFD700' }}>{sendStatus}</span>}</div>)}{user.role === 'k' && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}>📸 PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg, #2AAA8A, #20917A)' }} onClick={() => handleSendToBot()}>🤖 Invia a Bot</button></div>)}</div>) : !rankings && (<div style={{ textAlign: 'center', padding: 60, color: '#999999' }}><div style={{ fontSize: 50 }}>📊</div><p>Carica un CSV per iniziare</p></div>)}
+          {rankings && activeTab === 'classifiche' ? (<div style={S.rankCard}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 15 }}><div><h2 style={{ color: config.color, fontSize: 18, margin: 0 }}>{config.emoji} {config.label}</h2><p style={{ color: '#666666', fontSize: 12, marginTop: 4 }}>{getData().length} partecipanti • {getClassificaTotal()} contratti • {eventDate}</p></div><div style={{ display: 'flex', gap: 15 }}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: config.color }}>{getClassificaTotal()}</div><div style={{ fontSize: 9, color: '#999999' }}>{labels.c1}</div></div><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</div><div style={{ fontSize: 9, color: '#999999' }}>{labels.c2}</div></div></div></div><div style={{ overflowX: 'auto', maxHeight: '50vh', overflowY: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 300 }}><thead><tr style={{ borderBottom: '1px solid #E0E0E0' }}><th style={S.th}>#</th><th style={{ ...S.th, textAlign: 'left' }}>Nome</th><th style={S.th}>{labels.c1}</th>{isExclusive() && <><th style={S.th}>%</th><th style={S.th}>{labels.c2}</th></>}</tr></thead><tbody>{getData().map(([name, s], i) => { const p = s.v1 > 0 ? Math.round(s.v2 / s.v1 * 100) : 0; return (<tr key={name} style={{ borderBottom: '1px solid #F5F5F5', ...(i < 3 ? { background: `${config.color}10` } : {}) }}><td style={{ padding: 10, textAlign: 'center' }}>{<PositionBadge position={i+1} size="sm" />}</td><td style={{ padding: 10, fontWeight: i < 3 ? 700 : 500, fontSize: 13 }}>{name}</td><td style={{ padding: 10, textAlign: 'center', color: config.color, fontWeight: 700 }}>{s.v1}</td>{isExclusive() && <><td style={{ padding: 10, textAlign: 'center', color: p >= 50 ? '#4CAF50' : DS.colors.accent, fontSize: 12 }}>{p}%</td><td style={{ padding: 10, textAlign: 'center', color: '#4CAF50', fontWeight: 700 }}>{s.v2}</td></>}</tr>); })}</tbody></table></div>{(user.role === 'admin' || user.role === 'assistente') && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}><Camera size={16} /> PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg, #2AAA8A, #4DB6AC)' }} onClick={() => handleSendToBot()}><Share2 size={16} /> Invia a Bot</button>{sendStatus && <span style={{ fontSize: 13, color: sendStatus.includes('<CheckCircle size={16} />') ? '#4CAF50' : sendStatus.includes('<XCircle size={16} />') ? '#f44' : DS.colors.accent }}>{sendStatus}</span>}</div>)}{user.role === 'k' && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}><Camera size={16} /> PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg, #2AAA8A, #20917A)' }} onClick={() => handleSendToBot()}><Share2 size={16} /> Invia a Bot</button></div>)}</div>) : !rankings && (<div style={{ textAlign: 'center', padding: 60, color: '#999999' }}><div style={{ fontSize: 50 }}><BarChart3 size={16} /></div><p>Carica un CSV per iniziare</p></div>)}
         </section>
       </main>
       {showConfirmModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
           <div style={{ background: 'linear-gradient(135deg,#FFFFFF,#F5F5F5)', borderRadius: 20, padding: 30, maxWidth: 450, width: '100%', border: '1px solid #E0E0E0' }}>
-            <h2 style={{ color: '#FFD700', marginBottom: 20, fontSize: 20 }}>⚠️ VERIFICA PRIMA DI INVIARE</h2>
+            <h2 style={{ color: DS.colors.accent, marginBottom: 20, fontSize: 20 }}><AlertTriangle size={16} /> VERIFICA PRIMA DI INVIARE</h2>
             <div style={{ background: '#F5F5F5', borderRadius: 12, padding: 20, marginBottom: 20 }}>
-              <p style={{ color: '#444444', marginBottom: 10, fontSize: 14 }}>📊 <strong style={{ color: '#333333' }}>Classifica:</strong> {config.label}</p>
-              <p style={{ color: '#444444', marginBottom: 10, fontSize: 14 }}>📅 <strong style={{ color: '#333333' }}>Evento:</strong> {eventName} - {eventDate}</p>
-              <p style={{ color: '#444444', marginBottom: 10, fontSize: 14 }}>📈 <strong style={{ color: '#333333' }}>Tipo:</strong> {periodType === 'progressiva' ? 'Progressiva' : periodType === 'settimanale' ? 'Settimanale' : 'Finale mese'}</p>
+              <p style={{ color: '#444444', marginBottom: 10, fontSize: 14 }}><BarChart3 size={16} /> <strong style={{ color: '#333333' }}>Classifica:</strong> {config.label}</p>
+              <p style={{ color: '#444444', marginBottom: 10, fontSize: 14 }}><Calendar size={16} /> <strong style={{ color: '#333333' }}>Evento:</strong> {eventName} - {eventDate}</p>
+              <p style={{ color: '#444444', marginBottom: 10, fontSize: 14 }}><TrendingUp size={16} /> <strong style={{ color: '#333333' }}>Tipo:</strong> {periodType === 'progressiva' ? 'Progressiva' : periodType === 'settimanale' ? 'Settimanale' : 'Finale mese'}</p>
               <div style={{ height: 1, background: '#E0E0E0', margin: '15px 0' }} />
-              <p style={{ color: '#444444', marginBottom: 8, fontSize: 14 }}>📥 <strong style={{ color: config.color }}>{getClassificaTotal()}</strong> {labels.c1}</p>
-              <p style={{ color: '#444444', marginBottom: 8, fontSize: 14 }}>✅ <strong style={{ color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</strong> {labels.c2}</p>
-              <p style={{ color: '#444444', fontSize: 14 }}>👥 <strong style={{ color: '#333333' }}>{getData().length}</strong> partecipanti</p>
+              <p style={{ color: '#444444', marginBottom: 8, fontSize: 14 }}><Download size={16} /> <strong style={{ color: config.color }}>{getClassificaTotal()}</strong> {labels.c1}</p>
+              <p style={{ color: '#444444', marginBottom: 8, fontSize: 14 }}><CheckCircle size={16} /> <strong style={{ color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</strong> {labels.c2}</p>
+              <p style={{ color: '#444444', fontSize: 14 }}><Users size={16} /> <strong style={{ color: '#333333' }}>{getData().length}</strong> partecipanti</p>
             </div>
-            <p style={{ color: '#FFD700', fontSize: 14, marginBottom: 20, textAlign: 'center' }}>✅ I numeri sono corretti?</p>
+            <p style={{ color: DS.colors.accent, fontSize: 14, marginBottom: 20, textAlign: 'center' }}><CheckCircle size={16} /> I numeri sono corretti?</p>
             <div style={{ display: 'flex', gap: 12 }}>
               <button style={{ ...S.btn, flex: 1, background: 'transparent', border: '1px solid #E0E0E0' }} onClick={() => setShowConfirmModal(false)}>Annulla</button>
-              <button style={{ ...S.btn, flex: 1, background: 'linear-gradient(135deg,#4CAF50,#81C784)' }} onClick={() => { setShowConfirmModal(false); handleSendToBot(true); }}>✅ Conferma e Invia</button>
+              <button style={{ ...S.btn, flex: 1, background: 'linear-gradient(135deg,#4CAF50,#81C784)' }} onClick={() => { setShowConfirmModal(false); handleSendToBot(true); }}><CheckCircle size={16} /> Conferma e Invia</button>
             </div>
           </div>
         </div>
@@ -6959,16 +7186,19 @@ export default function Home() {
 }
 
 const S = {
+  // ─────────────────────────────────────────────────────────────────────────
+  // LOGIN
+  // ─────────────────────────────────────────────────────────────────────────
   loginWrap: { 
     minHeight: '100vh', 
     display: 'flex', 
     alignItems: 'center', 
     justifyContent: 'center', 
-    padding: 20, 
-    fontFamily: '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif',
+    padding: DS.space.xl, 
+    fontFamily: DS.font.family,
     position: 'relative',
     overflow: 'hidden',
-    background: '#0a0a0f'
+    background: DS.colors.gray900
   },
   loginBgImage: {
     position: 'absolute',
@@ -6982,70 +7212,148 @@ const S = {
   loginOverlay: {
     position: 'absolute',
     inset: 0,
-    background: 'linear-gradient(135deg, rgba(0,0,0,0.6) 0%, rgba(42,170,138,0.25) 50%, rgba(0,0,0,0.7) 100%)',
+    background: `linear-gradient(135deg, rgba(0,0,0,0.7) 0%, ${DS.colors.primary}30 50%, rgba(0,0,0,0.8) 100%)`,
     zIndex: 1
   },
   loginCard: { 
-    background: 'rgba(255,255,255,0.92)', 
+    background: 'rgba(255,255,255,0.95)', 
     backdropFilter: 'blur(20px)',
     WebkitBackdropFilter: 'blur(20px)',
     border: '1px solid rgba(255,255,255,0.3)', 
-    borderRadius: 24, 
-    padding: '50px 40px', 
+    borderRadius: DS.radius.xl, 
+    padding: '48px 40px', 
     width: '100%', 
-    maxWidth: 420, 
+    maxWidth: 400, 
     textAlign: 'center', 
-    color: '#333333', 
-    boxShadow: '0 25px 50px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.1) inset',
+    color: DS.colors.gray800, 
+    boxShadow: DS.shadow.xl,
     position: 'relative',
     zIndex: 2
   },
-  logoContainer: { marginBottom: 30 }, 
-  logoIcon: { marginBottom: 20 },
+  logoContainer: { marginBottom: DS.space['2xl'] }, 
+  logoIcon: { marginBottom: DS.space.xl },
   podium: { display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 6, height: 65 },
-  podiumBar: { width: 36, borderRadius: '8px 8px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' },
-  podiumNum: { fontSize: 14, fontWeight: 800, color: '#333333' },
-  logoText: { fontSize: 36, marginBottom: 8, color: '#333333', letterSpacing: '-0.5px' }, 
-  logoTagline: { color: '#2AAA8A', fontSize: 14, fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase' },
-  loginDivider: { height: 2, background: 'linear-gradient(90deg, transparent, #2AAA8A, transparent)', margin: '28px 0', borderRadius: 1 },
-  input: { width: '100%', padding: '18px 20px', fontSize: 16, border: '2px solid #E8E8E8', borderRadius: 14, background: 'rgba(255,255,255,0.9)', color: '#333333', marginBottom: 16, outline: 'none', boxSizing: 'border-box', transition: 'all 0.3s ease' },
-  btn: { padding: '18px 28px', fontSize: 16, fontWeight: 700, border: 'none', borderRadius: 14, background: 'linear-gradient(135deg, #2AAA8A 0%, #20917A 100%)', color: '#FFFFFF', cursor: 'pointer', width: '100%', boxShadow: '0 8px 25px rgba(42,170,138,0.35)', transition: 'all 0.3s ease', textTransform: 'uppercase', letterSpacing: '1px' },
-  categoryIcons: { display: 'flex', justifyContent: 'center', gap: 24, marginTop: 35 }, 
-  catIcon: { fontSize: 28, opacity: 0.7, transition: 'all 0.3s ease' },
-  homeWrap: { minHeight: '100vh', background: '#F5F5F5', fontFamily: '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif' },
-  homeHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 25px', borderBottom: '1px solid #E0E0E0', background: '#FFFFFF' },
-  homeLogoSmall: { fontSize: 18, color: '#333333' },
-  logoutBtn: { padding: '8px 16px', fontSize: 13, border: '1px solid #E0E0E0', borderRadius: 8, background: 'transparent', color: '#333333', cursor: 'pointer' },
-  homeMain: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 60px)', padding: 30 },
-  homeLogo: { textAlign: 'center', marginBottom: 50 }, homeLogoIcon: { marginBottom: 20 },
-  homePodium: { display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 8, height: 90 },
-  homePodiumBar: { width: 50, borderRadius: '10px 10px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 8, boxShadow: '0 4px 15px rgba(0,0,0,0.1)' },
-  homePodiumNum: { fontSize: 20, fontWeight: 800, color: '#333333' },
-  homeTitle: { fontSize: 48, fontWeight: 300, color: '#333333', marginBottom: 8 }, homeSubtitle: { fontSize: 16, color: '#666666', fontStyle: 'italic' },
-  uploadArea: { width: '100%', maxWidth: 500, border: '3px dashed #2AAA8A50', borderRadius: 20, padding: '60px 40px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s', background: '#FFFFFF' },
-  uploadAreaActive: { borderColor: '#2AAA8A', background: 'rgba(42,170,138,0.05)', transform: 'scale(1.02)' },
-  uploadLabel: { cursor: 'pointer', display: 'block' }, uploadIcon: { fontSize: 70, marginBottom: 20 }, uploadText: { fontSize: 22, fontWeight: 700, color: '#2AAA8A', marginBottom: 10 }, uploadHint: { fontSize: 14, color: '#666666' },
-  categoriesPreview: { display: 'flex', gap: 20, marginTop: 50, flexWrap: 'wrap', justifyContent: 'center' },
-  catPreviewItem: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '15px 25px', background: '#FFFFFF', borderRadius: 12, color: '#666666', fontSize: 13, border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' },
-  catPreviewIcon: { fontSize: 28 }, homeFooter: { marginTop: 40, color: '#999999', fontSize: 12 },
-  previewWrap: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 15 },
-  previewModal: { background: '#FFFFFF', borderRadius: 20, padding: 25, width: '100%', maxWidth: 600, maxHeight: '95vh', display: 'flex', flexDirection: 'column', border: '1px solid #E0E0E0', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' },
-  previewImg: { background: '#F8F9FA', borderRadius: 12, padding: 12, overflow: 'auto', flex: 1 },
-  dash: { minHeight: '100vh', background: '#F5F5F5', color: '#333333', fontFamily: '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', background: '#FFFFFF', borderBottom: '1px solid #E0E0E0', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' },
-  menuBtn: { background: 'none', border: 'none', color: '#333333', fontSize: 22, cursor: 'pointer' },
-  badge: { fontSize: 10, padding: '4px 10px', background: 'rgba(42,170,138,0.15)', color: '#2AAA8A', borderRadius: 15, fontWeight: 700 },
-  sidebar: { position: 'fixed', top: 0, left: 0, width: 280, height: '100vh', background: '#FFFFFF', padding: '60px 15px 20px', overflowY: 'auto', zIndex: 200, transform: 'translateX(-100%)', transition: 'transform 0.3s', boxSizing: 'border-box', borderRight: '1px solid #E0E0E0', boxShadow: '4px 0 20px rgba(0,0,0,0.08)' },
+  podiumBar: { width: 36, borderRadius: '8px 8px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 6, boxShadow: DS.shadow.md },
+  podiumNum: { fontSize: DS.font.body.size, fontWeight: 800, color: DS.colors.gray800 },
+  logoText: { fontSize: 32, marginBottom: DS.space.sm, color: DS.colors.gray800, letterSpacing: '-0.5px', fontWeight: 300 }, 
+  logoTagline: { color: DS.colors.primary, fontSize: DS.font.caption.size, fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase' },
+  loginDivider: { height: 2, background: `linear-gradient(90deg, transparent, ${DS.colors.primary}, transparent)`, margin: `${DS.space['2xl']}px 0`, borderRadius: 1 },
+  input: { 
+    width: '100%', 
+    padding: '16px 18px', 
+    fontSize: DS.font.body.size, 
+    border: `1px solid ${DS.colors.gray200}`, 
+    borderRadius: DS.radius.md, 
+    background: DS.colors.white, 
+    color: DS.colors.gray800, 
+    marginBottom: DS.space.lg, 
+    outline: 'none', 
+    boxSizing: 'border-box', 
+    transition: DS.transition.fast,
+    fontFamily: DS.font.family
+  },
+  btn: { 
+    padding: '14px 24px', 
+    fontSize: DS.font.body.size, 
+    fontWeight: 600, 
+    border: 'none', 
+    borderRadius: DS.radius.md, 
+    background: DS.colors.primary, 
+    color: DS.colors.white, 
+    cursor: 'pointer', 
+    width: '100%', 
+    boxShadow: DS.shadow.md, 
+    transition: DS.transition.fast,
+    fontFamily: DS.font.family
+  },
+  categoryIcons: { display: 'flex', justifyContent: 'center', gap: DS.space.xl, marginTop: DS.space['3xl'] }, 
+  catIcon: { fontSize: 24, opacity: 0.6, transition: DS.transition.fast },
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // HOME
+  // ─────────────────────────────────────────────────────────────────────────
+  homeWrap: { minHeight: '100vh', background: DS.colors.gray50, fontFamily: DS.font.family },
+  homeHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: `${DS.space.md}px ${DS.space.xl}px`, borderBottom: `1px solid ${DS.colors.gray200}`, background: DS.colors.white },
+  homeLogoSmall: { fontSize: 18, color: DS.colors.gray800 },
+  logoutBtn: { padding: `${DS.space.sm}px ${DS.space.lg}px`, fontSize: DS.font.caption.size, border: `1px solid ${DS.colors.gray200}`, borderRadius: DS.radius.md, background: 'transparent', color: DS.colors.gray600, cursor: 'pointer', fontWeight: 500 },
+  homeMain: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 60px)', padding: DS.space['3xl'] },
+  homeLogo: { textAlign: 'center', marginBottom: DS.space['4xl'] }, 
+  homeLogoIcon: { marginBottom: DS.space.xl },
+  homePodium: { display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: DS.space.sm, height: 90 },
+  homePodiumBar: { width: 50, borderRadius: '10px 10px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: DS.space.sm, boxShadow: DS.shadow.md },
+  homePodiumNum: { fontSize: DS.font.h2.size, fontWeight: 800, color: DS.colors.gray800 },
+  homeTitle: { fontSize: 42, fontWeight: 300, color: DS.colors.gray800, marginBottom: DS.space.sm }, 
+  homeSubtitle: { fontSize: DS.font.body.size, color: DS.colors.gray500, fontStyle: 'italic' },
+  uploadArea: { width: '100%', maxWidth: 500, border: `2px dashed ${DS.colors.primary}40`, borderRadius: DS.radius.xl, padding: `${DS.space['4xl']}px ${DS.space['3xl']}px`, textAlign: 'center', cursor: 'pointer', transition: DS.transition.normal, background: DS.colors.white },
+  uploadAreaActive: { borderColor: DS.colors.primary, background: `${DS.colors.primary}08`, transform: 'scale(1.02)' },
+  uploadLabel: { cursor: 'pointer', display: 'block' }, 
+  uploadIcon: { fontSize: 60, marginBottom: DS.space.xl }, 
+  uploadText: { fontSize: DS.font.h2.size, fontWeight: 700, color: DS.colors.primary, marginBottom: DS.space.sm }, 
+  uploadHint: { fontSize: DS.font.body.size, color: DS.colors.gray500 },
+  categoriesPreview: { display: 'flex', gap: DS.space.xl, marginTop: DS.space['4xl'], flexWrap: 'wrap', justifyContent: 'center' },
+  catPreviewItem: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: DS.space.sm, padding: `${DS.space.lg}px ${DS.space.xl}px`, background: DS.colors.white, borderRadius: DS.radius.lg, color: DS.colors.gray500, fontSize: DS.font.caption.size, border: `1px solid ${DS.colors.gray200}`, boxShadow: DS.shadow.sm },
+  catPreviewIcon: { fontSize: 24 }, 
+  homeFooter: { marginTop: DS.space['3xl'], color: DS.colors.gray400, fontSize: DS.font.micro.size },
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // PREVIEW MODAL
+  // ─────────────────────────────────────────────────────────────────────────
+  previewWrap: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: DS.space.lg },
+  previewModal: { background: DS.colors.white, borderRadius: DS.radius.xl, padding: DS.space.xl, width: '100%', maxWidth: 600, maxHeight: '95vh', display: 'flex', flexDirection: 'column', border: `1px solid ${DS.colors.gray200}`, boxShadow: DS.shadow.xl },
+  previewImg: { background: DS.colors.gray50, borderRadius: DS.radius.lg, padding: DS.space.md, overflow: 'auto', flex: 1 },
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // DASHBOARD
+  // ─────────────────────────────────────────────────────────────────────────
+  dash: { minHeight: '100vh', background: DS.colors.gray50, color: DS.colors.gray800, fontFamily: DS.font.family },
+  header: { 
+    display: 'flex', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    padding: `${DS.space.md}px ${DS.space.xl}px`, 
+    background: DS.colors.white, 
+    borderBottom: `1px solid ${DS.colors.gray200}`, 
+    position: 'sticky', 
+    top: 0, 
+    zIndex: 100, 
+    boxShadow: DS.shadow.sm,
+    height: 60
+  },
+  menuBtn: { background: 'none', border: 'none', color: DS.colors.gray700, fontSize: 20, cursor: 'pointer', padding: DS.space.sm, borderRadius: DS.radius.md },
+  badge: { 
+    fontSize: DS.font.micro.size, 
+    padding: `${DS.space.xs}px ${DS.space.md}px`, 
+    background: DS.colors.primary, 
+    color: DS.colors.white, 
+    borderRadius: DS.radius.md, 
+    fontWeight: 600 
+  },
+  sidebar: { 
+    position: 'fixed', 
+    top: 0, 
+    left: 0, 
+    width: 280, 
+    height: '100vh', 
+    background: DS.colors.white, 
+    padding: `60px ${DS.space.lg}px ${DS.space.xl}px`, 
+    overflowY: 'auto', 
+    zIndex: 200, 
+    transform: 'translateX(-100%)', 
+    transition: DS.transition.normal, 
+    boxSizing: 'border-box', 
+    borderRight: `1px solid ${DS.colors.gray200}`, 
+    boxShadow: DS.shadow.lg 
+  },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 150 },
-  catLabel: { fontSize: 10, color: '#999999', letterSpacing: 1, marginTop: 15, marginBottom: 6, textTransform: 'uppercase' },
-  menuItem: { display: 'block', width: '100%', padding: '10px 14px', fontSize: 13, border: 'none', borderRadius: 8, background: 'transparent', color: '#666666', cursor: 'pointer', textAlign: 'left', marginBottom: 2 },
-  menuActive: { background: 'rgba(42,170,138,0.12)', color: '#2AAA8A' },
-  divider: { height: 1, background: '#E0E0E0', margin: '15px 0' },
-  periodBtn: { display: 'block', width: '100%', padding: '8px 12px', fontSize: 12, border: '1px solid #E0E0E0', borderRadius: 6, background: '#FFFFFF', color: '#666666', cursor: 'pointer', marginBottom: 8, textAlign: 'left' },
-  select: { width: '100%', padding: '10px', fontSize: 13, border: '1px solid #E0E0E0', borderRadius: 8, background: '#FFFFFF', color: '#333333', marginBottom: 8 },
-  inputSm: { width: '100%', padding: '8px 10px', fontSize: 12, border: '1px solid #E0E0E0', borderRadius: 6, background: '#FFFFFF', color: '#333333', marginBottom: 8, boxSizing: 'border-box' },
-  content: { flex: 1, padding: 20, minHeight: 'calc(100vh - 60px)', maxWidth: 1400, margin: '0 auto' },
-  uploadBox: { border: '2px dashed #2AAA8A40', borderRadius: 12, padding: '20px', textAlign: 'center', marginBottom: 15, transition: 'all 0.3s', background: '#FFFFFF' },
-  rankCard: { background: '#FFFFFF', borderRadius: 16, padding: 18, border: '1px solid #E0E0E0', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' },
-  th: { padding: 10, fontSize: 10, fontWeight: 700, color: '#999999', textTransform: 'uppercase', textAlign: 'center' },
+  catLabel: { fontSize: DS.font.micro.size, color: DS.colors.gray400, letterSpacing: 1, marginTop: DS.space.lg, marginBottom: DS.space.sm, textTransform: 'uppercase', fontWeight: 600 },
+  menuItem: { display: 'block', width: '100%', padding: `${DS.space.md}px ${DS.space.lg}px`, fontSize: DS.font.body.size, border: 'none', borderRadius: DS.radius.md, background: 'transparent', color: DS.colors.gray600, cursor: 'pointer', textAlign: 'left', marginBottom: 2, fontFamily: DS.font.family, fontWeight: 500 },
+  menuActive: { background: `${DS.colors.primary}15`, color: DS.colors.primary },
+  divider: { height: 1, background: DS.colors.gray200, margin: `${DS.space.lg}px 0` },
+  periodBtn: { display: 'block', width: '100%', padding: `${DS.space.sm}px ${DS.space.md}px`, fontSize: DS.font.caption.size, border: `1px solid ${DS.colors.gray200}`, borderRadius: DS.radius.md, background: DS.colors.white, color: DS.colors.gray600, cursor: 'pointer', marginBottom: DS.space.sm, textAlign: 'left', fontFamily: DS.font.family },
+  select: { width: '100%', padding: DS.space.md, fontSize: DS.font.body.size, border: `1px solid ${DS.colors.gray200}`, borderRadius: DS.radius.md, background: DS.colors.white, color: DS.colors.gray800, marginBottom: DS.space.sm, fontFamily: DS.font.family },
+  inputSm: { width: '100%', padding: `${DS.space.sm}px ${DS.space.md}px`, fontSize: DS.font.caption.size, border: `1px solid ${DS.colors.gray200}`, borderRadius: DS.radius.md, background: DS.colors.white, color: DS.colors.gray800, marginBottom: DS.space.sm, boxSizing: 'border-box', fontFamily: DS.font.family },
+  content: { flex: 1, padding: DS.space.xl, minHeight: 'calc(100vh - 60px)', maxWidth: 1400, margin: '0 auto' },
+  uploadBox: { border: `2px dashed ${DS.colors.primary}40`, borderRadius: DS.radius.lg, padding: DS.space.xl, textAlign: 'center', marginBottom: DS.space.lg, transition: DS.transition.fast, background: DS.colors.white },
+  rankCard: { background: DS.colors.white, borderRadius: DS.radius.lg, padding: DS.space.xl, border: `1px solid ${DS.colors.gray200}`, boxShadow: DS.shadow.sm },
+  th: { padding: DS.space.md, fontSize: DS.font.micro.size, fontWeight: 600, color: DS.colors.gray500, textTransform: 'uppercase', textAlign: 'center', letterSpacing: '0.5px' },
 };
