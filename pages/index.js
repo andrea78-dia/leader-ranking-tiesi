@@ -2703,7 +2703,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v16.1 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v16.2 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -6474,7 +6474,7 @@ export default function Home() {
         </div>
         
         {/* Footer versione */}
-        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v16.1</p>
+        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v16.2</p>
       </div>
     </div></>);
 
@@ -6696,7 +6696,7 @@ export default function Home() {
           </div>
         )}
       </main>
-      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v16.1 • Leader Ranking</footer>
+      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v16.2 • Leader Ranking</footer>
     </div></>);
 
   // PREVIEW
@@ -7086,28 +7086,28 @@ export default function Home() {
                 {(() => {
                   const pies = getPieDistributions();
                   // Tabella stile nuovo - sfondo verde, testo nero
-                  const ClassificaTable = ({ title, emoji, data, color }) => {
+                  const ClassificaTable = ({ title, icon: IconComp, data, color }) => {
                     if (!data || data.length === 0) return null;
                     return (
-                      <div style={{ background: 'linear-gradient(135deg, rgba(42,170,138,0.12), rgba(42,170,138,0.04))', borderRadius: 16, padding: 15, border: `2px solid ${color}40` }}>
-                        <div style={{ fontSize: 14, color: color, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span>{emoji}</span> {title}
+                      <div style={{ background: `linear-gradient(135deg, ${color}15, ${color}05)`, borderRadius: DS.radius.lg, padding: DS.space.lg, border: `1px solid ${color}30` }}>
+                        <div style={{ fontSize: DS.font.body.size, color: color, fontWeight: 700, marginBottom: DS.space.md, display: 'flex', alignItems: 'center', gap: DS.space.sm }}>
+                          {IconComp && <IconComp size={16} color={color} />} {title}
                         </div>
                         <div style={{ overflowX: 'auto', maxHeight: 280, overflowY: 'auto' }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: DS.font.caption.size }}>
                             <thead>
-                              <tr style={{ borderBottom: '2px solid rgba(42,170,138,0.3)' }}>
-                                <th style={{ padding: '8px 4px', textAlign: 'center', color: '#333', fontWeight: 600, width: 30 }}>#</th>
-                                <th style={{ padding: '8px 4px', textAlign: 'left', color: '#333', fontWeight: 600 }}>Nome</th>
-                                <th style={{ padding: '8px 4px', textAlign: 'center', color: '#333', fontWeight: 600 }}>Tot</th>
+                              <tr style={{ borderBottom: `2px solid ${color}30` }}>
+                                <th style={{ padding: '8px 4px', textAlign: 'center', color: DS.colors.gray700, fontWeight: 600, width: 30 }}>#</th>
+                                <th style={{ padding: '8px 4px', textAlign: 'left', color: DS.colors.gray700, fontWeight: 600 }}>Nome</th>
+                                <th style={{ padding: '8px 4px', textAlign: 'center', color: DS.colors.gray700, fontWeight: 600 }}>Tot</th>
                               </tr>
                             </thead>
                             <tbody>
                               {data.slice(0, 15).map(([name, val], i) => {
                                 const tot = typeof val === 'object' ? (val.v1 || val.total || 0) : val;
                                 return (
-                                  <tr key={i} style={{ borderBottom: '1px solid rgba(42,170,138,0.15)', background: i < 3 ? 'rgba(42,170,138,0.15)' : 'transparent' }}>
-                                    <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: i < 3 ? 700 : 400, fontSize: 11, color: '#333' }}>
+                                  <tr key={i} style={{ borderBottom: `1px solid ${color}15`, background: i < 3 ? `${color}15` : 'transparent' }}>
+                                    <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: i < 3 ? 700 : 400, fontSize: DS.font.micro.size, color: DS.colors.gray700 }}>
                                       {<PositionBadge position={i+1} size="sm" />}
                                     </td>
                                     <td style={{ padding: '8px 4px', fontWeight: i < 3 ? 600 : 400, color: '#333', fontSize: 11, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</td>
@@ -7123,11 +7123,11 @@ export default function Home() {
                   };
                   
                   return (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-                      <ClassificaTable title="K MANAGER" emoji="<Crown size={16} />" data={pies.k} color=DS.colors.accent />
-                      <ClassificaTable title="NETWORKER" emoji="<Star size={16} />" data={pies.nw} color=DS.colors.primaryLight />
-                      <ClassificaTable title="SDP" emoji="" data={rankings?.sdp_inseriti || []} color="#2196F3" />
-                      <ClassificaTable title="IVD" emoji="" data={rankings?.ivd_inseriti || []} color="#FF9800" />
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: DS.space.md }}>
+                      <ClassificaTable title="K MANAGER" icon={Crown} data={pies.k} color={DS.colors.accent} />
+                      <ClassificaTable title="NETWORKER" icon={Star} data={pies.nw} color={DS.colors.primary} />
+                      <ClassificaTable title="SDP" icon={Briefcase} data={rankings?.sdp_inseriti || []} color={DS.colors.info} />
+                      <ClassificaTable title="IVD" icon={Users} data={rankings?.ivd_inseriti || []} color={DS.colors.warning} />
                     </div>
                   );
                 })()}
