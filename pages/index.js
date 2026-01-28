@@ -599,7 +599,7 @@ export default function Home() {
 
   // Dashboard helper functions
   const getDashboardStats = () => {
-    if (!filteredData || !rankings) return { ins: 0, acc: 0, part: 0, conv: 0, top3: [], top10: [], weeklyData: [], monthlyData: [], maxV1: 1, isMonthly: false };
+    if (!filteredData || !rankings) return { ins: 0, acc: 0, part: 0, conv: 0, top3: [], top10: [], weeklyData: [], monthlyData: [], hourlyData: {}, maxV1: 1, isMonthly: false };
     
     // USA LA CLASSIFICA SELEZIONATA invece di sempre IVD
     const currentData = getData(); // Usa la stessa funzione delle classifiche
@@ -616,6 +616,8 @@ export default function Home() {
     // Heatmap - analizza date inserimento
     const weeklyData = [0, 0, 0, 0, 0, 0, 0]; // Lun-Dom
     const monthlyData = Array(31).fill(0); // Giorni 1-31
+    const hourlyData = { notte: 0, mattinaPrima: 0, mattina: 0, pranzo: 0, pomeriggio: 0, sera: 0, notturno: 0 };
+    const weeklyTotals = [0, 0, 0, 0, 0]; // 5 settimane
     let minDate = null, maxDate = null;
     
     filteredData.forEach(row => {
@@ -633,7 +635,20 @@ export default function Home() {
             const dayOfMonth = d.getDate();
             if (dayOfMonth >= 1 && dayOfMonth <= 31) {
               monthlyData[dayOfMonth - 1]++;
+              // Settimana del mese
+              const weekOfMonth = Math.floor((dayOfMonth - 1) / 7);
+              if (weekOfMonth < 5) weeklyTotals[weekOfMonth]++;
             }
+            
+            // Fasce orarie
+            const hour = d.getHours();
+            if (hour >= 0 && hour < 6) hourlyData.notte++;
+            else if (hour >= 6 && hour < 9) hourlyData.mattinaPrima++;
+            else if (hour >= 9 && hour < 12) hourlyData.mattina++;
+            else if (hour >= 12 && hour < 15) hourlyData.pranzo++;
+            else if (hour >= 15 && hour < 18) hourlyData.pomeriggio++;
+            else if (hour >= 18 && hour < 21) hourlyData.sera++;
+            else hourlyData.notturno++;
             
             // Track date range
             if (!minDate || d < minDate) minDate = d;
@@ -654,10 +669,11 @@ export default function Home() {
       const month = minDate.getMonth();
       const firstDay = new Date(year, month, 1).getDay(); // 0=Dom
       const daysInMonth = new Date(year, month + 1, 0).getDate();
-      monthInfo = { year, month, firstDay: firstDay === 0 ? 6 : firstDay - 1, daysInMonth };
+      const monthName = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][month];
+      monthInfo = { year, month, firstDay: firstDay === 0 ? 6 : firstDay - 1, daysInMonth, monthName };
     }
     
-    return { ins: totIns, acc: totAcc, part: currentData.length, conv, top3, top10, maxV1, weeklyData, monthlyData, isMonthly, monthInfo };
+    return { ins: totIns, acc: totAcc, part: currentData.length, conv, top3, top10, maxV1, weeklyData, monthlyData, hourlyData, weeklyTotals, isMonthly, monthInfo };
   };
 
   // Calcola distribuzioni per grafici torta
@@ -2523,6 +2539,8 @@ export default function Home() {
   
   // Stato per drill-down heatmap mesi
   const [heatmapDrilldown, setHeatmapDrilldown] = useState(null);
+  // Stato per drill-down calendario dashboard
+  const [dashboardDrilldown, setDashboardDrilldown] = useState(false);
 
   // === SCREENSHOT DASHBOARD (solo canvas nativo, no dipendenze esterne) ===
   const generateDashboardCanvas = (format = 'png') => {
@@ -2741,7 +2759,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v16.9 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v17.0 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -6499,7 +6517,7 @@ export default function Home() {
         </div>
         
         {/* Footer versione */}
-        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v16.9</p>
+        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v17.0</p>
       </div>
     </div></>);
 
@@ -6721,7 +6739,7 @@ export default function Home() {
           </div>
         )}
       </main>
-      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v16.9 • Leader Ranking</footer>
+      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v17.0 • Leader Ranking</footer>
     </div></>);
 
   // PREVIEW
@@ -6926,66 +6944,199 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* CALENDARIO ATTIVITÀ - Stile Report */}
+                  {/* CALENDARIO ATTIVITÀ - Stile Report con Drill-down */}
                   {stats.isMonthly ? (
                     <div style={{ background: DS.colors.white, borderRadius: 16, padding: 16, border: `1px solid ${DS.colors.gray200}`, gridColumn: 'span 2' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                        <div style={{ fontSize: 14, color: DS.colors.gray800, fontWeight: 600 }}><Calendar size={16} /> CALENDARIO MESE</div>
-                        <div style={{ display: 'flex', gap: 12 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#10B981' }} /><span style={{ fontSize: 9, color: DS.colors.gray500 }}>Alto</span></div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#F59E0B' }} /><span style={{ fontSize: 9, color: DS.colors.gray500 }}>Medio</span></div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#EF4444' }} /><span style={{ fontSize: 9, color: DS.colors.gray500 }}>Basso</span></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <Calendar size={16} color={DS.colors.gray700} />
+                          <span style={{ fontSize: 14, color: DS.colors.gray800, fontWeight: 600 }}>
+                            {dashboardDrilldown ? `${stats.monthInfo?.monthName || 'Mese'} ${stats.monthInfo?.year || ''}` : 'CALENDARIO MESE'}
+                          </span>
+                          {!dashboardDrilldown && <span style={{ fontSize: 11, color: DS.colors.gray500 }}>• Clicca per dettagli</span>}
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          {dashboardDrilldown && (
+                            <button 
+                              onClick={() => setDashboardDrilldown(false)}
+                              style={{ padding: '6px 12px', background: DS.colors.gray100, border: `1px solid ${DS.colors.gray200}`, borderRadius: 6, fontSize: 11, cursor: 'pointer', color: DS.colors.gray700, fontWeight: 500 }}
+                            >
+                              Torna al mese
+                            </button>
+                          )}
+                          <div style={{ display: 'flex', gap: 10 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#10B981' }} /><span style={{ fontSize: 9, color: DS.colors.gray500 }}>Alto</span></div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#F59E0B' }} /><span style={{ fontSize: 9, color: DS.colors.gray500 }}>Medio</span></div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#EF4444' }} /><span style={{ fontSize: 9, color: DS.colors.gray500 }}>Basso</span></div>
+                          </div>
                         </div>
                       </div>
-                      {(() => {
-                        const maxM = Math.max(...stats.monthlyData, 1);
-                        const daysInMonth = stats.monthInfo?.daysInMonth || 31;
-                        const firstDay = stats.monthInfo?.firstDay || 0;
-                        const dayLabels = ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
-                        
-                        return (
-                          <div>
-                            {/* Header giorni settimana */}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 6 }}>
-                              {dayLabels.map((d, i) => (
-                                <div key={i} style={{ textAlign: 'center', fontSize: 10, color: DS.colors.gray500, fontWeight: 600 }}>{d}</div>
-                              ))}
+                      
+                      {!dashboardDrilldown ? (
+                        /* VISTA CALENDARIO MESE - Cliccabile */
+                        (() => {
+                          const maxM = Math.max(...stats.monthlyData, 1);
+                          const daysInMonth = stats.monthInfo?.daysInMonth || 31;
+                          const firstDay = stats.monthInfo?.firstDay || 0;
+                          const dayLabels = ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
+                          
+                          return (
+                            <div 
+                              onClick={() => setDashboardDrilldown(true)} 
+                              style={{ cursor: 'pointer' }}
+                            >
+                              {/* Header giorni settimana */}
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 6 }}>
+                                {dayLabels.map((d, i) => (
+                                  <div key={i} style={{ textAlign: 'center', fontSize: 10, color: DS.colors.gray500, fontWeight: 600 }}>{d}</div>
+                                ))}
+                              </div>
+                              {/* Griglia calendario */}
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+                                {Array(firstDay).fill(null).map((_, i) => (
+                                  <div key={`empty-${i}`} style={{ height: 38 }} />
+                                ))}
+                                {stats.monthlyData.slice(0, daysInMonth).map((val, i) => {
+                                  const intensity = val / maxM;
+                                  const bgColor = val === 0 ? DS.colors.gray100 : 
+                                                 intensity > 0.7 ? '#10B981' : 
+                                                 intensity > 0.3 ? '#F59E0B' : '#EF4444';
+                                  return (
+                                    <div key={i} style={{ 
+                                      height: 38, 
+                                      borderRadius: 6, 
+                                      background: bgColor, 
+                                      display: 'flex', 
+                                      flexDirection: 'column',
+                                      alignItems: 'center', 
+                                      justifyContent: 'center',
+                                      transition: 'transform 0.15s ease'
+                                    }}
+                                    onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                                    onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                                    >
+                                      <span style={{ fontSize: 10, color: val === 0 ? DS.colors.gray400 : '#FFFFFF', fontWeight: 500 }}>{i + 1}</span>
+                                      {val > 0 && <span style={{ fontSize: 9, color: '#FFFFFF', fontWeight: 700 }}>{val}</span>}
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             </div>
-                            {/* Griglia calendario */}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-                              {/* Celle vuote prima del primo giorno */}
-                              {Array(firstDay).fill(null).map((_, i) => (
-                                <div key={`empty-${i}`} style={{ height: 38 }} />
-                              ))}
-                              {/* Giorni del mese */}
-                              {stats.monthlyData.slice(0, daysInMonth).map((val, i) => {
-                                const intensity = val / maxM;
-                                const bgColor = val === 0 ? DS.colors.gray100 : 
-                                               intensity > 0.7 ? '#10B981' : 
-                                               intensity > 0.3 ? '#F59E0B' : '#EF4444';
+                          );
+                        })()
+                      ) : (
+                        /* DRILL-DOWN - Settimane, Orari, Giorni */
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                          {/* SETTIMANE */}
+                          <div>
+                            <div style={{ fontSize: 11, color: DS.colors.gray600, fontWeight: 600, marginBottom: 8 }}>
+                              <Calendar size={14} /> SETTIMANE
+                            </div>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              {(stats.weeklyTotals || [0,0,0,0,0]).map((val, i) => {
+                                const maxW = Math.max(...(stats.weeklyTotals || [1]), 1);
+                                const intensity = val / maxW;
+                                const bgColor = val === 0 ? DS.colors.gray100 : intensity > 0.7 ? '#10B981' : intensity > 0.3 ? '#F59E0B' : '#EF4444';
                                 return (
-                                  <div key={i} style={{ 
-                                    height: 38, 
-                                    borderRadius: 6, 
-                                    background: bgColor, 
-                                    display: 'flex', 
-                                    flexDirection: 'column',
-                                    alignItems: 'center', 
-                                    justifyContent: 'center',
-                                    transition: 'transform 0.15s ease'
-                                  }}
-                                  onMouseOver={e => { if (val > 0) e.currentTarget.style.transform = 'scale(1.05)'; }}
-                                  onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
-                                  >
-                                    <span style={{ fontSize: 10, color: val === 0 ? DS.colors.gray400 : '#FFFFFF', fontWeight: 500 }}>{i + 1}</span>
-                                    {val > 0 && <span style={{ fontSize: 9, color: '#FFFFFF', fontWeight: 700 }}>{val}</span>}
+                                  <div key={i} style={{ flex: 1, textAlign: 'center' }}>
+                                    <div style={{ fontSize: 9, color: DS.colors.gray500, marginBottom: 4 }}>Sett {i + 1}</div>
+                                    <div style={{ 
+                                      height: 44, 
+                                      borderRadius: 8, 
+                                      background: bgColor, 
+                                      display: 'flex', 
+                                      alignItems: 'center', 
+                                      justifyContent: 'center', 
+                                      fontSize: 14, 
+                                      fontWeight: 700, 
+                                      color: val === 0 ? DS.colors.gray400 : '#FFFFFF' 
+                                    }}>
+                                      {val}
+                                    </div>
                                   </div>
                                 );
                               })}
                             </div>
                           </div>
-                        );
-                      })()}
+                          
+                          {/* FASCE ORARIE */}
+                          <div>
+                            <div style={{ fontSize: 11, color: DS.colors.gray600, fontWeight: 600, marginBottom: 8 }}>
+                              <Clock size={14} /> FASCE ORARIE
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+                              {[
+                                { key: 'notte', label: '00-06' },
+                                { key: 'mattinaPrima', label: '06-09' },
+                                { key: 'mattina', label: '09-12' },
+                                { key: 'pranzo', label: '12-15' },
+                                { key: 'pomeriggio', label: '15-18' },
+                                { key: 'sera', label: '18-21' },
+                                { key: 'notturno', label: '21-24' }
+                              ].map(({ key, label }) => {
+                                const val = stats.hourlyData?.[key] || 0;
+                                const maxH = Math.max(...Object.values(stats.hourlyData || {}), 1);
+                                const intensity = val / maxH;
+                                const bgColor = val === 0 ? DS.colors.gray100 : intensity > 0.7 ? '#10B981' : intensity > 0.3 ? '#F59E0B' : '#EF4444';
+                                return (
+                                  <div key={key} style={{ textAlign: 'center' }}>
+                                    <div style={{ fontSize: 8, color: DS.colors.gray500, marginBottom: 3 }}>{label}</div>
+                                    <div style={{ 
+                                      height: 36, 
+                                      borderRadius: 6, 
+                                      background: bgColor, 
+                                      display: 'flex', 
+                                      alignItems: 'center', 
+                                      justifyContent: 'center', 
+                                      fontSize: 12, 
+                                      fontWeight: 600, 
+                                      color: val === 0 ? DS.colors.gray400 : '#FFFFFF' 
+                                    }}>
+                                      {val}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          
+                          {/* GIORNI DEL MESE - Versione compatta */}
+                          <div style={{ gridColumn: 'span 2' }}>
+                            <div style={{ fontSize: 11, color: DS.colors.gray600, fontWeight: 600, marginBottom: 8 }}>
+                              <BarChart3 size={14} /> GIORNI DEL MESE
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
+                              {['L', 'M', 'M', 'G', 'V', 'S', 'D'].map((d, i) => (
+                                <div key={i} style={{ textAlign: 'center', fontSize: 9, color: DS.colors.gray500, fontWeight: 600 }}>{d}</div>
+                              ))}
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3, marginTop: 4 }}>
+                              {Array(stats.monthInfo?.firstDay || 0).fill(null).map((_, i) => (
+                                <div key={`empty-${i}`} style={{ height: 32 }} />
+                              ))}
+                              {stats.monthlyData.slice(0, stats.monthInfo?.daysInMonth || 31).map((val, i) => {
+                                const maxM = Math.max(...stats.monthlyData, 1);
+                                const intensity = val / maxM;
+                                const bgColor = val === 0 ? DS.colors.gray100 : intensity > 0.7 ? '#10B981' : intensity > 0.3 ? '#F59E0B' : '#EF4444';
+                                return (
+                                  <div key={i} style={{ 
+                                    height: 32, 
+                                    borderRadius: 5, 
+                                    background: bgColor, 
+                                    display: 'flex', 
+                                    flexDirection: 'column',
+                                    alignItems: 'center', 
+                                    justifyContent: 'center'
+                                  }}>
+                                    <span style={{ fontSize: 9, color: val === 0 ? DS.colors.gray400 : '#FFFFFF', fontWeight: 500 }}>{i + 1}</span>
+                                    {val > 0 && <span style={{ fontSize: 8, color: '#FFFFFF', fontWeight: 700 }}>{val}</span>}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     // HEATMAP SETTIMANALE
