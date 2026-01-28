@@ -1451,8 +1451,9 @@ export default function Home() {
         }
       });
       
-      // ORDINAMENTO: per SCORE (punti × velocità)
-      trackerCoaching.sort((a, b) => b.score - a.score);
+      // ORDINAMENTO: per PUNTI TOTALI (chi ha prodotto di più in cima)
+      // Lo Score rimane come indicatore bonus di velocità
+      trackerCoaching.sort((a, b) => b.puntiTotali - a.puntiTotali);
       
       // Calcola medie
       const conLA = trackerCoaching.filter(t => t.giorniLA !== null);
@@ -2411,7 +2412,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v15.1 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v15.3 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -2489,13 +2490,16 @@ export default function Home() {
       
       const zip = new window.JSZip();
       const sections = [
-        { id: 'section-fv', name: '01_Pilastro_FV' },
-        { id: 'section-la', name: '02_Pilastro_LA' },
-        { id: 'section-collab', name: '03_Pilastro_Collaboratori' },
-        { id: 'section-tracker', name: '04_Tracker_Coaching' },
-        { id: 'section-fatturato', name: '05_Analisi_Fatturato' },
-        { id: 'section-classifiche-fatturato', name: '06_Classifiche_Fatturato' },
-        { id: 'section-alert', name: '07_Alert_Da_Attivare' }
+        { id: 'section-riepilogo', name: '01_Riepilogo_Generale' },
+        { id: 'section-best', name: '02_Best_Performers' },
+        { id: 'section-conversioni', name: '03_Analisi_Conversioni' },
+        { id: 'section-calendario', name: '04_Calendario_Attivita' },
+        { id: 'section-fv', name: '05_Pilastro_FV' },
+        { id: 'section-la', name: '06_Pilastro_LA' },
+        { id: 'section-collab', name: '07_Pilastro_Collaboratori' },
+        { id: 'section-tracker', name: '08_Tracker_Coaching' },
+        { id: 'section-fatturato', name: '09_Analisi_Fatturato' },
+        { id: 'section-alert', name: '10_Alert_Da_Attivare' }
       ];
       
       // Mostra loading
@@ -3798,7 +3802,7 @@ export default function Home() {
     };
 
     return (
-      <div style={{ 
+      <div id="section-riepilogo" style={{ 
         background: '#FFFFFF', 
         borderRadius: 20, 
         padding: 24,
@@ -3824,7 +3828,8 @@ export default function Home() {
             </p>
           </div>
           
-          {/* Semafori */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button onClick={() => screenshotSection('section-riepilogo', 'Riepilogo_Generale')} style={{ padding: '6px 12px', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>📷</button>
           <div style={{ display: 'flex', gap: 12 }}>
             {[
               { label: 'FV', value: data.semafori?.fv },
@@ -3849,6 +3854,7 @@ export default function Home() {
                 <div style={{ fontSize: 10, color: '#6B7280', fontWeight: 500 }}>{item.label}</div>
               </div>
             ))}
+          </div>
           </div>
         </div>
         
@@ -4149,11 +4155,14 @@ export default function Home() {
     );
 
     return (
-      <div style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, border: '1px solid #E5E7EB', marginBottom: 20 }}>
-        <h3 style={{ color: '#1F2937', fontSize: 18, margin: '0 0 20px', fontWeight: 700 }}>
-          📊 Analisi Conversioni
-          <span style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 400, marginLeft: 8 }}>Passaggi di stato</span>
-        </h3>
+      <div id="section-conversioni" style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, border: '1px solid #E5E7EB', marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h3 style={{ color: '#1F2937', fontSize: 18, margin: 0, fontWeight: 700 }}>
+            📊 Analisi Conversioni
+            <span style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 400, marginLeft: 8 }}>Passaggi di stato</span>
+          </h3>
+          <button onClick={() => screenshotSection('section-conversioni', 'Analisi_Conversioni')} style={{ padding: '6px 12px', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>📷</button>
+        </div>
         
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
           {/* FV Funnel */}
@@ -4356,12 +4365,15 @@ export default function Home() {
         
         {/* 🏆 BEST PERFORMERS - Migliori K e NW per categoria */}
         {reportData.bestPerformers && (
-          <div style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, border: '1px solid #E5E7EB' }}>
-            <div style={{ marginBottom: 20 }}>
-              <h3 style={{ color: '#1F2937', fontSize: 18, margin: 0, fontWeight: 700 }}>🏆 Best Performers</h3>
-              <p style={{ color: '#6B7280', fontSize: 12, margin: '4px 0 0' }}>
-                I migliori K Manager e Networker per ogni categoria {reportData.periodoRiferimento ? `• ${reportData.periodoRiferimento.label}` : ''}
-              </p>
+          <div id="section-best" style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, border: '1px solid #E5E7EB' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+              <div>
+                <h3 style={{ color: '#1F2937', fontSize: 18, margin: 0, fontWeight: 700 }}>🏆 Best Performers</h3>
+                <p style={{ color: '#6B7280', fontSize: 12, margin: '4px 0 0' }}>
+                  I migliori K Manager e Networker per ogni categoria {reportData.periodoRiferimento ? `• ${reportData.periodoRiferimento.label}` : ''}
+                </p>
+              </div>
+              <button onClick={() => screenshotSection('section-best', 'Best_Performers')} style={{ padding: '6px 12px', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>📷</button>
             </div>
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
@@ -4520,7 +4532,7 @@ export default function Home() {
         
         {/* CALENDARIO CON DRILL-DOWN - GRIGLIA 3x3 */}
         {Object.keys(reportData.heatmapMesi).length > 0 && (
-          <div style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, border: '1px solid #E5E7EB' }}>
+          <div id="section-calendario" style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, border: '1px solid #E5E7EB' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <div>
                 <h3 style={{ color: '#1F2937', fontSize: 18, margin: 0, fontWeight: 700 }}>🗓️ Calendario Attività</h3>
@@ -4528,14 +4540,17 @@ export default function Home() {
                   Clicca un box per vedere il dettaglio mensile {reportData.periodoRiferimento ? `• ${reportData.periodoRiferimento.label}` : ''}
                 </p>
               </div>
-              {heatmapDrilldown && (
-                <button 
-                  onClick={() => setHeatmapDrilldown(null)}
-                  style={{ padding: '8px 16px', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 8, fontSize: 12, cursor: 'pointer', color: '#374151', fontWeight: 500 }}
-                >
-                  ← Torna ai mesi
-                </button>
-              )}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button onClick={() => screenshotSection('section-calendario', 'Calendario_Attivita')} style={{ padding: '6px 12px', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>📷</button>
+                {heatmapDrilldown && (
+                  <button 
+                    onClick={() => setHeatmapDrilldown(null)}
+                    style={{ padding: '8px 16px', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 8, fontSize: 12, cursor: 'pointer', color: '#374151', fontWeight: 500 }}
+                  >
+                    ← Torna ai mesi
+                  </button>
+                )}
+              </div>
             </div>
             
             {!heatmapDrilldown ? (
@@ -5662,13 +5677,13 @@ export default function Home() {
             <div style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <div style={{ fontSize: 14, color: '#374151', fontWeight: 700 }}>🏆 Classifica Produzione Propria ({reportData.trackerCoaching.ivdConContratti} IVD produttivi)</div>
-                <div style={{ fontSize: 10, color: '#6B7280', fontStyle: 'italic' }}>Score = Punti × Velocità (100/media gg)</div>
+                <div style={{ fontSize: 10, color: '#6B7280', fontStyle: 'italic' }}>Ordinata per PUNTI • Score = bonus velocità</div>
               </div>
               {/* Header */}
               <div style={{ display: 'grid', gridTemplateColumns: '30px 1fr 70px 50px 50px 55px 55px 55px 55px 70px', gap: 6, marginBottom: 8, paddingBottom: 8, borderBottom: '2px solid #E5E7EB' }}>
                 <span style={{ fontSize: 9, color: '#6B7280', fontWeight: 600 }}>#</span>
                 <span style={{ fontSize: 9, color: '#6B7280', fontWeight: 600 }}>NOME</span>
-                <span style={{ fontSize: 9, color: '#2AAA8A', fontWeight: 600, textAlign: 'center' }}>PUNTI</span>
+                <span style={{ fontSize: 9, color: '#2AAA8A', fontWeight: 600, textAlign: 'center' }}>PUNTI ⬇️</span>
                 <span style={{ fontSize: 9, color: '#15803D', fontWeight: 600, textAlign: 'center' }}>%LA</span>
                 <span style={{ fontSize: 9, color: '#B45309', fontWeight: 600, textAlign: 'center' }}>%FV</span>
                 <span style={{ fontSize: 9, color: '#15803D', fontWeight: 600, textAlign: 'center' }}>1°LA</span>
@@ -5678,33 +5693,40 @@ export default function Home() {
                 <span style={{ fontSize: 9, color: '#DC2626', fontWeight: 600, textAlign: 'center' }}>SCORE</span>
               </div>
               <div style={{ maxHeight: 400, overflowY: 'auto' }}>
-                {reportData.trackerCoaching.lista.filter(t => t.puntiTotali > 0).map((t, i) => (
+                {reportData.trackerCoaching.lista.filter(t => t.puntiTotali > 0).map((t, i) => {
+                  // Calcola se ha tutte e 4 le milestone
+                  const haAllMilestones = t.giorniLA !== null && t.giorniFV !== null && t.giorniIscritto !== null && t.giorniAttivato !== null;
+                  return (
                   <div key={i} style={{ 
                     display: 'grid', 
                     gridTemplateColumns: '30px 1fr 70px 50px 50px 55px 55px 55px 55px 70px', 
                     gap: 6, 
                     padding: '8px 4px', 
                     fontSize: 11, 
-                    background: i < 3 ? `rgba(42,170,138,${0.15 - i * 0.04})` : i % 2 === 0 ? 'transparent' : '#FFFFFF',
-                    borderRadius: 4
+                    background: i < 3 ? `rgba(42,170,138,${0.15 - i * 0.04})` : haAllMilestones ? 'rgba(16,185,129,0.08)' : i % 2 === 0 ? 'transparent' : '#FFFFFF',
+                    borderRadius: 4,
+                    borderLeft: haAllMilestones ? '3px solid #10B981' : 'none'
                   }}>
                     <span style={{ fontWeight: i < 3 ? 700 : 400, color: '#1F2937' }}>
                       {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}`}
                     </span>
-                    <span style={{ color: '#1F2937', fontWeight: i < 3 ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.nome}</span>
+                    <span style={{ color: '#1F2937', fontWeight: i < 3 ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {t.nome} {haAllMilestones && '⭐'}
+                    </span>
                     <span style={{ textAlign: 'center', color: '#2AAA8A', fontWeight: 700 }}>{t.puntiTotali.toLocaleString('it-IT')}</span>
                     <span style={{ textAlign: 'center', color: '#15803D', fontWeight: 500 }}>{t.pctLA}%</span>
                     <span style={{ textAlign: 'center', color: '#B45309', fontWeight: 500 }}>{t.pctFV}%</span>
-                    <span style={{ textAlign: 'center', color: t.giorniLA !== null ? '#15803D' : '#D1D5DB' }}>{t.giorniLA !== null ? `${t.giorniLA}g` : '-'}</span>
-                    <span style={{ textAlign: 'center', color: t.giorniFV !== null ? '#B45309' : '#D1D5DB' }}>{t.giorniFV !== null ? `${t.giorniFV}g` : '-'}</span>
-                    <span style={{ textAlign: 'center', color: t.giorniIscritto !== null ? '#6D28D9' : '#D1D5DB' }}>{t.giorniIscritto !== null ? `${t.giorniIscritto}g` : '-'}</span>
-                    <span style={{ textAlign: 'center', color: t.giorniAttivato !== null ? '#EA580C' : '#D1D5DB' }}>{t.giorniAttivato !== null ? `${t.giorniAttivato}g` : '-'}</span>
+                    <span style={{ textAlign: 'center', color: t.giorniLA !== null ? '#15803D' : '#D1D5DB', fontWeight: t.giorniLA !== null ? 600 : 400 }}>{t.giorniLA !== null ? `${t.giorniLA}g` : '-'}</span>
+                    <span style={{ textAlign: 'center', color: t.giorniFV !== null ? '#B45309' : '#D1D5DB', fontWeight: t.giorniFV !== null ? 600 : 400 }}>{t.giorniFV !== null ? `${t.giorniFV}g` : '-'}</span>
+                    <span style={{ textAlign: 'center', color: t.giorniIscritto !== null ? '#6D28D9' : '#D1D5DB', fontWeight: t.giorniIscritto !== null ? 600 : 400 }}>{t.giorniIscritto !== null ? `${t.giorniIscritto}g` : '-'}</span>
+                    <span style={{ textAlign: 'center', color: t.giorniAttivato !== null ? '#EA580C' : '#D1D5DB', fontWeight: t.giorniAttivato !== null ? 600 : 400 }}>{t.giorniAttivato !== null ? `${t.giorniAttivato}g` : '-'}</span>
                     <span style={{ textAlign: 'center', color: '#DC2626', fontWeight: 700 }}>{t.score?.toLocaleString('it-IT') || 0}</span>
                   </div>
-                ))}
+                  );
+                })}
               </div>
-              <div style={{ marginTop: 12, padding: '8px 12px', background: '#F3F4F6', borderRadius: 8, fontSize: 10, color: '#6B7280', fontStyle: 'italic' }}>
-                💡 Score = Punti × Velocità (100 / media giorni primi contratti). Premia chi produce di più e parte più velocemente.
+              <div style={{ marginTop: 12, padding: '10px 14px', background: 'linear-gradient(135deg, #F0FDF4, #ECFDF5)', borderRadius: 8, fontSize: 10, color: '#065F46', border: '1px solid #BBF7D0' }}>
+                <strong>📊 Ordinamento:</strong> per PUNTI totali (chi produce di più) • <strong>⭐ Stella:</strong> ha completato tutte e 4 le milestone • <strong>Score:</strong> Punti × Velocità (bonus per chi parte veloce)
               </div>
             </div>
             
@@ -5821,9 +5843,12 @@ export default function Home() {
                   <div style={{ fontSize: 9, color: '#6B7280' }}>⭐ PUNTI EFFETTIVI</div>
                   <div style={{ fontSize: 20, fontWeight: 700, color: '#B45309' }}>{reportData.fatturato.fv.effettivi.punti.toLocaleString('it-IT')}</div>
                 </div>
-                <div style={{ textAlign: 'center', padding: 8, background: '#F9FAFB', borderRadius: 8 }}>
-                  <div style={{ fontSize: 9, color: '#6B7280' }}>📊 PUNTI INSERITI</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: '#6B7280' }}>{reportData.fatturato.fv.inseriti.punti.toLocaleString('it-IT')}</div>
+                <div style={{ textAlign: 'center', padding: 8, background: '#D1FAE5', borderRadius: 8, border: '1px solid #6EE7B7' }}>
+                  <div style={{ fontSize: 9, color: '#065F46' }}>✅ PUNTI ACCETTATI</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: '#059669' }}>{(reportData.fatturato.fv.accettatiPunti?.punti || reportData.fatturato.fv.effettivi.punti).toLocaleString('it-IT')}</div>
+                  {reportData.fatturato.fv.accettatiPunti?.aacContratti > 0 && (
+                    <div style={{ fontSize: 8, color: '#6B7280' }}>+{reportData.fatturato.fv.accettatiPunti.aacContratti} AAC</div>
+                  )}
                 </div>
               </div>
             </div>
@@ -6193,37 +6218,63 @@ export default function Home() {
         </div>
         
         {/* Footer versione */}
-        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v15.1</p>
+        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v15.3</p>
       </div>
     </div></>);
 
   // HOMEPAGE - TABS SEMPRE VISIBILI (senza area CSV)
   if (!csvData && (user.role === 'admin' || user.role === 'assistente' || user.role === 'k')) return (<><Head><title>Leader Ranking</title><meta name="viewport" content="width=device-width,initial-scale=1" /></Head>
     <div style={{ minHeight: '100vh', background: darkMode ? '#1a1a2e' : '#F8F9FA', fontFamily: '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif', transition: 'background 0.3s ease' }}>
-      <header style={{ background: darkMode ? '#16213e' : '#FFFFFF', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${darkMode ? '#0f3460' : '#E0E0E0'}` }}>
-        <div><span style={{ color: '#2AAA8A', fontWeight: 800, fontSize: 18 }}>LEADER</span><span style={{ fontWeight: 300, fontSize: 18, color: darkMode ? '#FFF' : '#333' }}> RANKING</span></div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <header style={{ background: darkMode ? '#16213e' : '#FFFFFF', padding: '12px 25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${darkMode ? '#0f3460' : '#E0E0E0'}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ color: '#2AAA8A', fontWeight: 800, fontSize: 18 }}>LEADER</span>
+          <span style={{ fontWeight: 300, fontSize: 18, color: darkMode ? '#FFF' : '#333' }}>RANKING</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           {/* Toggle Dark/Light Mode */}
           <button 
             onClick={() => setDarkMode(!darkMode)}
             style={{ 
-              padding: '6px 12px', 
-              background: darkMode ? '#FFD700' : '#333', 
+              padding: '8px 14px', 
+              background: darkMode ? 'linear-gradient(135deg, #FFD700, #FFC107)' : 'linear-gradient(135deg, #1F2937, #374151)', 
               color: darkMode ? '#333' : '#FFF', 
               border: 'none', 
-              borderRadius: 20, 
+              borderRadius: 8, 
               fontSize: 12, 
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: 4
+              gap: 6,
+              fontWeight: 500,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
             }}
           >
             {darkMode ? '☀️ Light' : '🌙 Dark'}
           </button>
-          <span style={{ fontSize: 13, color: darkMode ? '#AAA' : '#666666' }}>Ciao, {user.name}</span>
-          <span style={{ padding: '4px 10px', background: '#2AAA8A', color: '#FFF', borderRadius: 6, fontSize: 11, fontWeight: 600 }}>{user.role.toUpperCase()}</span>
-          <button style={{ ...S.btn, padding: '6px 14px', fontSize: 12, background: 'transparent', border: `1px solid ${darkMode ? '#444' : '#E0E0E0'}`, color: darkMode ? '#FFF' : '#666' }} onClick={() => setUser(null)}>Esci</button>
+          {/* User info card */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 10, 
+            background: darkMode ? '#0f3460' : '#F9FAFB', 
+            padding: '8px 14px', 
+            borderRadius: 10, 
+            border: `1px solid ${darkMode ? '#1a3a5c' : '#E5E7EB'}` 
+          }}>
+            <span style={{ fontSize: 13, color: darkMode ? '#CCC' : '#4B5563', fontWeight: 500 }}>Ciao, {user.name}</span>
+            <span style={{ padding: '4px 10px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', color: '#FFF', borderRadius: 6, fontSize: 11, fontWeight: 600 }}>{user.role.toUpperCase()}</span>
+          </div>
+          <button style={{ 
+            padding: '8px 16px', 
+            fontSize: 12, 
+            background: darkMode ? 'transparent' : '#FFF', 
+            border: `1px solid ${darkMode ? '#444' : '#E5E7EB'}`, 
+            color: darkMode ? '#AAA' : '#6B7280',
+            borderRadius: 8,
+            cursor: 'pointer',
+            fontWeight: 500,
+            transition: 'all 0.2s ease'
+          }} onClick={() => setUser(null)}>Esci</button>
         </div>
       </header>
       
@@ -6412,7 +6463,7 @@ export default function Home() {
           </div>
         )}
       </main>
-      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v15.1 • Leader Ranking</footer>
+      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v15.3 • Leader Ranking</footer>
     </div></>);
 
   // PREVIEW
@@ -6432,20 +6483,48 @@ export default function Home() {
   // DASHBOARD
   return (<><Head><title>Leader Ranking</title><meta name="viewport" content="width=device-width,initial-scale=1" /></Head>
     <div style={S.dash}>
-      <header style={S.header}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button style={S.menuBtn} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>☰</button>
-          <span style={{ fontWeight: 800, color: '#2AAA8A' }}>LEADER</span>
-          <span style={{ fontWeight: 300, color: '#333333' }}>RANKING</span>
+      <header style={{ ...S.header, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', padding: '12px 20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button style={{ ...S.menuBtn, padding: 8 }} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>☰</button>
+          <span style={{ fontWeight: 800, color: '#2AAA8A', fontSize: 18 }}>LEADER</span>
+          <span style={{ fontWeight: 300, color: '#333333', fontSize: 18 }}>RANKING</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {/* Tasto Indietro */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* Tasto Indietro elegante */}
           <button 
-            style={{ ...S.btn, padding: '6px 12px', fontSize: 12, background: '#F5F5F5', border: '1px solid #E0E0E0', color: '#333' }} 
+            style={{ 
+              padding: '8px 16px', 
+              fontSize: 12, 
+              background: '#F9FAFB', 
+              border: '1px solid #E5E7EB', 
+              color: '#4B5563', 
+              borderRadius: 8,
+              cursor: 'pointer',
+              fontWeight: 500,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
+            }} 
             onClick={() => { setCsvData(null); setRankings(null); setFilteredData(null); setReportData(null); }}
-          >← Indietro</button>
-          <span style={S.badge}>{user.role.toUpperCase()}</span>
-          <button style={{ ...S.btn, padding: '6px 12px', fontSize: 12, background: 'transparent', border: '1px solid #E0E0E0' }} onClick={() => { setUser(null); setCsvData(null); setRankings(null); }}>Esci</button>
+          >← INDIETRO</button>
+          <span style={{ 
+            padding: '6px 12px', 
+            background: 'linear-gradient(135deg, #2AAA8A, #20917A)', 
+            color: '#FFF', 
+            borderRadius: 8, 
+            fontSize: 11, 
+            fontWeight: 600 
+          }}>{user.role.toUpperCase()}</span>
+          <button style={{ 
+            padding: '8px 16px', 
+            fontSize: 12, 
+            background: 'transparent', 
+            border: '1px solid #E5E7EB',
+            borderRadius: 8,
+            color: '#6B7280',
+            cursor: 'pointer',
+            fontWeight: 500
+          }} onClick={() => { setUser(null); setCsvData(null); setRankings(null); }}>Esci</button>
         </div>
       </header>
       <main style={{ display: 'flex' }}>
@@ -6820,14 +6899,32 @@ export default function Home() {
                   );
                 })()}
 
-                {/* BOTTONI DOWNLOAD SLIDE */}
-                <div style={{ background: 'linear-gradient(135deg, rgba(42,170,138,0.2), rgba(42,170,138,0.05))', borderRadius: 16, padding: 20, border: '1px solid rgba(42,170,138,0.3)' }}>
-                  <div style={{ fontSize: 16, color: '#2AAA8A', fontWeight: 700, marginBottom: 5 }}>📥 SCARICA PER SLIDE</div>
-                  <div style={{ fontSize: 12, color: '#666666', marginBottom: 15 }}>PNG 1920x1080 (16:9) - Sfondo verde corporate</div>
-                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                    <button style={{ ...S.btn, flex: 1, minWidth: 180, padding: '14px 20px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', fontSize: 14 }} onClick={() => downloadSlidePNG('full')}>📊 Podio + Classifica</button>
-                    <button style={{ ...S.btn, flex: 1, minWidth: 180, padding: '14px 20px', background: 'linear-gradient(135deg, #FFD700, #20917A)', color: '#FFFFFF', fontSize: 14 }} onClick={() => downloadSlidePNG('solo')}>🏆 Solo Podio</button>
-                  </div>
+                {/* BOTTONE SCREENSHOT TUTTE LE SLIDE */}
+                <div style={{ 
+                  background: 'linear-gradient(135deg, rgba(42,170,138,0.15), rgba(42,170,138,0.05))', 
+                  borderRadius: 16, 
+                  padding: 20, 
+                  border: '1px solid rgba(42,170,138,0.3)',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: 14, color: '#2AAA8A', fontWeight: 700, marginBottom: 8 }}>📷 Esporta per Presentazione</div>
+                  <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 16 }}>Genera PNG alta risoluzione di tutte le sezioni del Report</div>
+                  <button 
+                    onClick={screenshotAllSections}
+                    style={{ 
+                      padding: '14px 28px', 
+                      background: 'linear-gradient(135deg, #2AAA8A, #20917A)', 
+                      color: '#FFF', 
+                      border: 'none', 
+                      borderRadius: 10, 
+                      fontSize: 14, 
+                      fontWeight: 600, 
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 15px rgba(42,170,138,0.3)'
+                    }}
+                  >
+                    📷 Scarica Tutte le Slide (ZIP)
+                  </button>
                 </div>
               </div>
             );
