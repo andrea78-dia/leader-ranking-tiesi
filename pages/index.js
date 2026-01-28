@@ -1,6 +1,81 @@
 import React, { useState } from 'react';
 import Head from 'next/head';
 
+// ═══════════════════════════════════════════════════════════════════════════
+// 🎨 DESIGN SYSTEM - Stili uniformi per tutta l'app
+// ═══════════════════════════════════════════════════════════════════════════
+const DS = {
+  // Colori
+  colors: {
+    primary: '#2AAA8A',
+    primaryDark: '#20917A',
+    secondary: '#F59E0B',
+    success: '#10B981',
+    danger: '#EF4444',
+    warning: '#F59E0B',
+    
+    bgPage: '#F8F9FA',
+    bgCard: '#FFFFFF',
+    bgMuted: '#F9FAFB',
+    
+    border: '#E5E7EB',
+    borderLight: '#F3F4F6',
+    
+    textPrimary: '#1F2937',
+    textSecondary: '#6B7280',
+    textMuted: '#9CA3AF',
+    
+    // Prodotti
+    fv: '#15803D',
+    fvBg: '#F0FDF4',
+    fvBorder: '#BBF7D0',
+    
+    la: '#B45309',
+    laBg: '#FFFBEB',
+    laBorder: '#FCD34D',
+    
+    seminari: '#7C3AED',
+    seminariBg: '#F5F3FF',
+    seminariBorder: '#C4B5FD',
+    
+    ivd: '#0D9488',
+    ivdBg: '#F0FDFA',
+    ivdBorder: '#99F6E4'
+  },
+  
+  // Border radius
+  radius: {
+    sm: 8,
+    md: 12,
+    lg: 16,
+    xl: 20,
+    full: 9999
+  },
+  
+  // Shadows
+  shadow: {
+    sm: '0 1px 2px rgba(0,0,0,0.05)',
+    md: '0 4px 6px -1px rgba(0,0,0,0.1)',
+    lg: '0 10px 15px -3px rgba(0,0,0,0.1)'
+  },
+  
+  // Card styles presets
+  card: {
+    background: '#FFFFFF',
+    borderRadius: 16,
+    border: '1px solid #E5E7EB',
+    padding: 20,
+    shadow: '0 1px 3px rgba(0,0,0,0.05)'
+  },
+  
+  cardInner: {
+    background: '#F9FAFB',
+    borderRadius: 12,
+    border: '1px solid #E5E7EB',
+    padding: 16
+  }
+};
+
 const USERS = {
   admin: { password: 'admin2026', role: 'admin', name: 'Admin' },
   assistente: { password: 'assist2026', role: 'assistente', name: 'Assistente' },
@@ -2202,7 +2277,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v14.2 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v14.3 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -3629,7 +3704,7 @@ export default function Home() {
           
           {/* TOTALE */}
           <div style={{
-            background: 'linear-gradient(135deg, #2AAA8A 0%, #20917A 100%)',
+            background: 'linear-gradient(135deg, DS.colors.primary 0%, #20917A 100%)',
             borderRadius: 16,
             padding: 20,
             color: '#FFF'
@@ -3657,7 +3732,7 @@ export default function Home() {
         {/* Riga info: Seminari + Nuovi IVD + Alert */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
           {/* Seminari */}
-          <div style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
+          <div style={{ background: '#F9FAFB', borderRadius: DS.radius.md, padding: DS.cardInner.padding, border: '1px solid #E5E7EB' }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#6B7280', marginBottom: 10 }}>🎓 Seminari</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
@@ -3680,7 +3755,7 @@ export default function Home() {
           </div>
           
           {/* Nuovi IVD */}
-          <div style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
+          <div style={{ background: '#F9FAFB', borderRadius: DS.radius.md, padding: DS.cardInner.padding, border: '1px solid #E5E7EB' }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#6B7280', marginBottom: 10 }}>👥 Nuovi IVD Attivati</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
@@ -3702,7 +3777,7 @@ export default function Home() {
           </div>
           
           {/* Incidenza Nuovi IVD */}
-          <div style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
+          <div style={{ background: '#F9FAFB', borderRadius: DS.radius.md, padding: DS.cardInner.padding, border: '1px solid #E5E7EB' }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#6B7280', marginBottom: 10 }}>📈 Incidenza Nuovi IVD</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
               <div style={{ textAlign: 'center' }}>
@@ -3840,7 +3915,7 @@ export default function Home() {
     );
 
     return (
-      <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 24, border: '1px solid #E5E7EB', marginBottom: 20 }}>
+      <div style={{ background: '#FFFFFF', borderRadius: DS.radius.lg, padding: DS.card.padding, border: '1px solid #E5E7EB', marginBottom: 20 }}>
         <h3 style={{ color: '#1F2937', fontSize: 18, margin: '0 0 20px', fontWeight: 700 }}>
           📊 Analisi Conversioni
           <span style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 400, marginLeft: 8 }}>Passaggi di stato</span>
@@ -3849,7 +3924,7 @@ export default function Home() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
           {/* FV Funnel */}
           {fv && (
-            <div style={{ background: '#F9FAFB', borderRadius: 16, padding: 16 }}>
+            <div style={{ background: '#F9FAFB', borderRadius: DS.radius.lg, padding: DS.cardInner.padding }}>
               <div style={{ 
                 fontSize: 14, 
                 fontWeight: 700, 
@@ -3891,7 +3966,7 @@ export default function Home() {
           
           {/* LA Funnel */}
           {la && (
-            <div style={{ background: '#F9FAFB', borderRadius: 16, padding: 16 }}>
+            <div style={{ background: '#F9FAFB', borderRadius: DS.radius.lg, padding: DS.cardInner.padding }}>
               <div style={{ 
                 fontSize: 14, 
                 fontWeight: 700, 
@@ -3958,7 +4033,7 @@ export default function Home() {
     );
 
     return (
-      <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 24, border: '1px solid #E2E8F0', marginBottom: 20 }}>
+      <div style={{ background: '#FFFFFF', borderRadius: DS.radius.lg, padding: DS.card.padding, border: '1px solid #E2E8F0', marginBottom: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div>
             <h3 style={{ color: '#1E293B', fontSize: 18, margin: 0, fontWeight: 700 }}>👥 Performance Rete Vendita</h3>
@@ -4047,7 +4122,7 @@ export default function Home() {
         
         {/* 🏆 BEST PERFORMERS - Migliori K e NW per categoria */}
         {reportData.bestPerformers && (
-          <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 24, border: '1px solid #E5E7EB' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: DS.radius.lg, padding: DS.card.padding, border: '1px solid #E5E7EB' }}>
             <div style={{ marginBottom: 20 }}>
               <h3 style={{ color: '#1F2937', fontSize: 18, margin: 0, fontWeight: 700 }}>🏆 Best Performers</h3>
               <p style={{ color: '#6B7280', fontSize: 12, margin: '4px 0 0' }}>
@@ -4057,7 +4132,7 @@ export default function Home() {
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
               {/* COLONNA K MANAGER */}
-              <div style={{ background: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)', borderRadius: 16, padding: 20, border: '2px solid #FCD34D' }}>
+              <div style={{ background: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)', borderRadius: DS.radius.lg, padding: DS.card.padding, border: '2px solid #FCD34D' }}>
                 <div style={{ fontSize: 16, fontWeight: 700, color: '#B45309', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                   👑 TOP K MANAGER
                 </div>
@@ -4126,7 +4201,7 @@ export default function Home() {
               </div>
               
               {/* COLONNA NETWORKER */}
-              <div style={{ background: 'linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 100%)', borderRadius: 16, padding: 20, border: '2px solid #6EE7B7' }}>
+              <div style={{ background: 'linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 100%)', borderRadius: DS.radius.lg, padding: DS.card.padding, border: '2px solid #6EE7B7' }}>
                 <div style={{ fontSize: 16, fontWeight: 700, color: '#059669', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                   ⭐ TOP NETWORKER
                 </div>
@@ -4211,7 +4286,7 @@ export default function Home() {
         
         {/* CALENDARIO CON DRILL-DOWN - GRIGLIA 3x3 */}
         {Object.keys(reportData.heatmapMesi).length > 0 && (
-          <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 24, border: '1px solid #E5E7EB' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: DS.radius.lg, padding: DS.card.padding, border: '1px solid #E5E7EB' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <div>
                 <h3 style={{ color: '#1F2937', fontSize: 18, margin: 0, fontWeight: 700 }}>🗓️ Calendario Attività</h3>
@@ -4593,7 +4668,7 @@ export default function Home() {
                 { title: 'NETWORKER', emoji: '⭐', data: reportData.pilastri.fv.classifiche.nw, color: '#15803D' },
                 { title: 'SDP', emoji: '🔵', data: reportData.pilastri.fv.classifiche.sdp, color: '#2563EB' }
               ].map(({ title, emoji, data, color }) => (
-                <div key={title} style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
+                <div key={title} style={{ background: '#F9FAFB', borderRadius: DS.radius.md, padding: DS.cardInner.padding, border: '1px solid #E5E7EB' }}>
                   <div style={{ fontSize: 13, color: color, fontWeight: 700, marginBottom: 12 }}>{emoji} {title} <span style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 400 }}>({data.length})</span></div>
                   {/* Header 4 colonne */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 40px)', gap: 4, marginBottom: 8, paddingBottom: 8, borderBottom: '2px solid #E5E7EB' }}>
@@ -4784,7 +4859,7 @@ export default function Home() {
                 { title: 'NETWORKER', emoji: '⭐', data: reportData.pilastri.energy.classifiche.nw, color: '#15803D' },
                 { title: 'SDP', emoji: '🔵', data: reportData.pilastri.energy.classifiche.sdp, color: '#2563EB' }
               ].map(({ title, emoji, data, color }) => (
-                <div key={title} style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
+                <div key={title} style={{ background: '#F9FAFB', borderRadius: DS.radius.md, padding: DS.cardInner.padding, border: '1px solid #E5E7EB' }}>
                   <div style={{ fontSize: 13, color: color, fontWeight: 700, marginBottom: 12 }}>{emoji} {title} <span style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 400 }}>({data.length})</span></div>
                   {/* Header 4 colonne */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 40px)', gap: 4, marginBottom: 8, paddingBottom: 8, borderBottom: '2px solid #E5E7EB' }}>
@@ -4877,7 +4952,7 @@ export default function Home() {
                           <div style={{ fontSize: 11, color: '#2AAA8A', fontWeight: 600, marginBottom: 8 }}>📝 ISCRITTI ({iscritti.reduce((s,[,c]) => s+c, 0)})</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                             {iscritti.map(([stato, count], i) => (
-                              <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #2AAA8A' }}>
+                              <span key={i} style={{ background: '#FFF', padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid DS.colors.primary' }}>
                                 {stato} <strong style={{ color: '#2AAA8A' }}>{count}</strong>
                               </span>
                             ))}
@@ -4933,7 +5008,7 @@ export default function Home() {
                 { title: 'NETWORKER', emoji: '⭐', data: reportData.pilastri.collaboratori.classifiche.nw, color: '#15803D' },
                 { title: 'SDP', emoji: '🔵', data: reportData.pilastri.collaboratori.classifiche.sdp, color: '#2563EB' }
               ].map(({ title, emoji, data, color }) => (
-                <div key={title} style={{ background: '#F9FAFB', borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
+                <div key={title} style={{ background: '#F9FAFB', borderRadius: DS.radius.md, padding: DS.cardInner.padding, border: '1px solid #E5E7EB' }}>
                   <div style={{ fontSize: 13, color: color, fontWeight: 700, marginBottom: 12 }}>{emoji} {title} <span style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 400 }}>({data.length})</span></div>
                   {/* Header 4 colonne */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 40px)', gap: 4, marginBottom: 8, paddingBottom: 8, borderBottom: '2px solid #E5E7EB' }}>
@@ -4972,7 +5047,7 @@ export default function Home() {
         
         {/* ALERT DA ATTIVARE - FULL WIDTH, PIÙ SPAZIOSO */}
         {reportData.alertDaAttivare && reportData.alertDaAttivare.totale > 0 && (
-          <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 24, border: '1px solid #E5E7EB' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: DS.radius.lg, padding: DS.card.padding, border: '1px solid #E5E7EB' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontSize: 28 }}>🚨</span>
@@ -5021,7 +5096,7 @@ export default function Home() {
             {/* 3 LISTE AFFIANCATE */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
               {/* VERDE 0-30g */}
-              <div style={{ background: '#F0FDF4', borderRadius: 12, padding: 16, border: '1px solid #BBF7D0' }}>
+              <div style={{ background: '#F0FDF4', borderRadius: DS.radius.md, padding: DS.cardInner.padding, border: '1px solid #BBF7D0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <span style={{ fontSize: 13, color: '#15803D', fontWeight: 700 }}>🟢 VERDE (0-30g): {reportData.alertDaAttivare.verde.length}</span>
                   <button onClick={() => {
@@ -5048,7 +5123,7 @@ export default function Home() {
               </div>
               
               {/* GIALLO 31-60g */}
-              <div style={{ background: '#FFFBEB', borderRadius: 12, padding: 16, border: '1px solid #FCD34D' }}>
+              <div style={{ background: '#FFFBEB', borderRadius: DS.radius.md, padding: DS.cardInner.padding, border: '1px solid #FCD34D' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <span style={{ fontSize: 13, color: '#B45309', fontWeight: 700 }}>🟡 GIALLO (31-60g): {reportData.alertDaAttivare.giallo.length}</span>
                   <button onClick={() => {
@@ -5075,7 +5150,7 @@ export default function Home() {
               </div>
               
               {/* ROSSO 61-150g */}
-              <div style={{ background: '#FEF2F2', borderRadius: 12, padding: 16, border: '1px solid #FECACA' }}>
+              <div style={{ background: '#FEF2F2', borderRadius: DS.radius.md, padding: DS.cardInner.padding, border: '1px solid #FECACA' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <span style={{ fontSize: 13, color: '#DC2626', fontWeight: 700 }}>🔴 ROSSO (61-150g): {reportData.alertDaAttivare.rosso.filter(a => a.giorni <= 150).length}</span>
                   <button onClick={() => {
@@ -5107,7 +5182,7 @@ export default function Home() {
         
         {/* TRACKER COACHING - FULL WIDTH, PIÙ SPAZIOSO */}
         {reportData.trackerCoaching && reportData.trackerCoaching.totale > 0 && (
-          <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 24, border: '1px solid #E5E7EB' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: DS.radius.lg, padding: DS.card.padding, border: '1px solid #E5E7EB' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontSize: 28 }}>🎯</span>
@@ -5257,7 +5332,7 @@ export default function Home() {
             )}
             
             {/* RIEPILOGO FV - INSERITI vs EFFETTIVI */}
-            <div style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, marginBottom: 15, border: '1px solid #E5E7EB' }}>
+            <div style={{ background: '#FFFFFF', borderRadius: DS.radius.lg, padding: DS.card.padding, marginBottom: 15, border: '1px solid #E5E7EB' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
                 <span style={{ fontSize: 14, color: '#15803D', fontWeight: 700 }}>☀️ FOTOVOLTAICO</span>
                 <span style={{ fontSize: 9, color: '#6B7280' }}>
@@ -5318,7 +5393,7 @@ export default function Home() {
             </div>
             
             {/* RIEPILOGO LA - FATTURATO + PUNTI */}
-            <div style={{ background: '#FFFFFF', borderRadius: 16, padding: 20, marginBottom: 20, border: '1px solid #E5E7EB' }}>
+            <div style={{ background: '#FFFFFF', borderRadius: DS.radius.lg, padding: DS.card.padding, marginBottom: 20, border: '1px solid #E5E7EB' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
                 <span style={{ fontSize: 14, color: '#B45309', fontWeight: 700 }}>⚡ LUCE AMICA</span>
                 <span style={{ fontSize: 9, color: '#6B7280' }}>
@@ -5404,7 +5479,7 @@ export default function Home() {
             </div>
             
             {/* TOTALE COMPLESSIVO LEADER */}
-            <div style={{ background: 'linear-gradient(135deg, #2AAA8A 0%, #20917A 100%)', borderRadius: 16, padding: 20, marginBottom: 10, color: '#FFF', textAlign: 'center' }}>
+            <div style={{ background: 'linear-gradient(135deg, DS.colors.primary 0%, #20917A 100%)', borderRadius: DS.radius.lg, padding: DS.card.padding, marginBottom: 10, color: '#FFF', textAlign: 'center' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 15 }}>
                 <div>
                   <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }}>💰 FATTURATO TOTALE EFFETTIVO</div>
@@ -5515,7 +5590,7 @@ export default function Home() {
         )}
         
         {/* SEZIONE DOWNLOAD & EXPORT */}
-        <div style={{ background: '#FFFFFF', borderRadius: 20, padding: 24, border: '1px solid #E5E7EB' }}>
+        <div style={{ background: '#FFFFFF', borderRadius: DS.radius.lg, padding: DS.card.padding, border: '1px solid #E5E7EB' }}>
           <div style={{ marginBottom: 20 }}>
             <h3 style={{ color: '#1F2937', fontSize: 18, margin: 0, fontWeight: 700 }}>📥 Download & Export</h3>
             <p style={{ color: '#6B7280', fontSize: 12, margin: '4px 0 0' }}>
@@ -5527,7 +5602,7 @@ export default function Home() {
           <div style={{ display: 'flex', gap: 15, flexWrap: 'wrap' }}>
             <button 
               onClick={downloadReportPNG}
-              style={{ padding: '16px 28px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', color: '#FFF', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 4px 12px rgba(42,170,138,0.3)' }}
+              style={{ padding: '16px 28px', background: 'linear-gradient(135deg, DS.colors.primary, #20917A)', color: '#FFF', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 4px 12px rgba(42,170,138,0.3)' }}
             >
               <span style={{ fontSize: 24 }}>📷</span>
               <div style={{ textAlign: 'left' }}>
@@ -5567,7 +5642,7 @@ export default function Home() {
         to { opacity: 1; transform: translateY(0); }
       }
       .login-card { animation: fadeInUp 0.6s ease-out; }
-      .login-input:focus { border-color: #2AAA8A; box-shadow: 0 0 0 3px rgba(42,170,138,0.15); outline: none; }
+      .login-input:focus { border-color: DS.colors.primary; box-shadow: 0 0 0 3px rgba(42,170,138,0.15); outline: none; }
       .login-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(42,170,138,0.35); }
     `}</style>
   </Head>
@@ -5632,7 +5707,7 @@ export default function Home() {
           {loginError && <p style={{ color: '#E53935', fontSize: 14, margin: 0, textAlign: 'center' }}>{loginError}</p>}
           <button 
             className="login-btn" 
-            style={{ padding: '16px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #2AAA8A, #1E8A6E)', color: '#FFF', fontSize: 15, fontWeight: 600, cursor: 'pointer', marginTop: 8, transition: 'all 0.2s ease', letterSpacing: '1px' }} 
+            style={{ padding: '16px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, DS.colors.primary, #1E8A6E)', color: '#FFF', fontSize: 15, fontWeight: 600, cursor: 'pointer', marginTop: 8, transition: 'all 0.2s ease', letterSpacing: '1px' }} 
             onClick={handleLogin}
           >
             ACCEDI
@@ -5640,7 +5715,7 @@ export default function Home() {
         </div>
         
         {/* Footer versione */}
-        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v14.2</p>
+        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v14.3</p>
       </div>
     </div></>);
 
@@ -5681,7 +5756,7 @@ export default function Home() {
             onClick={() => setActiveTab('dashboard')}
             style={{ 
               padding: '20px', 
-              background: activeTab === 'dashboard' ? 'linear-gradient(135deg, #2AAA8A, #20917A)' : darkMode ? '#16213e' : '#FFFFFF', 
+              background: activeTab === 'dashboard' ? 'linear-gradient(135deg, DS.colors.primary, #20917A)' : darkMode ? '#16213e' : '#FFFFFF', 
               color: activeTab === 'dashboard' ? '#FFF' : darkMode ? '#AAA' : '#666666',
               border: activeTab === 'dashboard' ? 'none' : `1px solid ${darkMode ? '#0f3460' : '#E0E0E0'}`,
               borderRadius: 16, 
@@ -5731,7 +5806,7 @@ export default function Home() {
               >
                 <input type="file" accept=".csv" id="csvUploadMain" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) processFile(e.target.files[0]); }} />
                 <label htmlFor="csvUploadMain" style={{ cursor: 'pointer', display: 'block' }}>
-                  <div style={{ width: 70, height: 70, borderRadius: 20, background: 'linear-gradient(135deg, #2AAA8A, #20917A)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 8px 25px rgba(42,170,138,0.3)' }}>
+                  <div style={{ width: 70, height: 70, borderRadius: 20, background: 'linear-gradient(135deg, DS.colors.primary, #20917A)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 8px 25px rgba(42,170,138,0.3)' }}>
                     <span style={{ fontSize: 30, filter: 'brightness(10)' }}>📤</span>
                   </div>
                   <div style={{ color: '#1a1a2e', fontWeight: 600, fontSize: 16, marginBottom: 6 }}>Carica file CSV</div>
@@ -5758,7 +5833,7 @@ export default function Home() {
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 15, marginBottom: 25 }}>
                 {/* IVD */}
-                <div style={{ background: reportCSVs.ivd ? 'linear-gradient(135deg, rgba(76,175,80,0.08), rgba(76,175,80,0.02))' : 'linear-gradient(135deg, #FAFAFA, #F5F5F5)', borderRadius: 16, padding: 20, border: reportCSVs.ivd ? '2px solid #4CAF50' : '1px solid #E8E8E8', transition: 'all 0.2s ease' }}>
+                <div style={{ background: reportCSVs.ivd ? 'linear-gradient(135deg, rgba(76,175,80,0.08), rgba(76,175,80,0.02))' : 'linear-gradient(135deg, #FAFAFA, #F5F5F5)', borderRadius: DS.radius.lg, padding: DS.card.padding, border: reportCSVs.ivd ? '2px solid #4CAF50' : '1px solid #E8E8E8', transition: 'all 0.2s ease' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                     <div style={{ width: 36, height: 36, borderRadius: 10, background: '#FF9800', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <span style={{ fontSize: 16, filter: 'brightness(10)' }}>📋</span>
@@ -5772,7 +5847,7 @@ export default function Home() {
                 </div>
                 
                 {/* Luce Amica */}
-                <div style={{ background: reportCSVs.energy ? 'linear-gradient(135deg, rgba(76,175,80,0.08), rgba(76,175,80,0.02))' : 'linear-gradient(135deg, #FAFAFA, #F5F5F5)', borderRadius: 16, padding: 20, border: reportCSVs.energy ? '2px solid #4CAF50' : '1px solid #E8E8E8', transition: 'all 0.2s ease' }}>
+                <div style={{ background: reportCSVs.energy ? 'linear-gradient(135deg, rgba(76,175,80,0.08), rgba(76,175,80,0.02))' : 'linear-gradient(135deg, #FAFAFA, #F5F5F5)', borderRadius: DS.radius.lg, padding: DS.card.padding, border: reportCSVs.energy ? '2px solid #4CAF50' : '1px solid #E8E8E8', transition: 'all 0.2s ease' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                     <div style={{ width: 36, height: 36, borderRadius: 10, background: '#FFD700', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <span style={{ fontSize: 16 }}>⚡</span>
@@ -5786,7 +5861,7 @@ export default function Home() {
                 </div>
                 
                 {/* FV */}
-                <div style={{ background: reportCSVs.fv ? 'linear-gradient(135deg, rgba(76,175,80,0.08), rgba(76,175,80,0.02))' : 'linear-gradient(135deg, #FAFAFA, #F5F5F5)', borderRadius: 16, padding: 20, border: reportCSVs.fv ? '2px solid #4CAF50' : '1px solid #E8E8E8', transition: 'all 0.2s ease' }}>
+                <div style={{ background: reportCSVs.fv ? 'linear-gradient(135deg, rgba(76,175,80,0.08), rgba(76,175,80,0.02))' : 'linear-gradient(135deg, #FAFAFA, #F5F5F5)', borderRadius: DS.radius.lg, padding: DS.card.padding, border: reportCSVs.fv ? '2px solid #4CAF50' : '1px solid #E8E8E8', transition: 'all 0.2s ease' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                     <div style={{ width: 36, height: 36, borderRadius: 10, background: '#2AAA8A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <span style={{ fontSize: 16, filter: 'brightness(10)' }}>☀️</span>
@@ -5800,7 +5875,7 @@ export default function Home() {
                 </div>
                 
                 {/* Seminari */}
-                <div style={{ background: reportCSVs.consultings ? 'linear-gradient(135deg, rgba(76,175,80,0.08), rgba(76,175,80,0.02))' : 'linear-gradient(135deg, #FAFAFA, #F5F5F5)', borderRadius: 16, padding: 20, border: reportCSVs.consultings ? '2px solid #4CAF50' : '1px solid #E8E8E8', transition: 'all 0.2s ease' }}>
+                <div style={{ background: reportCSVs.consultings ? 'linear-gradient(135deg, rgba(76,175,80,0.08), rgba(76,175,80,0.02))' : 'linear-gradient(135deg, #FAFAFA, #F5F5F5)', borderRadius: DS.radius.lg, padding: DS.card.padding, border: reportCSVs.consultings ? '2px solid #4CAF50' : '1px solid #E8E8E8', transition: 'all 0.2s ease' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                     <div style={{ width: 36, height: 36, borderRadius: 10, background: '#9C27B0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <span style={{ fontSize: 16, filter: 'brightness(10)' }}>🎓</span>
@@ -5816,7 +5891,7 @@ export default function Home() {
               
               <div style={{ display: 'flex', gap: 12 }}>
                 <button 
-                  style={{ flex: 2, padding: '16px 24px', background: Object.values(reportCSVs).some(v => v) ? 'linear-gradient(135deg, #2AAA8A, #1E8A6E)' : '#E8E8E8', color: Object.values(reportCSVs).some(v => v) ? '#FFF' : '#AAA', border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 600, cursor: Object.values(reportCSVs).some(v => v) ? 'pointer' : 'not-allowed', boxShadow: Object.values(reportCSVs).some(v => v) ? '0 8px 25px rgba(42,170,138,0.3)' : 'none', transition: 'all 0.2s ease' }} 
+                  style={{ flex: 2, padding: '16px 24px', background: Object.values(reportCSVs).some(v => v) ? 'linear-gradient(135deg, DS.colors.primary, #1E8A6E)' : '#E8E8E8', color: Object.values(reportCSVs).some(v => v) ? '#FFF' : '#AAA', border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 600, cursor: Object.values(reportCSVs).some(v => v) ? 'pointer' : 'not-allowed', boxShadow: Object.values(reportCSVs).some(v => v) ? '0 8px 25px rgba(42,170,138,0.3)' : 'none', transition: 'all 0.2s ease' }} 
                   onClick={() => setReportData(generateReportData())}
                   disabled={!Object.values(reportCSVs).some(v => v)}
                 >GENERA REPORT</button>
@@ -5834,7 +5909,7 @@ export default function Home() {
           </div>
         )}
       </main>
-      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v14.2 • Leader Ranking</footer>
+      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v14.3 • Leader Ranking</footer>
     </div></>);
 
   // PREVIEW
@@ -5845,7 +5920,7 @@ export default function Home() {
       <div style={S.previewImg}><img src={previewImage} style={{ maxWidth: '100%', maxHeight: '55vh' }} /></div>
       <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 15, flexWrap: 'wrap' }}>
         <button style={{ ...S.btn, flex: 1, minWidth: 100, background: '#F5F5F5', border: '1px solid #E0E0E0', color: '#333333' }} onClick={() => setShowPreview(false)}>✕ Chiudi</button>
-        <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'linear-gradient(135deg,#2AAA8A,#20917A)', color: '#FFFFFF' }} onClick={download}>📥 SCARICA</button>
+        <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'linear-gradient(135deg,DS.colors.primary,#20917A)', color: '#FFFFFF' }} onClick={download}>📥 SCARICA</button>
         <button style={{ ...S.btn, flex: 1, minWidth: 100, background: 'linear-gradient(135deg,#FFD700,#FFC107)', color: '#333333' }} onClick={handleSendToBot}>🤖 INVIA A BOT</button>
       </div>
       {sendStatus && <p style={{ textAlign: 'center', marginTop: 10, color: sendStatus.includes('✅') ? '#4CAF50' : sendStatus.includes('❌') ? '#f44' : '#FFD700' }}>{sendStatus}</p>}
@@ -5973,7 +6048,7 @@ export default function Home() {
                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <span style={{ width: 28, fontSize: 13, color: '#666666', fontWeight: 600 }}>{i + 4}°</span>
                           <div style={{ flex: 1, height: 28, background: '#F5F5F5', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
-                            <div style={{ width: `${(p.v1 / stats.maxV1) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #2AAA8A, #4DB6AC)', borderRadius: 6 }} />
+                            <div style={{ width: `${(p.v1 / stats.maxV1) * 100}%`, height: '100%', background: 'linear-gradient(90deg, DS.colors.primary, #4DB6AC)', borderRadius: 6 }} />
                             <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: '#333333', fontWeight: 500 }}>{p.name}</span>
                           </div>
                           <span style={{ width: 28, fontSize: 14, fontWeight: 700, color: '#2AAA8A', textAlign: 'right' }}>{p.v1}</span>
@@ -6235,7 +6310,7 @@ export default function Home() {
                   return (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
                       <ClassificaTable title="K MANAGER" emoji="👑" data={pies.k} color="#FFD700" />
-                      <ClassificaTable title="NETWORKER" emoji="⭐" data={pies.nw} color="#2AAA8A" />
+                      <ClassificaTable title="NETWORKER" emoji="⭐" data={pies.nw} color='#2AAA8A' />
                       <ClassificaTable title="SDP" emoji="🔵" data={rankings?.sdp_inseriti || []} color="#2196F3" />
                       <ClassificaTable title="IVD" emoji="🟠" data={rankings?.ivd_inseriti || []} color="#FF9800" />
                     </div>
@@ -6243,11 +6318,11 @@ export default function Home() {
                 })()}
 
                 {/* BOTTONI DOWNLOAD SLIDE */}
-                <div style={{ background: 'linear-gradient(135deg, rgba(42,170,138,0.2), rgba(42,170,138,0.05))', borderRadius: 16, padding: 20, border: '1px solid rgba(42,170,138,0.3)' }}>
+                <div style={{ background: 'linear-gradient(135deg, rgba(42,170,138,0.2), rgba(42,170,138,0.05))', borderRadius: DS.radius.lg, padding: DS.card.padding, border: '1px solid rgba(42,170,138,0.3)' }}>
                   <div style={{ fontSize: 16, color: '#2AAA8A', fontWeight: 700, marginBottom: 5 }}>📥 SCARICA PER SLIDE</div>
                   <div style={{ fontSize: 12, color: '#666666', marginBottom: 15 }}>PNG 1920x1080 (16:9) - Sfondo verde corporate</div>
                   <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                    <button style={{ ...S.btn, flex: 1, minWidth: 180, padding: '14px 20px', background: 'linear-gradient(135deg, #2AAA8A, #20917A)', fontSize: 14 }} onClick={() => downloadSlidePNG('full')}>📊 Podio + Classifica</button>
+                    <button style={{ ...S.btn, flex: 1, minWidth: 180, padding: '14px 20px', background: 'linear-gradient(135deg, DS.colors.primary, #20917A)', fontSize: 14 }} onClick={() => downloadSlidePNG('full')}>📊 Podio + Classifica</button>
                     <button style={{ ...S.btn, flex: 1, minWidth: 180, padding: '14px 20px', background: 'linear-gradient(135deg, #FFD700, #20917A)', color: '#FFFFFF', fontSize: 14 }} onClick={() => downloadSlidePNG('solo')}>🏆 Solo Podio</button>
                   </div>
                 </div>
@@ -6256,7 +6331,7 @@ export default function Home() {
           })()}
 
           {/* CLASSIFICHE TAB */}
-          {rankings && activeTab === 'classifiche' ? (<div style={S.rankCard}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 15 }}><div><h2 style={{ color: config.color, fontSize: 18, margin: 0 }}>{config.emoji} {config.label}</h2><p style={{ color: '#666666', fontSize: 12, marginTop: 4 }}>{getData().length} partecipanti • {getClassificaTotal()} contratti • {eventDate}</p></div><div style={{ display: 'flex', gap: 15 }}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: config.color }}>{getClassificaTotal()}</div><div style={{ fontSize: 9, color: '#999999' }}>{labels.c1}</div></div><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</div><div style={{ fontSize: 9, color: '#999999' }}>{labels.c2}</div></div></div></div><div style={{ overflowX: 'auto', maxHeight: '50vh', overflowY: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 300 }}><thead><tr style={{ borderBottom: '1px solid #E0E0E0' }}><th style={S.th}>#</th><th style={{ ...S.th, textAlign: 'left' }}>Nome</th><th style={S.th}>{labels.c1}</th>{isExclusive() && <><th style={S.th}>%</th><th style={S.th}>{labels.c2}</th></>}</tr></thead><tbody>{getData().map(([name, s], i) => { const p = s.v1 > 0 ? Math.round(s.v2 / s.v1 * 100) : 0; return (<tr key={name} style={{ borderBottom: '1px solid #F5F5F5', ...(i < 3 ? { background: `${config.color}10` } : {}) }}><td style={{ padding: 10, textAlign: 'center' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td><td style={{ padding: 10, fontWeight: i < 3 ? 700 : 500, fontSize: 13 }}>{name}</td><td style={{ padding: 10, textAlign: 'center', color: config.color, fontWeight: 700 }}>{s.v1}</td>{isExclusive() && <><td style={{ padding: 10, textAlign: 'center', color: p >= 50 ? '#4CAF50' : '#FFD700', fontSize: 12 }}>{p}%</td><td style={{ padding: 10, textAlign: 'center', color: '#4CAF50', fontWeight: 700 }}>{s.v2}</td></>}</tr>); })}</tbody></table></div>{(user.role === 'admin' || user.role === 'assistente') && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}>📸 PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg,#2AAA8A,#4DB6AC)' }} onClick={() => handleSendToBot()}>🤖 Invia a Bot</button>{sendStatus && <span style={{ fontSize: 13, color: sendStatus.includes('✅') ? '#4CAF50' : sendStatus.includes('❌') ? '#f44' : '#FFD700' }}>{sendStatus}</span>}</div>)}{user.role === 'k' && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}>📸 PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg,#2AAA8A,#20917A)' }} onClick={() => handleSendToBot()}>🤖 Invia a Bot</button></div>)}</div>) : !rankings && (<div style={{ textAlign: 'center', padding: 60, color: '#999999' }}><div style={{ fontSize: 50 }}>📊</div><p>Carica un CSV per iniziare</p></div>)}
+          {rankings && activeTab === 'classifiche' ? (<div style={S.rankCard}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 15 }}><div><h2 style={{ color: config.color, fontSize: 18, margin: 0 }}>{config.emoji} {config.label}</h2><p style={{ color: '#666666', fontSize: 12, marginTop: 4 }}>{getData().length} partecipanti • {getClassificaTotal()} contratti • {eventDate}</p></div><div style={{ display: 'flex', gap: 15 }}><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: config.color }}>{getClassificaTotal()}</div><div style={{ fontSize: 9, color: '#999999' }}>{labels.c1}</div></div><div style={{ textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, color: '#4CAF50' }}>{getData().reduce((s,[,x])=>s+x.v2,0)}</div><div style={{ fontSize: 9, color: '#999999' }}>{labels.c2}</div></div></div></div><div style={{ overflowX: 'auto', maxHeight: '50vh', overflowY: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 300 }}><thead><tr style={{ borderBottom: '1px solid #E0E0E0' }}><th style={S.th}>#</th><th style={{ ...S.th, textAlign: 'left' }}>Nome</th><th style={S.th}>{labels.c1}</th>{isExclusive() && <><th style={S.th}>%</th><th style={S.th}>{labels.c2}</th></>}</tr></thead><tbody>{getData().map(([name, s], i) => { const p = s.v1 > 0 ? Math.round(s.v2 / s.v1 * 100) : 0; return (<tr key={name} style={{ borderBottom: '1px solid #F5F5F5', ...(i < 3 ? { background: `${config.color}10` } : {}) }}><td style={{ padding: 10, textAlign: 'center' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td><td style={{ padding: 10, fontWeight: i < 3 ? 700 : 500, fontSize: 13 }}>{name}</td><td style={{ padding: 10, textAlign: 'center', color: config.color, fontWeight: 700 }}>{s.v1}</td>{isExclusive() && <><td style={{ padding: 10, textAlign: 'center', color: p >= 50 ? '#4CAF50' : '#FFD700', fontSize: 12 }}>{p}%</td><td style={{ padding: 10, textAlign: 'center', color: '#4CAF50', fontWeight: 700 }}>{s.v2}</td></>}</tr>); })}</tbody></table></div>{(user.role === 'admin' || user.role === 'assistente') && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}>📸 PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg,DS.colors.primary,#4DB6AC)' }} onClick={() => handleSendToBot()}>🤖 Invia a Bot</button>{sendStatus && <span style={{ fontSize: 13, color: sendStatus.includes('✅') ? '#4CAF50' : sendStatus.includes('❌') ? '#f44' : '#FFD700' }}>{sendStatus}</span>}</div>)}{user.role === 'k' && (<div style={{ display: 'flex', gap: 10, marginTop: 15, flexWrap: 'wrap', alignItems: 'center' }}><button style={{ ...S.btn, flex: 1, minWidth: 120, background: `linear-gradient(135deg,${config.color},${config.color}88)` }} onClick={handleGenerate}>📸 PNG 1080x1080</button><button style={{ ...S.btn, flex: 1, minWidth: 120, background: 'linear-gradient(135deg,DS.colors.primary,#20917A)' }} onClick={() => handleSendToBot()}>🤖 Invia a Bot</button></div>)}</div>) : !rankings && (<div style={{ textAlign: 'center', padding: 60, color: '#999999' }}><div style={{ fontSize: 50 }}>📊</div><p>Carica un CSV per iniziare</p></div>)}
         </section>
       </main>
       {showConfirmModal && (
@@ -6332,9 +6407,9 @@ const S = {
   podiumNum: { fontSize: 14, fontWeight: 800, color: '#333333' },
   logoText: { fontSize: 36, marginBottom: 8, color: '#333333', letterSpacing: '-0.5px' }, 
   logoTagline: { color: '#2AAA8A', fontSize: 14, fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase' },
-  loginDivider: { height: 2, background: 'linear-gradient(90deg, transparent, #2AAA8A, transparent)', margin: '28px 0', borderRadius: 1 },
+  loginDivider: { height: 2, background: 'linear-gradient(90deg, transparent, DS.colors.primary, transparent)', margin: '28px 0', borderRadius: 1 },
   input: { width: '100%', padding: '18px 20px', fontSize: 16, border: '2px solid #E8E8E8', borderRadius: 14, background: 'rgba(255,255,255,0.9)', color: '#333333', marginBottom: 16, outline: 'none', boxSizing: 'border-box', transition: 'all 0.3s ease' },
-  btn: { padding: '18px 28px', fontSize: 16, fontWeight: 700, border: 'none', borderRadius: 14, background: 'linear-gradient(135deg, #2AAA8A 0%, #20917A 100%)', color: '#FFFFFF', cursor: 'pointer', width: '100%', boxShadow: '0 8px 25px rgba(42,170,138,0.35)', transition: 'all 0.3s ease', textTransform: 'uppercase', letterSpacing: '1px' },
+  btn: { padding: '18px 28px', fontSize: 16, fontWeight: 700, border: 'none', borderRadius: 14, background: 'linear-gradient(135deg, DS.colors.primary 0%, #20917A 100%)', color: '#FFFFFF', cursor: 'pointer', width: '100%', boxShadow: '0 8px 25px rgba(42,170,138,0.35)', transition: 'all 0.3s ease', textTransform: 'uppercase', letterSpacing: '1px' },
   categoryIcons: { display: 'flex', justifyContent: 'center', gap: 24, marginTop: 35 }, 
   catIcon: { fontSize: 28, opacity: 0.7, transition: 'all 0.3s ease' },
   homeWrap: { minHeight: '100vh', background: '#F5F5F5', fontFamily: '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif' },
@@ -6347,7 +6422,7 @@ const S = {
   homePodiumBar: { width: 50, borderRadius: '10px 10px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 8, boxShadow: '0 4px 15px rgba(0,0,0,0.1)' },
   homePodiumNum: { fontSize: 20, fontWeight: 800, color: '#333333' },
   homeTitle: { fontSize: 48, fontWeight: 300, color: '#333333', marginBottom: 8 }, homeSubtitle: { fontSize: 16, color: '#666666', fontStyle: 'italic' },
-  uploadArea: { width: '100%', maxWidth: 500, border: '3px dashed #2AAA8A50', borderRadius: 20, padding: '60px 40px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s', background: '#FFFFFF' },
+  uploadArea: { width: '100%', maxWidth: 500, border: '3px dashed DS.colors.primary50', borderRadius: 20, padding: '60px 40px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s', background: '#FFFFFF' },
   uploadAreaActive: { borderColor: '#2AAA8A', background: 'rgba(42,170,138,0.05)', transform: 'scale(1.02)' },
   uploadLabel: { cursor: 'pointer', display: 'block' }, uploadIcon: { fontSize: 70, marginBottom: 20 }, uploadText: { fontSize: 22, fontWeight: 700, color: '#2AAA8A', marginBottom: 10 }, uploadHint: { fontSize: 14, color: '#666666' },
   categoriesPreview: { display: 'flex', gap: 20, marginTop: 50, flexWrap: 'wrap', justifyContent: 'center' },
@@ -6355,7 +6430,7 @@ const S = {
   catPreviewIcon: { fontSize: 28 }, homeFooter: { marginTop: 40, color: '#999999', fontSize: 12 },
   previewWrap: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 15 },
   previewModal: { background: '#FFFFFF', borderRadius: 20, padding: 25, width: '100%', maxWidth: 600, maxHeight: '95vh', display: 'flex', flexDirection: 'column', border: '1px solid #E0E0E0', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' },
-  previewImg: { background: '#F8F9FA', borderRadius: 12, padding: 12, overflow: 'auto', flex: 1 },
+  previewImg: { background: '#F8F9FA', borderRadius: DS.radius.md, padding: 12, overflow: 'auto', flex: 1 },
   dash: { minHeight: '100vh', background: '#F5F5F5', color: '#333333', fontFamily: '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', background: '#FFFFFF', borderBottom: '1px solid #E0E0E0', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' },
   menuBtn: { background: 'none', border: 'none', color: '#333333', fontSize: 22, cursor: 'pointer' },
@@ -6370,7 +6445,7 @@ const S = {
   select: { width: '100%', padding: '10px', fontSize: 13, border: '1px solid #E0E0E0', borderRadius: 8, background: '#FFFFFF', color: '#333333', marginBottom: 8 },
   inputSm: { width: '100%', padding: '8px 10px', fontSize: 12, border: '1px solid #E0E0E0', borderRadius: 6, background: '#FFFFFF', color: '#333333', marginBottom: 8, boxSizing: 'border-box' },
   content: { flex: 1, padding: 15, minHeight: 'calc(100vh - 60px)' },
-  uploadBox: { border: '2px dashed #2AAA8A40', borderRadius: 12, padding: '20px', textAlign: 'center', marginBottom: 15, transition: 'all 0.3s', background: '#FFFFFF' },
+  uploadBox: { border: '2px dashed DS.colors.primary40', borderRadius: 12, padding: '20px', textAlign: 'center', marginBottom: 15, transition: 'all 0.3s', background: '#FFFFFF' },
   rankCard: { background: '#FFFFFF', borderRadius: 16, padding: 18, border: '1px solid #E0E0E0', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' },
   th: { padding: 10, fontSize: 10, fontWeight: 700, color: '#999999', textTransform: 'uppercase', textAlign: 'center' },
 };
