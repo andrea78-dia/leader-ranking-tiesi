@@ -2741,7 +2741,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v16.8 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v16.9 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -6499,7 +6499,7 @@ export default function Home() {
         </div>
         
         {/* Footer versione */}
-        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v16.8</p>
+        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v16.9</p>
       </div>
     </div></>);
 
@@ -6721,7 +6721,7 @@ export default function Home() {
           </div>
         )}
       </main>
-      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v16.8 • Leader Ranking</footer>
+      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v16.9 • Leader Ranking</footer>
     </div></>);
 
   // PREVIEW
@@ -6926,36 +6926,16 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* HEATMAP DINAMICO - Settimanale o Mensile */}
-                  {!stats.isMonthly ? (
-                    // HEATMAP SETTIMANALE
-                    <div style={{ background: '#FCFCFC', borderRadius: 16, padding: 15, border: '1px solid #F5F5F5' }}>
-                      <div style={{ fontSize: 12, color: '#666666', marginBottom: 8 }}><Calendar size={16} /> ATTIVITÀ SETTIMANALE</div>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        {dayNames.map((day, i) => {
-                          const val = stats.weeklyData[i];
-                          const intensity = val / maxWeekly;
-                          const bgColor = val === 0 ? '#F5F5F5' : intensity > 0.7 ? '#4CAF50' : intensity > 0.4 ? DS.colors.accent : DS.colors.primaryLight;
-                          return (
-                            <div key={day} style={{ flex: 1, textAlign: 'center' }}>
-                              <div style={{ fontSize: 9, color: '#999999', marginBottom: 4 }}>{day}</div>
-                              <div style={{ height: 36, borderRadius: 6, background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: val === 0 ? '#E0E0E0' : '#fff' }}>{val}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 10 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#4CAF50' }} /><span style={{ fontSize: 9, color: '#666666' }}>Alto (&gt;70%)</span></div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: DS.colors.accent }} /><span style={{ fontSize: 9, color: '#666666' }}>Medio</span></div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: DS.colors.primaryLight }} /><span style={{ fontSize: 9, color: '#666666' }}>Basso</span></div>
-                      </div>
-                    </div>
-                  ) : (
-                    // HEATMAP MENSILE - Griglia Calendario WOW
-                    <div style={{ background: 'linear-gradient(135deg, rgba(255,107,53,0.08), rgba(255,107,53,0.02))', borderRadius: 16, padding: 15, border: '1px solid rgba(255,107,53,0.2)', gridColumn: 'span 2' }}>
+                  {/* CALENDARIO ATTIVITÀ - Stile Report */}
+                  {stats.isMonthly ? (
+                    <div style={{ background: DS.colors.white, borderRadius: 16, padding: 16, border: `1px solid ${DS.colors.gray200}`, gridColumn: 'span 2' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                        <div style={{ fontSize: 14, color: DS.colors.primaryLight, fontWeight: 600 }}><TrendingUp size={16} /> TEMPERATURA CONTRATTI</div>
-                        <div style={{ fontSize: 10, color: '#666666' }}>Giorni caldi del mese</div>
+                        <div style={{ fontSize: 14, color: DS.colors.gray800, fontWeight: 600 }}><Calendar size={16} /> CALENDARIO MESE</div>
+                        <div style={{ display: 'flex', gap: 12 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#10B981' }} /><span style={{ fontSize: 9, color: DS.colors.gray500 }}>Alto</span></div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#F59E0B' }} /><span style={{ fontSize: 9, color: DS.colors.gray500 }}>Medio</span></div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#EF4444' }} /><span style={{ fontSize: 9, color: DS.colors.gray500 }}>Basso</span></div>
+                        </div>
                       </div>
                       {(() => {
                         const maxM = Math.max(...stats.monthlyData, 1);
@@ -6966,53 +6946,69 @@ export default function Home() {
                         return (
                           <div>
                             {/* Header giorni settimana */}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3, marginBottom: 6 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 6 }}>
                               {dayLabels.map((d, i) => (
-                                <div key={i} style={{ textAlign: 'center', fontSize: 10, color: '#999999', fontWeight: 600 }}>{d}</div>
+                                <div key={i} style={{ textAlign: 'center', fontSize: 10, color: DS.colors.gray500, fontWeight: 600 }}>{d}</div>
                               ))}
                             </div>
                             {/* Griglia calendario */}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
                               {/* Celle vuote prima del primo giorno */}
                               {Array(firstDay).fill(null).map((_, i) => (
-                                <div key={`empty-${i}`} style={{ height: 32 }} />
+                                <div key={`empty-${i}`} style={{ height: 38 }} />
                               ))}
                               {/* Giorni del mese */}
                               {stats.monthlyData.slice(0, daysInMonth).map((val, i) => {
                                 const intensity = val / maxM;
-                                const bgColor = val === 0 ? '#F5F5F5' : 
-                                               intensity > 0.7 ? '#4CAF50' : 
-                                               intensity > 0.4 ? DS.colors.accent : '#E53935';
-                                const isHot = intensity > 0.7 && val > 0;
+                                const bgColor = val === 0 ? DS.colors.gray100 : 
+                                               intensity > 0.7 ? '#10B981' : 
+                                               intensity > 0.3 ? '#F59E0B' : '#EF4444';
                                 return (
                                   <div key={i} style={{ 
-                                    height: 32, 
+                                    height: 38, 
                                     borderRadius: 6, 
                                     background: bgColor, 
                                     display: 'flex', 
                                     flexDirection: 'column',
                                     alignItems: 'center', 
                                     justifyContent: 'center',
-                                    position: 'relative',
-                                    boxShadow: isHot ? '0 0 10px rgba(76,175,80,0.5)' : 'none',
-                                    transition: 'all 0.2s'
-                                  }}>
-                                    <span style={{ fontSize: 10, color: val === 0 ? '#AAAAAA' : '#fff', fontWeight: val > 0 ? 600 : 400 }}>{i + 1}</span>
-                                    {val > 0 && <span style={{ fontSize: 8, color: '#333333', fontWeight: 700 }}>{val}</span>}
-                                    {isHot && <span style={{ position: 'absolute', top: -4, right: -2, fontSize: 8 }}><TrendingUp size={16} /></span>}
+                                    transition: 'transform 0.15s ease'
+                                  }}
+                                  onMouseOver={e => { if (val > 0) e.currentTarget.style.transform = 'scale(1.05)'; }}
+                                  onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                                  >
+                                    <span style={{ fontSize: 10, color: val === 0 ? DS.colors.gray400 : '#FFFFFF', fontWeight: 500 }}>{i + 1}</span>
+                                    {val > 0 && <span style={{ fontSize: 9, color: '#FFFFFF', fontWeight: 700 }}>{val}</span>}
                                   </div>
                                 );
                               })}
                             </div>
-                            {/* Legenda */}
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: 15, marginTop: 12 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#4CAF50', boxShadow: '0 0 6px rgba(76,175,80,0.5)' }} /><span style={{ fontSize: 10, color: '#666666' }}><TrendingUp size={16} /> Caldo</span></div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: DS.colors.accent }} /><span style={{ fontSize: 10, color: '#666666' }}>Tiepido</span></div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: '#E53935' }} /><span style={{ fontSize: 10, color: '#666666' }}>Freddo</span></div>
-                            </div>
                           </div>
                         );
                       })()}
+                    </div>
+                  ) : (
+                    // HEATMAP SETTIMANALE
+                    <div style={{ background: DS.colors.white, borderRadius: 16, padding: 16, border: `1px solid ${DS.colors.gray200}` }}>
+                      <div style={{ fontSize: 12, color: DS.colors.gray700, fontWeight: 600, marginBottom: 10 }}><Calendar size={16} /> ATTIVITÀ SETTIMANALE</div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {dayNames.map((day, i) => {
+                          const val = stats.weeklyData[i];
+                          const intensity = val / maxWeekly;
+                          const bgColor = val === 0 ? DS.colors.gray100 : intensity > 0.7 ? '#10B981' : intensity > 0.3 ? '#F59E0B' : '#EF4444';
+                          return (
+                            <div key={day} style={{ flex: 1, textAlign: 'center' }}>
+                              <div style={{ fontSize: 9, color: DS.colors.gray500, marginBottom: 4 }}>{day}</div>
+                              <div style={{ height: 40, borderRadius: 6, background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, color: val === 0 ? DS.colors.gray400 : '#FFFFFF' }}>{val}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#10B981' }} /><span style={{ fontSize: 9, color: DS.colors.gray500 }}>Alto</span></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#F59E0B' }} /><span style={{ fontSize: 9, color: DS.colors.gray500 }}>Medio</span></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: '#EF4444' }} /><span style={{ fontSize: 9, color: DS.colors.gray500 }}>Basso</span></div>
+                      </div>
                     </div>
                   )}
                 </div>
