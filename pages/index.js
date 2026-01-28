@@ -51,28 +51,28 @@ const DS = {
   colors: {
     // Primary - Verde Teal Executive
     primary: '#1E8A6E',
-    primaryLight: DS.colors.primaryLight,
+    primaryLight: '#2AAA8A',
     primaryDark: '#166D57',
     primaryBg: '#F0FDF9',
     primaryBorder: '#A7F3D0',
     
     // Accent - Oro NWG Raffinato
-    accent: DS.colors.accent,
+    accent: '#C9A227',
     accentLight: '#E5C255',
     accentDark: '#A68512',
     accentBg: '#FFFBEB',
     accentBorder: '#FDE68A',
     
     // Semantic
-    success: DS.colors.success,
+    success: '#059669',
     successBg: '#ECFDF5',
     successBorder: '#A7F3D0',
     
-    danger: DS.colors.danger,
+    danger: '#DC2626',
     dangerBg: '#FEF2F2',
     dangerBorder: '#FECACA',
     
-    warning: DS.colors.warning,
+    warning: '#D97706',
     warningBg: '#FFFBEB',
     warningBorder: '#FDE68A',
     
@@ -81,28 +81,28 @@ const DS = {
     infoBorder: '#BAE6FD',
     
     // Neutrals
-    white: DS.colors.white,
-    gray50: DS.colors.gray50,
-    gray100: DS.colors.gray100,
-    gray200: DS.colors.gray200,
+    white: '#FFFFFF',
+    gray50: '#F9FAFB',
+    gray100: '#F3F4F6',
+    gray200: '#E5E7EB',
     gray300: '#D1D5DB',
     gray400: '#9CA3AF',
-    gray500: DS.colors.gray500,
+    gray500: '#6B7280',
     gray600: '#4B5563',
-    gray700: DS.colors.gray700,
-    gray800: DS.colors.gray800,
+    gray700: '#374151',
+    gray800: '#1F2937',
     gray900: '#111827',
     
     // Prodotti - Coerenti con brand
-    fv: DS.colors.success,      // Fotovoltaico - Verde Emerald
+    fv: '#059669',      // Fotovoltaico - Verde Emerald
     fvBg: '#ECFDF5',
     fvBorder: '#A7F3D0',
     
-    la: DS.colors.warning,      // Luce Amica - Ambra
+    la: '#D97706',      // Luce Amica - Ambra
     laBg: '#FFFBEB',
     laBorder: '#FDE68A',
     
-    seminari: DS.colors.seminari, // Seminari - Viola
+    seminari: '#7C3AED', // Seminari - Viola
     seminariBg: '#F5F3FF',
     seminariBorder: '#C4B5FD',
     
@@ -111,9 +111,9 @@ const DS = {
     ivdBorder: '#A5F3FC',
     
     // Podio
-    gold: DS.colors.accent,
-    silver: DS.colors.gray500,
-    bronze: DS.colors.la
+    gold: '#C9A227',
+    silver: '#6B7280',
+    bronze: '#B45309'
   },
   
   // ─────────────────────────────────────────────────────────────────────────
@@ -2741,7 +2741,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v16.3 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v16.4 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -6512,7 +6512,7 @@ export default function Home() {
         </div>
         
         {/* Footer versione */}
-        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v16.3</p>
+        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v16.4</p>
       </div>
     </div></>);
 
@@ -6734,7 +6734,7 @@ export default function Home() {
           </div>
         )}
       </main>
-      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v16.3 • Leader Ranking</footer>
+      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v16.4 • Leader Ranking</footer>
     </div></>);
 
   // PREVIEW
