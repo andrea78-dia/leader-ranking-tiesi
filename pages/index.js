@@ -1277,7 +1277,7 @@ export default function Home() {
         statiGroups: statiRagg.groups,
         classifiche: classifiche,
         totaleK: classifiche.k.reduce((s, [,v]) => s + v.total, 0),
-        catLabels: { c1: ' Positivi', c2: '🟡 Lavoraz.', c3: ' Persi' },
+        catLabels: { c1: ' Positivi', c2: 'Lavoraz.', c3: ' Persi' },
         catKeys: ['positivo', 'lavorazione', 'negativo']
       };
       result.heatmapMesi.fv = heatmap;
@@ -1323,7 +1323,7 @@ export default function Home() {
         statiGroupsEnergia: statiEnergia.groups,
         classifiche: classifiche,
         totaleK: classifiche.k.reduce((s, [,v]) => s + v.total, 0),
-        catLabels: { c1: ' Accettati', c2: '🟡 Lavorab.', c3: ' Persi' },
+        catLabels: { c1: ' Accettati', c2: 'Lavorab.', c3: ' Persi' },
         catKeys: ['positivo', 'lavorabile', 'meno']
       };
       result.heatmapMesi.energy = heatmap;
@@ -1490,7 +1490,7 @@ export default function Home() {
     if (collabData.iscritti > 0 || collabData.attivati > 0) {
       result.pilastri.collaboratori = {
         nome: 'COLLABORATORI',
-        emoji: '🎓',
+        icon: Award,
         color: DS.colors.primaryLight,
         funnel: {
           iscritti: collabData.iscritti,
@@ -1506,7 +1506,7 @@ export default function Home() {
         statiAttivati: collabData.statiAttivati,
         classifiche: collabData.classifiche || { k: [], nw: [], sdp: [] },
         totaleK: collabData.classifiche ? collabData.classifiche.k.reduce((s, [,v]) => s + v.total, 0) : 0,
-        catLabels: { c1: '📝 Iscritti', c2: 'Presenti', c3: ' Attivati' },
+        catLabels: { c1: 'Iscritti', c2: 'Presenti', c3: ' Attivati' },
         catKeys: ['iscritti', 'presenti', 'attivati']
       };
     }
@@ -2741,7 +2741,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v16.5 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v16.7 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -3838,7 +3838,7 @@ export default function Home() {
       ctx.fillStyle = DS.colors.seminari;
       ctx.font = 'bold 24px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText('🎓 SEMINARI', 70, y + 35);
+      ctx.fillText('SEMINARI', 70, y + 35);
       
       ctx.font = 'bold 48px Arial';
       ctx.fillText(sem.funnel.iscritti.toString(), 70, y + 90);
@@ -4153,7 +4153,7 @@ export default function Home() {
               <BarChart3 size={16} /> Riepilogo Generale
             </h2>
             <p style={{ color: DS.colors.gray500, fontSize: 12, margin: '4px 0 0' }}>
-              {periodo ? `<Calendar size={16} /> Periodo: ${periodo.label}` : 'Panoramica completa risultati periodo'}
+              {periodo ? <>Periodo: {periodo.label}</> : 'Panoramica completa risultati periodo'}
             </p>
           </div>
           
@@ -4302,7 +4302,7 @@ export default function Home() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
           {/* Seminari */}
           <div style={{ background: DS.colors.gray50, borderRadius: 12, padding: 16, border: '1px solid #E5E7EB' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: DS.colors.gray500, marginBottom: 10 }}>🎓 Seminari</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: DS.colors.gray500, marginBottom: 10 }}>Seminari</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <div style={{ fontSize: 10, color: '#9CA3AF' }}>Iscritti</div>
@@ -4605,13 +4605,14 @@ export default function Home() {
     );
 
     return (
-      <div style={{ background: DS.colors.white, borderRadius: 16, padding: 20, border: '1px solid #E2E8F0', marginBottom: 20 }}>
+      <div id="section-performance" style={{ background: DS.colors.white, borderRadius: 16, padding: 20, border: '1px solid #E2E8F0', marginBottom: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div>
             <h3 style={{ color: '#1E293B', fontSize: 18, margin: 0, fontWeight: 700 }}><Users size={16} /> Performance Rete Vendita</h3>
             <p style={{ color: '#94A3B8', fontSize: 12, margin: '4px 0 0' }}>Distribuzione produttività IVD ({tracker.totale} totali)</p>
           </div>
-          <div style={{ display: 'flex', gap: 16 }}>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+            <button onClick={() => screenshotSection('section-performance', 'Performance_Rete_Vendita')} style={{ padding: '6px 12px', background: DS.colors.gray100, border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}><Camera size={14} /></button>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 20, fontWeight: 800, color: '#10B981' }}>{tracker.ivdConContratti || 0}</div>
               <div style={{ fontSize: 9, color: '#94A3B8' }}>Produttivi</div>
@@ -4627,14 +4628,14 @@ export default function Home() {
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 12 }}><BarChart3 size={16} /> Distribuzione per Fascia</div>
             <BarChart label="0 contratti" value={fasce.zero} color="#EF4444" emoji="" />
-            <BarChart label="1-5 contratti" value={fasce.bassa} color="#F59E0B" emoji="🟡" />
+            <BarChart label="1-5 contratti" value={fasce.bassa} color="#F59E0B" emoji="" />
             <BarChart label="6-20 contratti" value={fasce.media} color="#3B82F6" emoji="" />
             <BarChart label="21-50 contratti" value={fasce.alta} color="#10B981" emoji="" />
-            <BarChart label="50+ contratti" value={fasce.top} color="#8B5CF6" emoji="<Star size={16} />" />
+            <BarChart label="50+ contratti" value={fasce.top} color="#8B5CF6" emoji="" />
           </div>
           
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 12 }}>⏱️ Tempo Medio al Primo Contratto</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 12 }}><Clock size={16} /> Tempo Medio al Primo Contratto</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 10, padding: 12, textAlign: 'center' }}>
                 <div style={{ fontSize: 9, color: DS.colors.fv, marginBottom: 2 }}>Prima LA</div>
@@ -4740,7 +4741,7 @@ export default function Home() {
                   {/* Seminari Iscritti */}
                   {reportData.bestPerformers.seminari?.iscritti?.k && (
                     <div style={{ background: DS.colors.white, borderRadius: 10, padding: 12, border: '1px solid #C4B5FD' }}>
-                      <div style={{ fontSize: 10, color: DS.colors.gray500, marginBottom: 4 }}>🎓 Miglior Iscritti Seminari</div>
+                      <div style={{ fontSize: 10, color: DS.colors.gray500, marginBottom: 4 }}>Miglior Iscritti Seminari</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontWeight: 700, color: DS.colors.seminari }}>{reportData.bestPerformers.seminari.iscritti.k.nome}</span>
                         <span style={{ fontWeight: 800, color: '#5B21B6' }}>{reportData.bestPerformers.seminari.iscritti.k.valore}</span>
@@ -4809,7 +4810,7 @@ export default function Home() {
                   {/* Seminari Iscritti */}
                   {reportData.bestPerformers.seminari?.iscritti?.nw && (
                     <div style={{ background: DS.colors.white, borderRadius: 10, padding: 12, border: '1px solid #C4B5FD' }}>
-                      <div style={{ fontSize: 10, color: DS.colors.gray500, marginBottom: 4 }}>🎓 Miglior Iscritti Seminari</div>
+                      <div style={{ fontSize: 10, color: DS.colors.gray500, marginBottom: 4 }}>Miglior Iscritti Seminari</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontWeight: 700, color: DS.colors.seminari }}>{reportData.bestPerformers.seminari.iscritti.nw.nome}</span>
                         <span style={{ fontWeight: 800, color: '#5B21B6' }}>{reportData.bestPerformers.seminari.iscritti.nw.valore}</span>
@@ -4897,7 +4898,7 @@ export default function Home() {
                   {[
                     { key: 'fv', icon: Sun, label: 'Fotovoltaico', color: DS.colors.fv, bgColor: '#F0FDF4', borderColor: '#BBF7D0' },
                     { key: 'energy', icon: Zap, label: 'Luce Amica', color: DS.colors.la, bgColor: '#FFFBEB', borderColor: '#FCD34D' },
-                    { key: 'consultings', emoji: '🎓', label: 'Seminari', color: DS.colors.seminari, bgColor: '#F5F3FF', borderColor: '#C4B5FD' },
+                    { key: 'consultings', icon: Award, label: 'Seminari', color: DS.colors.seminari, bgColor: '#F5F3FF', borderColor: '#C4B5FD' },
                     { key: 'presenti', icon: CheckCircle, label: 'Presenti', color: DS.colors.success, bgColor: '#ECFDF5', borderColor: '#A7F3D0' },
                     { key: 'ivd', icon: Users, label: 'Attivati', color: '#EA580C', bgColor: '#FFF7ED', borderColor: '#FDBA74' },
                     { key: 'guadagnoFV', emoji: '', label: 'Fatturato FV', color: DS.colors.fv, bgColor: '#F0FDF4', borderColor: '#BBF7D0', isCurrency: true },
@@ -5021,7 +5022,7 @@ export default function Home() {
                 const infoMap = { 
                   fv: { icon: Sun, label: 'Fotovoltaico', color: DS.colors.fv }, 
                   energy: { icon: Zap, label: 'Luce Amica', color: DS.colors.la }, 
-                  consultings: { emoji: '🎓', label: 'Seminari', color: DS.colors.seminari }, 
+                  consultings: { icon: Award, label: 'Seminari', color: DS.colors.seminari }, 
                   presenti: { icon: CheckCircle, label: 'Presenti', color: DS.colors.success }, 
                   ivd: { icon: Users, label: 'Attivati', color: '#EA580C' },
                   guadagnoFV: { emoji: '', label: 'Guadagno FV', color: DS.colors.fv, isCurrency: true },
@@ -5214,7 +5215,7 @@ export default function Home() {
                     {/* LAVORAZIONE - GIALLO */}
                     {statiGialli.length > 0 && (
                       <div style={{ background: 'rgba(255,215,0,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(255,215,0,0.3)' }}>
-                        <div style={{ fontSize: 11, color: '#FF8F00', fontWeight: 600, marginBottom: 8 }}>🟡 LAVORAZIONE ({statiGialli.reduce((s,[,c]) => s+c, 0)})</div>
+                        <div style={{ fontSize: 11, color: '#FF8F00', fontWeight: 600, marginBottom: 8 }}>LAVORAZIONE ({statiGialli.reduce((s,[,c]) => s+c, 0)})</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {statiGialli.map(([stato, count], i) => (
                             <span key={i} style={{ background: DS.colors.white, padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #FFD700' }}>
@@ -5325,7 +5326,7 @@ export default function Home() {
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 42, fontWeight: 800, color: DS.colors.accent }}>{reportData.pilastri.energy.funnel.lavorabili}</div>
-                <div style={{ fontSize: 12, color: DS.colors.accent }}>🟡 Lavorabili <span style={{ fontSize: 10 }}>({reportData.pilastri.energy.funnel.inseriti > 0 ? Math.round(reportData.pilastri.energy.funnel.lavorabili / reportData.pilastri.energy.funnel.inseriti * 100) : 0}%)</span></div>
+                <div style={{ fontSize: 12, color: DS.colors.accent }}>Lavorabili <span style={{ fontSize: 10 }}>({reportData.pilastri.energy.funnel.inseriti > 0 ? Math.round(reportData.pilastri.energy.funnel.lavorabili / reportData.pilastri.energy.funnel.inseriti * 100) : 0}%)</span></div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 42, fontWeight: 800, color: '#E53935' }}>{reportData.pilastri.energy.funnel.persi}</div>
@@ -5359,7 +5360,7 @@ export default function Home() {
                     {/* LAVORABILI */}
                     {lavorabili.length > 0 && (
                       <div style={{ background: 'rgba(255,215,0,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(255,215,0,0.3)' }}>
-                        <div style={{ fontSize: 11, color: '#FF8F00', fontWeight: 600, marginBottom: 8 }}>🟡 CONTRATTO - LAVORABILI ({lavorabili.reduce((s,[,c]) => s+c, 0)})</div>
+                        <div style={{ fontSize: 11, color: '#FF8F00', fontWeight: 600, marginBottom: 8 }}>CONTRATTO - LAVORABILI ({lavorabili.reduce((s,[,c]) => s+c, 0)})</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {lavorabili.map(([stato, count], i) => (
                             <span key={i} style={{ background: DS.colors.white, padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #FFD700' }}>
@@ -5414,7 +5415,7 @@ export default function Home() {
                     )}
                     {daAttivare.length > 0 && (
                       <div style={{ background: 'rgba(255,215,0,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(255,215,0,0.3)' }}>
-                        <div style={{ fontSize: 11, color: '#FF8F00', fontWeight: 600, marginBottom: 8 }}>🟡 FORNITURA - DA ATTIVARE ({daAttivare.reduce((s,[,c]) => s+c, 0)})</div>
+                        <div style={{ fontSize: 11, color: '#FF8F00', fontWeight: 600, marginBottom: 8 }}>FORNITURA - DA ATTIVARE ({daAttivare.reduce((s,[,c]) => s+c, 0)})</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {daAttivare.map(([stato, count], i) => (
                             <span key={i} style={{ background: DS.colors.white, padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #FFD700' }}>
@@ -5495,7 +5496,7 @@ export default function Home() {
           <div id="section-collab" style={{ background: DS.colors.white, borderRadius: 20, padding: 20, border: '1px solid #E0E0E0' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 28 }}>🎓</span>
+                <Award size={28} color={DS.colors.seminari} />
                 <div>
                   <h3 style={{ color: DS.colors.primaryLight, fontSize: 20, margin: 0, fontWeight: 700 }}>PILASTRO COLLABORATORI</h3>
                   <p style={{ color: '#666', fontSize: 12, margin: 0 }}>Funnel: Iscritti → Presenti → Attivati</p>
@@ -5515,7 +5516,7 @@ export default function Home() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, marginBottom: 25, flexWrap: 'wrap' }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 42, fontWeight: 800, color: DS.colors.primaryLight }}>{reportData.pilastri.collaboratori.funnel.iscritti}</div>
-                <div style={{ fontSize: 12, color: '#666' }}>📝 Iscritti</div>
+                <div style={{ fontSize: 12, color: '#666' }}>Iscritti</div>
               </div>
               <div style={{ fontSize: 24, color: '#E0E0E0' }}>→</div>
               <div style={{ textAlign: 'center' }}>
@@ -5671,7 +5672,7 @@ export default function Home() {
                     return (<>
                       {iscritti.length > 0 && (
                         <div style={{ background: 'rgba(42,170,138,0.08)', borderRadius: 10, padding: 12, border: '1px solid rgba(42,170,138,0.3)' }}>
-                          <div style={{ fontSize: 11, color: DS.colors.primaryLight, fontWeight: 600, marginBottom: 8 }}>📝 ISCRITTI ({iscritti.reduce((s,[,c]) => s+c, 0)})</div>
+                          <div style={{ fontSize: 11, color: DS.colors.primaryLight, fontWeight: 600, marginBottom: 8 }}>ISCRITTI ({iscritti.reduce((s,[,c]) => s+c, 0)})</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                             {iscritti.map(([stato, count], i) => (
                               <span key={i} style={{ background: DS.colors.white, padding: '4px 10px', borderRadius: 15, fontSize: 10, color: '#333', border: '1px solid #2AAA8A' }}>
@@ -6032,9 +6033,9 @@ export default function Home() {
                     gap: 6, 
                     padding: '8px 4px', 
                     fontSize: 11, 
-                    background: i < 3 ? `rgba(42,170,138,${0.15 - i * 0.04})` : haAllMilestones ? 'rgba(16,185,129,0.08)' : i % 2 === 0 ? 'transparent' : DS.colors.white,
+                    background: i < 3 ? `${DS.colors.primary}${15 - i * 4 < 10 ? '0' : ''}${Math.round((0.15 - i * 0.04) * 255).toString(16)}` : haAllMilestones ? `${DS.colors.success}08` : i % 2 === 0 ? 'transparent' : DS.colors.gray50,
                     borderRadius: 4,
-                    borderLeft: haAllMilestones ? '3px solid #10B981' : 'none'
+                    borderLeft: haAllMilestones ? `2px solid ${DS.colors.success}` : i < 3 ? `2px solid ${DS.colors.primary}` : 'none'
                   }}>
                     <span style={{ fontWeight: i < 3 ? 700 : 400, color: DS.colors.gray800 }}>
                       {<PositionBadge position={i+1} size="sm" />}
@@ -6512,7 +6513,7 @@ export default function Home() {
         </div>
         
         {/* Footer versione */}
-        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v16.5</p>
+        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v16.7</p>
       </div>
     </div></>);
 
@@ -6734,7 +6735,7 @@ export default function Home() {
           </div>
         )}
       </main>
-      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v16.5 • Leader Ranking</footer>
+      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v16.7 • Leader Ranking</footer>
     </div></>);
 
   // PREVIEW
@@ -6803,7 +6804,7 @@ export default function Home() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}><span style={{ fontSize: 12, color: '#999999', letterSpacing: 1 }}><BarChart3 size={16} /> CLASSIFICHE</span><button style={{ background: 'none', border: 'none', color: '#333333', fontSize: 18, cursor: 'pointer' }} onClick={() => setMobileMenuOpen(false)}>✕</button></div>
           {rankings ? (<><p style={S.catLabel}>IVD</p><button style={{ ...S.menuItem, ...(selectedRanking === 'ivd_inseriti' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('ivd_inseriti'); setMobileMenuOpen(false); }}> {labels.c1} ({rankings.ivd_inseriti.length})</button><button style={{ ...S.menuItem, ...(selectedRanking === 'ivd_accettati' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('ivd_accettati'); setMobileMenuOpen(false); }}> {labels.c2} ({rankings.ivd_accettati.length})</button><p style={S.catLabel}>SDP</p><button style={{ ...S.menuItem, ...(selectedRanking === 'sdp_inseriti' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('sdp_inseriti'); setMobileMenuOpen(false); }}> {labels.c1} ({rankings.sdp_inseriti.length})</button><button style={{ ...S.menuItem, ...(selectedRanking === 'sdp_accettati' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('sdp_accettati'); setMobileMenuOpen(false); }}> {labels.c2} ({rankings.sdp_accettati.length})</button><p style={S.catLabel}>MANAGER</p><button style={{ ...S.menuItem, ...(selectedRanking === 'nw' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('nw'); setMobileMenuOpen(false); }}><Star size={16} /> Networker ({rankings.nw.length})</button><button style={{ ...S.menuItem, ...(selectedRanking === 'k' ? S.menuActive : {}) }} onClick={() => { setSelectedRanking('k'); setMobileMenuOpen(false); }}><Crown size={16} /> K Manager ({rankings.k.length})</button></>) : <p style={{ color: '#999999', fontSize: 12 }}>Carica CSV</p>}
           <div style={S.divider} />
-          {(user.role === 'admin' || user.role === 'assistente') && (<><p style={S.catLabel}>⚙️ FILTRI</p><label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', color: '#333333' }}><input type="checkbox" checked={excludeK} onChange={toggleExcludeK} style={{ accentColor: DS.colors.primaryLight }} /> Escludi K</label><div style={S.divider} /><p style={S.catLabel}><Calendar size={16} /> PERIODO</p><button style={{ ...S.periodBtn, ...(!selectedMonth ? { background: 'rgba(124,77,255,0.2)', color: DS.colors.primaryLight } : {}) }} onClick={handleShowAll}><FileText size={16} /> Tutti ({csvData?.length || 0})</button>{availableMonths.length > 0 && (<select style={S.select} value={selectedMonth} onChange={e => handleMonthChange(e.target.value)}><option value="">-- Mese --</option>{availableMonths.map(m => <option key={m} value={m}>{m}</option>)}</select>)}{weeks.length > 0 && (<select style={S.select} value={selectedWeek?.num || ''} onChange={e => handleWeekChange(e.target.value)}><option value="">-- Settimana --</option>{weeks.map(w => <option key={w.num} value={w.num}>{w.label}</option>)}</select>)}<div style={S.divider} /><p style={S.catLabel}><BarChart3 size={16} /> TIPO CLASSIFICA</p><select style={S.select} value={periodType} onChange={e => setPeriodType(e.target.value)}><option value="progressiva"><TrendingUp size={16} /> Progressiva (mese in corso)</option><option value="settimanale"><Calendar size={16} /> Settimanale</option><option value="finale"><Trophy size={16} /> Finale mese</option></select><div style={S.divider} /><p style={S.catLabel}>🏷️ ETICHETTE</p><select style={S.select} value={eventName} onChange={e => setEventName(e.target.value)}>{EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select><input style={S.inputSm} value={eventDate} onChange={e => setEventDate(e.target.value)} placeholder="Periodo" /></>)}
+          {(user.role === 'admin' || user.role === 'assistente') && (<><p style={S.catLabel}>FILTRI</p><label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', color: '#333333' }}><input type="checkbox" checked={excludeK} onChange={toggleExcludeK} style={{ accentColor: DS.colors.primaryLight }} /> Escludi K</label><div style={S.divider} /><p style={S.catLabel}><Calendar size={16} /> PERIODO</p><button style={{ ...S.periodBtn, ...(!selectedMonth ? { background: 'rgba(124,77,255,0.2)', color: DS.colors.primaryLight } : {}) }} onClick={handleShowAll}><FileText size={16} /> Tutti ({csvData?.length || 0})</button>{availableMonths.length > 0 && (<select style={S.select} value={selectedMonth} onChange={e => handleMonthChange(e.target.value)}><option value="">-- Mese --</option>{availableMonths.map(m => <option key={m} value={m}>{m}</option>)}</select>)}{weeks.length > 0 && (<select style={S.select} value={selectedWeek?.num || ''} onChange={e => handleWeekChange(e.target.value)}><option value="">-- Settimana --</option>{weeks.map(w => <option key={w.num} value={w.num}>{w.label}</option>)}</select>)}<div style={S.divider} /><p style={S.catLabel}><BarChart3 size={16} /> TIPO CLASSIFICA</p><select style={S.select} value={periodType} onChange={e => setPeriodType(e.target.value)}><option value="progressiva"><TrendingUp size={16} /> Progressiva (mese in corso)</option><option value="settimanale"><Calendar size={16} /> Settimanale</option><option value="finale"><Trophy size={16} /> Finale mese</option></select><div style={S.divider} /><p style={S.catLabel}>ETICHETTE</p><select style={S.select} value={eventName} onChange={e => setEventName(e.target.value)}>{EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select><input style={S.inputSm} value={eventDate} onChange={e => setEventDate(e.target.value)} placeholder="Periodo" /></>)}
         </aside>
         {mobileMenuOpen && <div style={S.overlay} onClick={() => setMobileMenuOpen(false)} />}
         <section style={S.content}>
@@ -6865,29 +6866,35 @@ export default function Home() {
                   {/* PODIO */}
                   <div style={{ background: DS.colors.gray50, borderRadius: DS.radius.xl, padding: DS.space.xl, border: `1px solid ${DS.colors.gray100}` }}>
                     <h3 style={{ color: DS.colors.accent, fontSize: DS.font.h3.size, marginBottom: DS.space.lg, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: DS.space.sm }}><Trophy size={18} color={DS.colors.accent} /> PODIO</h3>
-                    <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: DS.space.md, height: 170 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: DS.space.md, height: 180 }}>
                       {/* 2° */}
                       <div style={{ textAlign: 'center', flex: 1 }}>
-                        <div style={{ fontSize: DS.font.caption.size, color: DS.colors.gray700, fontWeight: 600, marginBottom: DS.space.sm, lineHeight: 1.3 }}>{stats.top3[1]?.name || '-'}</div>
-                        <div style={{ background: 'linear-gradient(180deg, #E8E8E8, #A0A0A0)', borderRadius: '10px 10px 0 0', height: 90, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ background: 'linear-gradient(180deg, #E8E8E8, #A0A0A0)', borderRadius: '10px 10px 0 0', height: 90, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: DS.space.sm }}>
                           <PositionBadge position={2} size="lg" />
-                          <span style={{ fontSize: 18, fontWeight: 700, color: DS.colors.gray800, marginTop: DS.space.xs }}>{stats.top3[1]?.v1 || 0}</span>
+                          <div style={{ fontSize: DS.font.caption.size, color: DS.colors.gray700, fontWeight: 600, marginTop: DS.space.xs, lineHeight: 1.2, padding: '0 4px' }}>{stats.top3[1]?.name || '-'}</div>
+                        </div>
+                        <div style={{ background: DS.colors.gray200, padding: DS.space.sm, borderRadius: '0 0 10px 10px' }}>
+                          <span style={{ fontSize: 18, fontWeight: 800, color: DS.colors.gray800 }}>{stats.top3[1]?.v1 || 0}</span>
                         </div>
                       </div>
                       {/* 1° */}
                       <div style={{ textAlign: 'center', flex: 1 }}>
-                        <div style={{ fontSize: DS.font.body.size, color: DS.colors.accent, fontWeight: 700, marginBottom: DS.space.sm, lineHeight: 1.3 }}>{stats.top3[0]?.name || '-'}</div>
-                        <div style={{ background: `linear-gradient(180deg, ${DS.colors.accentLight}, ${DS.colors.accent})`, borderRadius: '10px 10px 0 0', height: 130, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 25px ${DS.colors.accent}40` }}>
+                        <div style={{ background: `linear-gradient(180deg, ${DS.colors.accentLight}, ${DS.colors.accent})`, borderRadius: '10px 10px 0 0', height: 130, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: DS.space.md, boxShadow: `0 0 20px ${DS.colors.accent}30` }}>
                           <PositionBadge position={1} size="lg" />
-                          <span style={{ fontSize: 24, fontWeight: 700, color: DS.colors.gray800, marginTop: DS.space.xs }}>{stats.top3[0]?.v1 || 0}</span>
+                          <div style={{ fontSize: DS.font.body.size, color: DS.colors.gray800, fontWeight: 700, marginTop: DS.space.sm, lineHeight: 1.2, padding: '0 4px' }}>{stats.top3[0]?.name || '-'}</div>
+                        </div>
+                        <div style={{ background: DS.colors.accent, padding: DS.space.sm, borderRadius: '0 0 10px 10px' }}>
+                          <span style={{ fontSize: 24, fontWeight: 800, color: DS.colors.white }}>{stats.top3[0]?.v1 || 0}</span>
                         </div>
                       </div>
                       {/* 3° */}
                       <div style={{ textAlign: 'center', flex: 1 }}>
-                        <div style={{ fontSize: DS.font.caption.size, color: DS.colors.gray700, fontWeight: 600, marginBottom: DS.space.sm, lineHeight: 1.3 }}>{stats.top3[2]?.name || '-'}</div>
-                        <div style={{ background: `linear-gradient(180deg, #B2DFDB, ${DS.colors.bronze})`, borderRadius: '10px 10px 0 0', height: 65, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ background: `linear-gradient(180deg, #D4A574, ${DS.colors.bronze})`, borderRadius: '10px 10px 0 0', height: 65, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: DS.space.xs }}>
                           <PositionBadge position={3} size="lg" />
-                          <span style={{ fontSize: DS.font.body.size, fontWeight: 700, color: DS.colors.gray800, marginTop: DS.space.xs }}>{stats.top3[2]?.v1 || 0}</span>
+                          <div style={{ fontSize: 11, color: DS.colors.gray800, fontWeight: 600, marginTop: 2, lineHeight: 1.1, padding: '0 2px' }}>{stats.top3[2]?.name || '-'}</div>
+                        </div>
+                        <div style={{ background: DS.colors.bronze, padding: DS.space.xs, borderRadius: '0 0 10px 10px' }}>
+                          <span style={{ fontSize: DS.font.body.size, fontWeight: 800, color: DS.colors.white }}>{stats.top3[2]?.v1 || 0}</span>
                         </div>
                       </div>
                     </div>
