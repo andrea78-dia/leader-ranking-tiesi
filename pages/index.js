@@ -2351,21 +2351,11 @@ export default function Home() {
       const CORSI_BASE = ['I Fondamentali di NWG', 'Le 6 Leggi del Successo', 'I segreti Per Un\' Ottima Consulenza'];
       const CORSI_CRESCITA = ['Comunicare con Efficacia', 'Come Guidare Verso Il Successo', 'Organizzazione E Tempo', 'Crea Una Squadra Vincente', 'Motivazione e Rendimento', 'Genera Abitudini Vincenti', 'Impara a Delegare'];
       
-      const categorizzaProdotto = (prodotto) => {
-        if (!prodotto) return 'altro';
-        const p = prodotto.toLowerCase();
-        if (p.includes('start box')) return 'startbox';
-        if (CORSI_BASE.some(c => p.includes(c.toLowerCase()))) return 'base';
-        if (CORSI_CRESCITA.some(c => p.includes(c.toLowerCase()))) return 'crescita';
-        if (p.includes('experience') || p.includes('nwg experience')) return 'eventi';
-        if (p.includes('coaching') || p.includes('leadership') || p.includes('problem solving') || p.includes('energy connection') || p.includes('relazioni vincenti')) return 'master';
-        return 'altro';
-      };
+      // Lista nomi nuovi IVD dal Tracker Coaching (per focus)
+      const nuoviIVDNomi = new Set((result.trackerCoaching?.lista || []).map(t => t.nome.toLowerCase().trim()));
       
-      // Conteggi
-      const prodottiCount = {};
-      const categorieCount = { startbox: 0, base: 0, crescita: 0, eventi: 0, master: 0, altro: 0 };
-      const presenzePerPersona = {};
+      // Dettaglio per singolo corso/prodotto
+      const corsiDettaglio = {};
       const corsiPerPersona = {};
       const networkerTeam = {};
       let totalePresenze = 0;
@@ -2374,53 +2364,88 @@ export default function Home() {
       accData.forEach(row => {
         const prodotto = row['Prodotto'] || '';
         const nome = row['Nome Intermediario'] || '';
-        const presente = row['Presente al Corso'] || '';
+        const presente = row['Presente al Corso'] === 'Si';
         const networker = row['Nome Primo Networker'] || '';
+        const dataCorso = row['Data corso'] || '';
         const stato = row['Stato pratica'] || '';
         
         if (!nome || stato === 'Recesso') return;
         
         totaleIscrizioni++;
+        if (presente) totalePresenze++;
         
-        // Conta prodotto
+        // Dettaglio per singolo corso
         if (prodotto) {
-          prodottiCount[prodotto] = (prodottiCount[prodotto] || 0) + 1;
-          const cat = categorizzaProdotto(prodotto);
-          categorieCount[cat]++;
+          if (!corsiDettaglio[prodotto]) {
+            corsiDettaglio[prodotto] = { 
+              nome: prodotto, 
+              iscritti: 0, 
+              presenti: 0, 
+              partecipanti: [],
+              nuoviIVD: [] // Focus nuovi IVD
+            };
+          }
+          corsiDettaglio[prodotto].iscritti++;
+          if (presente) corsiDettaglio[prodotto].presenti++;
+          
+          // Aggiungi partecipante
+          const partecipante = { nome, networker, dataCorso, presente };
+          corsiDettaglio[prodotto].partecipanti.push(partecipante);
+          
+          // Se è nuovo IVD, aggiungi a lista speciale
+          if (nuoviIVDNomi.has(nome.toLowerCase().trim())) {
+            corsiDettaglio[prodotto].nuoviIVD.push(partecipante);
+          }
         }
         
-        // Conta corsi per persona
-        if (!corsiPerPersona[nome]) corsiPerPersona[nome] = { totale: 0, presenze: 0, corsiBase: [], networker: networker };
+        // Corsi per persona (per tracciamento)
+        if (!corsiPerPersona[nome]) {
+          corsiPerPersona[nome] = { 
+            totale: 0, 
+            presenze: 0, 
+            corsiBase: [], 
+            corsiLista: [],
+            networker: networker,
+            primoCorso: null,
+            ultimoCorso: null
+          };
+        }
         corsiPerPersona[nome].totale++;
+        if (presente) {
+          corsiPerPersona[nome].presenze++;
+          corsiPerPersona[nome].corsiLista.push({ prodotto, dataCorso });
+          
+          // Traccia date per timeline
+          if (dataCorso) {
+            const d = new Date(dataCorso);
+            if (!isNaN(d.getTime())) {
+              if (!corsiPerPersona[nome].primoCorso || d < new Date(corsiPerPersona[nome].primoCorso)) {
+                corsiPerPersona[nome].primoCorso = dataCorso;
+              }
+              if (!corsiPerPersona[nome].ultimoCorso || d > new Date(corsiPerPersona[nome].ultimoCorso)) {
+                corsiPerPersona[nome].ultimoCorso = dataCorso;
+              }
+            }
+          }
+        }
         
         // Verifica corso base completato
         const corsoBaseMatch = CORSI_BASE.find(c => prodotto.toLowerCase().includes(c.toLowerCase()));
-        if (corsoBaseMatch && presente === 'Si' && !corsiPerPersona[nome].corsiBase.includes(corsoBaseMatch)) {
+        if (corsoBaseMatch && presente && !corsiPerPersona[nome].corsiBase.includes(corsoBaseMatch)) {
           corsiPerPersona[nome].corsiBase.push(corsoBaseMatch);
         }
         
-        // Conta presenze
-        if (presente === 'Si') {
-          totalePresenze++;
-          corsiPerPersona[nome].presenze++;
-          
-          // Conta per networker
-          if (networker) {
-            if (!networkerTeam[networker]) networkerTeam[networker] = { totaleCorsi: 0, totalePresenze: 0, membri: new Set() };
-            networkerTeam[networker].totaleCorsi++;
-            networkerTeam[networker].totalePresenze++;
-            networkerTeam[networker].membri.add(nome);
-          }
+        // Conta per networker
+        if (networker && presente) {
+          if (!networkerTeam[networker]) networkerTeam[networker] = { totaleCorsi: 0, totalePresenze: 0, membri: new Set() };
+          networkerTeam[networker].totaleCorsi++;
+          networkerTeam[networker].totalePresenze++;
+          networkerTeam[networker].membri.add(nome);
         }
       });
       
-      // Classifica prodotti
-      const prodottiOrdinati = Object.entries(prodottiCount).sort((a, b) => b[1] - a[1]);
-      
-      // Classifica persone per presenze
-      const personeSorted = Object.entries(corsiPerPersona)
-        .map(([nome, data]) => ({ nome, ...data }))
-        .sort((a, b) => b.presenze - a.presenze);
+      // Ordina corsi per iscritti
+      const corsiOrdinati = Object.values(corsiDettaglio).sort((a, b) => b.iscritti - a.iscritti);
       
       // Classifica networker con squadre più formate
       const networkerSorted = Object.entries(networkerTeam)
@@ -2432,50 +2457,79 @@ export default function Home() {
         }))
         .sort((a, b) => b.totalePresenze - a.totalePresenze);
       
-      // Fasce presenze per correlazione
-      const fascePresenze = { zero: [], bassa: [], media: [], alta: [] };
-      personeSorted.forEach(p => {
-        if (p.presenze === 0) fascePresenze.zero.push(p);
-        else if (p.presenze <= 3) fascePresenze.bassa.push(p);
-        else if (p.presenze <= 6) fascePresenze.media.push(p);
-        else fascePresenze.alta.push(p);
-      });
-      
-      // Match con Tracker Coaching - trova IVD invisibili
+      // Match con Tracker Coaching - trova IVD invisibili (con networker!)
       const ivdInvisibili = [];
       if (result.trackerCoaching?.lista) {
         const nomiAccademia = new Set(Object.keys(corsiPerPersona).map(n => n.toLowerCase().trim()));
         result.trackerCoaching.lista.forEach(ivd => {
           const nomeNorm = ivd.nome.toLowerCase().trim();
           if (!nomiAccademia.has(nomeNorm)) {
-            // Cerca networker di riferimento
+            // Cerca networker di riferimento dal CSV IVD
             const nwRef = reportCSVs.ivd?.data?.find(r => 
               (r['Nome'] || r['Nome Intermediario'] || '').toLowerCase().trim() === nomeNorm
             );
             ivdInvisibili.push({
               nome: ivd.nome,
               punti: ivd.puntiTotali,
-              networker: nwRef?.['Nome Primo Networker'] || 'N/D'
+              networker: nwRef?.['Nome Primo Networker'] || ivd.networker || 'N/D'
             });
           }
         });
       }
       
-      // Alert corsi base non completati
-      const senzaCorsiBase = personeSorted.filter(p => p.corsiBase.length < 3);
+      // Alert corsi base non completati - SOLO NUOVI IVD!
+      const senzaCorsiBase = [];
+      if (result.trackerCoaching?.lista) {
+        result.trackerCoaching.lista.forEach(ivd => {
+          const nomeNorm = ivd.nome.toLowerCase().trim();
+          const persona = Object.entries(corsiPerPersona).find(([n]) => n.toLowerCase().trim() === nomeNorm);
+          if (persona) {
+            const [nome, data] = persona;
+            if (data.corsiBase.length < 3) {
+              senzaCorsiBase.push({
+                nome,
+                corsiBase: data.corsiBase,
+                presenze: data.presenze,
+                networker: data.networker,
+                punti: ivd.puntiTotali
+              });
+            }
+          }
+        });
+      }
+      
+      // Dati formazione per Tracker Coaching (da integrare)
+      const formazionePerIVD = {};
+      if (result.trackerCoaching?.lista) {
+        result.trackerCoaching.lista.forEach(ivd => {
+          const nomeNorm = ivd.nome.toLowerCase().trim();
+          const persona = Object.entries(corsiPerPersona).find(([n]) => n.toLowerCase().trim() === nomeNorm);
+          if (persona) {
+            const [, data] = persona;
+            formazionePerIVD[ivd.nome] = {
+              totaleCorsi: data.totale,
+              presenze: data.presenze,
+              corsiBase: data.corsiBase.length,
+              primoCorso: data.primoCorso,
+              ultimoCorso: data.ultimoCorso
+            };
+          } else {
+            formazionePerIVD[ivd.nome] = null; // Invisibile
+          }
+        });
+      }
       
       result.accademia = {
         totaleIscrizioni,
         totalePresenze,
         tassoPresenza: totaleIscrizioni > 0 ? Math.round(totalePresenze / totaleIscrizioni * 100) : 0,
-        categorie: categorieCount,
-        prodotti: prodottiOrdinati.slice(0, 15),
+        corsi: corsiOrdinati,
         corsiBase: CORSI_BASE,
-        personeSorted: personeSorted.slice(0, 50),
+        corsiCrescita: CORSI_CRESCITA,
         networkerSorted: networkerSorted.slice(0, 10),
-        fascePresenze,
-        ivdInvisibili: ivdInvisibili.slice(0, 30),
-        senzaCorsiBase: senzaCorsiBase.slice(0, 30),
+        ivdInvisibili,
+        senzaCorsiBase,
+        formazionePerIVD,
         totalePersone: Object.keys(corsiPerPersona).length
       };
       
@@ -2747,6 +2801,8 @@ export default function Home() {
   const [heatmapDrilldown, setHeatmapDrilldown] = useState(null);
   // Stato per drill-down calendario dashboard
   const [dashboardDrilldown, setDashboardDrilldown] = useState(false);
+  // Stato per corso selezionato in Accademia
+  const [corsoSelezionato, setCorsoSelezionato] = useState(null);
 
   // === SCREENSHOT DASHBOARD (solo canvas nativo, no dipendenze esterne) ===
   const generateDashboardCanvas = (format = 'png') => {
@@ -2965,7 +3021,7 @@ export default function Home() {
     ctx.fillStyle = '#666666';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Leader Ranking v17.2 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
+    ctx.fillText(`Leader Ranking v17.3 • Generato il ${new Date().toLocaleDateString('it-IT')}`, W/2, H - 25);
     
     // Download
     if (format === 'png') {
@@ -6294,7 +6350,7 @@ export default function Home() {
                 <Award size={28} color="#E91E63" />
                 <div>
                   <h3 style={{ color: '#E91E63', fontSize: 20, margin: 0, fontWeight: 700 }}>PILASTRO ACCADEMIA</h3>
-                  <p style={{ color: '#666', fontSize: 12, margin: '5px 0 0' }}>Chi si forma produce di più • {reportData.accademia.totalePersone} persone tracciate</p>
+                  <p style={{ color: '#666', fontSize: 12, margin: '5px 0 0' }}>Chi si forma produce di più • {reportData.accademia.totalePersone} persone • Focus Nuovi IVD</p>
                 </div>
               </div>
               <button onClick={() => screenshotSection('section-accademia', 'Pilastro_Accademia')} style={{ padding: '6px 12px', background: DS.colors.gray100, border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}><Camera size={16} /></button>
@@ -6316,79 +6372,117 @@ export default function Home() {
               </div>
               <div style={{ background: 'linear-gradient(135deg, #FFF3E0, #FFE0B2)', borderRadius: 16, padding: 20, textAlign: 'center' }}>
                 <div style={{ fontSize: 36, fontWeight: 800, color: DS.colors.warning }}>{reportData.accademia.ivdInvisibili?.length || 0}</div>
-                <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>IVD Invisibili ⚠️</div>
+                <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>Nuovi IVD Invisibili</div>
               </div>
             </div>
             
-            {/* CATEGORIE PRODOTTI */}
+            {/* TAB CORSI - Cliccabili come heatmap */}
             <div style={{ background: '#FAFAFA', borderRadius: 16, padding: 16, marginBottom: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: DS.colors.gray700, marginBottom: 12 }}>Catalogo Prodotti per Categoria</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
-                <div style={{ background: '#FCE4EC', borderRadius: 12, padding: 12, textAlign: 'center', border: '2px solid #F48FB1' }}>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: '#E91E63' }}>{reportData.accademia.categorie?.startbox || 0}</div>
-                  <div style={{ fontSize: 10, color: '#666' }}>📦 Start Box</div>
-                </div>
-                <div style={{ background: '#E8F5E9', borderRadius: 12, padding: 12, textAlign: 'center', border: '2px solid #A5D6A7' }}>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: DS.colors.success }}>{reportData.accademia.categorie?.base || 0}</div>
-                  <div style={{ fontSize: 10, color: '#666' }}>🎓 Corsi Base</div>
-                </div>
-                <div style={{ background: '#E3F2FD', borderRadius: 12, padding: 12, textAlign: 'center', border: '2px solid #90CAF9' }}>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: '#1976D2' }}>{reportData.accademia.categorie?.crescita || 0}</div>
-                  <div style={{ fontSize: 10, color: '#666' }}>🚀 Crescita</div>
-                </div>
-                <div style={{ background: '#FFF3E0', borderRadius: 12, padding: 12, textAlign: 'center', border: '2px solid #FFCC80' }}>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: DS.colors.warning }}>{reportData.accademia.categorie?.eventi || 0}</div>
-                  <div style={{ fontSize: 10, color: '#666' }}>🌟 Eventi</div>
-                </div>
-                <div style={{ background: '#F3E5F5', borderRadius: 12, padding: 12, textAlign: 'center', border: '2px solid #CE93D8' }}>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: '#7B1FA2' }}>{reportData.accademia.categorie?.master || 0}</div>
-                  <div style={{ fontSize: 10, color: '#666' }}>🏆 Master</div>
-                </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: DS.colors.gray700 }}>
+                  Catalogo Corsi • Clicca per vedere partecipanti
+                </span>
+                {corsoSelezionato && (
+                  <button onClick={() => setCorsoSelezionato(null)} style={{ padding: '4px 12px', background: DS.colors.gray200, border: 'none', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
+                    ← Torna ai corsi
+                  </button>
+                )}
               </div>
-            </div>
-            
-            {/* CORRELAZIONE + SQUADRE PIU FORMATE */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
-              {/* CORRELAZIONE PRESENZE → PERFORMANCE */}
-              <div style={{ background: '#F0FDF4', borderRadius: 16, padding: 16, border: '1px solid #BBF7D0' }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: DS.colors.success, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <TrendingUp size={18} /> Correlazione Presenze → Performance
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {[
-                    { label: '0 presenze', count: reportData.accademia.fascePresenze?.zero?.length || 0, color: '#EF4444', bg: '#FEF2F2' },
-                    { label: '1-3 presenze', count: reportData.accademia.fascePresenze?.bassa?.length || 0, color: '#F59E0B', bg: '#FFFBEB' },
-                    { label: '4-6 presenze', count: reportData.accademia.fascePresenze?.media?.length || 0, color: '#10B981', bg: '#ECFDF5' },
-                    { label: '7+ presenze', count: reportData.accademia.fascePresenze?.alta?.length || 0, color: '#059669', bg: '#D1FAE5' }
-                  ].map((fascia, i) => {
-                    const maxCount = Math.max(
-                      reportData.accademia.fascePresenze?.zero?.length || 0,
-                      reportData.accademia.fascePresenze?.bassa?.length || 0,
-                      reportData.accademia.fascePresenze?.media?.length || 0,
-                      reportData.accademia.fascePresenze?.alta?.length || 0,
-                      1
-                    );
-                    const pct = Math.round(fascia.count / maxCount * 100);
+              
+              {!corsoSelezionato ? (
+                /* GRIGLIA CORSI */
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                  {(reportData.accademia.corsi || []).slice(0, 16).map((corso, i) => {
+                    const isBase = reportData.accademia.corsiBase?.some(c => corso.nome.toLowerCase().includes(c.toLowerCase()));
+                    const pct = corso.iscritti > 0 ? Math.round(corso.presenti / corso.iscritti * 100) : 0;
                     return (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ width: 90, fontSize: 11, fontWeight: 600, color: fascia.color }}>{fascia.label}</span>
-                        <div style={{ flex: 1, height: 24, background: '#E5E7EB', borderRadius: 4, overflow: 'hidden' }}>
-                          <div style={{ width: `${pct}%`, height: '100%', background: fascia.color, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 8 }}>
-                            {pct > 20 && <span style={{ fontSize: 10, color: '#FFF', fontWeight: 700 }}>{fascia.count}</span>}
+                      <div 
+                        key={i} 
+                        onClick={() => setCorsoSelezionato(corso)}
+                        style={{ 
+                          padding: 12, 
+                          background: isBase ? '#E8F5E9' : '#FFF', 
+                          borderRadius: 10, 
+                          border: isBase ? '2px solid #A5D6A7' : '1px solid #E5E7EB',
+                          cursor: 'pointer',
+                          transition: 'transform 0.15s ease'
+                        }}
+                        onMouseOver={e => e.currentTarget.style.transform = 'scale(1.02)'}
+                        onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                      >
+                        <div style={{ fontSize: 10, color: DS.colors.gray600, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {isBase && <span style={{ color: DS.colors.success, fontWeight: 700 }}>BASE • </span>}
+                          {corso.nome.length > 25 ? corso.nome.substring(0, 25) + '...' : corso.nome}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 20, fontWeight: 800, color: '#E91E63' }}>{corso.iscritti}</span>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: 11, color: DS.colors.success, fontWeight: 600 }}>{corso.presenti} pres</div>
+                            <div style={{ fontSize: 9, color: DS.colors.gray500 }}>{pct}%</div>
                           </div>
                         </div>
-                        {pct <= 20 && <span style={{ fontSize: 11, fontWeight: 700, color: fascia.color, width: 30 }}>{fascia.count}</span>}
+                        {corso.nuoviIVD?.length > 0 && (
+                          <div style={{ marginTop: 6, fontSize: 9, color: '#E91E63', fontWeight: 600 }}>
+                            {corso.nuoviIVD.length} nuovi IVD
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
-                <div style={{ marginTop: 12, padding: 10, background: '#D1FAE5', borderRadius: 8, textAlign: 'center' }}>
-                  <span style={{ fontSize: 11, color: '#059669', fontWeight: 600 }}>
-                    Chi fa 7+ corsi ha più probabilità di essere TOP performer!
-                  </span>
+              ) : (
+                /* DETTAGLIO CORSO SELEZIONATO */
+                <div>
+                  <div style={{ background: '#E91E63', color: '#FFF', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                    <div style={{ fontSize: 16, fontWeight: 700 }}>{corsoSelezionato.nome}</div>
+                    <div style={{ display: 'flex', gap: 20, marginTop: 8 }}>
+                      <span>{corsoSelezionato.iscritti} iscritti</span>
+                      <span>{corsoSelezionato.presenti} presenti</span>
+                      <span>{corsoSelezionato.iscritti > 0 ? Math.round(corsoSelezionato.presenti / corsoSelezionato.iscritti * 100) : 0}% presenza</span>
+                      <span style={{ color: '#FFD700' }}>{corsoSelezionato.nuoviIVD?.length || 0} nuovi IVD</span>
+                    </div>
+                  </div>
+                  
+                  {/* Lista partecipanti - Focus Nuovi IVD */}
+                  {corsoSelezionato.nuoviIVD?.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#E91E63', marginBottom: 8 }}>🎯 Nuovi IVD (Tracker Coaching)</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px 60px', gap: 4, fontSize: 10, color: DS.colors.gray500, marginBottom: 4 }}>
+                        <span>Nome</span><span>Networker</span><span>Data</span><span>Presenza</span>
+                      </div>
+                      {corsoSelezionato.nuoviIVD.map((p, i) => (
+                        <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px 60px', gap: 4, padding: '6px 0', borderBottom: '1px solid #F0F0F0', fontSize: 11 }}>
+                          <span style={{ fontWeight: 600, color: DS.colors.gray800 }}>{p.nome}</span>
+                          <span style={{ color: DS.colors.gray600 }}>{p.networker}</span>
+                          <span style={{ color: DS.colors.gray500 }}>{p.dataCorso}</span>
+                          <span style={{ color: p.presente ? DS.colors.success : DS.colors.danger, fontWeight: 600 }}>{p.presente ? 'Si' : 'No'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Altri partecipanti */}
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: DS.colors.gray600, marginBottom: 8 }}>
+                      Altri partecipanti ({corsoSelezionato.partecipanti?.length - (corsoSelezionato.nuoviIVD?.length || 0)})
+                    </div>
+                    <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                      {corsoSelezionato.partecipanti?.filter(p => !corsoSelezionato.nuoviIVD?.some(n => n.nome === p.nome)).slice(0, 20).map((p, i) => (
+                        <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px 60px', gap: 4, padding: '4px 0', borderBottom: '1px solid #F5F5F5', fontSize: 10 }}>
+                          <span style={{ color: DS.colors.gray700 }}>{p.nome}</span>
+                          <span style={{ color: DS.colors.gray500 }}>{p.networker}</span>
+                          <span style={{ color: DS.colors.gray400 }}>{p.dataCorso}</span>
+                          <span style={{ color: p.presente ? DS.colors.success : DS.colors.gray400 }}>{p.presente ? 'Si' : 'No'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
-              
+              )}
+            </div>
+            
+            {/* SQUADRE PIU FORMATE + ALERT */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
               {/* SQUADRE PIU FORMATE */}
               <div style={{ background: '#FDF4FF', borderRadius: 16, padding: 16, border: '1px solid #E9D5FF' }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#7C3AED', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -6405,96 +6499,65 @@ export default function Home() {
                   ))}
                 </div>
               </div>
-            </div>
-            
-            {/* ALERT: IVD INVISIBILI + SENZA CORSI BASE */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-              {/* ALERT INVISIBILI */}
-              {reportData.accademia.ivdInvisibili?.length > 0 && (
-                <div style={{ background: '#FEF2F2', borderRadius: 16, padding: 16, border: '2px solid #FECACA' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: DS.colors.danger, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <AlertTriangle size={18} /> IVD Invisibili (Privacy non attiva)
-                    </span>
+              
+              {/* ALERT IVD INVISIBILI */}
+              <div style={{ background: '#FEF2F2', borderRadius: 16, padding: 16, border: '2px solid #FECACA' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: DS.colors.danger, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <AlertTriangle size={18} /> Nuovi IVD Invisibili ({reportData.accademia.ivdInvisibili?.length || 0})
+                  </span>
+                  {reportData.accademia.ivdInvisibili?.length > 0 && (
                     <button onClick={() => {
-                      const csv = 'Nome IVD;Punti;Networker\n' + reportData.accademia.ivdInvisibili.map(i => `${i.nome};${i.punti};${i.networker}`).join('\n');
+                      const csv = 'Nome IVD;Punti;Networker da Contattare\n' + reportData.accademia.ivdInvisibili.map(i => `${i.nome};${i.punti};${i.networker}`).join('\n');
                       const blob = new Blob([csv], {type: 'text/csv'}); const url = URL.createObjectURL(blob);
                       const link = document.createElement('a'); link.href = url; link.download = 'ivd_invisibili_privacy.csv'; link.click();
                     }} style={{ padding: '4px 10px', background: DS.colors.danger, color: '#FFF', border: 'none', borderRadius: 6, fontSize: 10, cursor: 'pointer', fontWeight: 600 }}>
                       <Download size={14} /> CSV
                     </button>
-                  </div>
-                  <div style={{ fontSize: 11, color: DS.colors.gray600, marginBottom: 10 }}>
-                    Questi {reportData.accademia.ivdInvisibili.length} IVD sono nel Tracker ma NON nel sistema Accademia
-                  </div>
-                  <div style={{ maxHeight: 150, overflowY: 'auto' }}>
-                    {reportData.accademia.ivdInvisibili.slice(0, 8).map((ivd, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', fontSize: 11, background: i % 2 === 0 ? '#FFF' : 'transparent', borderRadius: 4 }}>
-                        <span style={{ fontWeight: 500, color: DS.colors.gray800 }}>{ivd.nome}</span>
-                        <span style={{ color: DS.colors.gray500 }}>{ivd.networker}</span>
-                      </div>
-                    ))}
-                    {reportData.accademia.ivdInvisibili.length > 8 && (
-                      <div style={{ fontSize: 10, color: DS.colors.gray500, fontStyle: 'italic', padding: '6px 8px' }}>...e altri {reportData.accademia.ivdInvisibili.length - 8}</div>
-                    )}
-                  </div>
+                  )}
                 </div>
-              )}
-              
-              {/* ALERT SENZA CORSI BASE */}
-              {reportData.accademia.senzaCorsiBase?.length > 0 && (
-                <div style={{ background: '#FFFBEB', borderRadius: 16, padding: 16, border: '2px solid #FDE68A' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: DS.colors.warning, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <BookOpen size={18} /> Corsi Base Non Completati
-                    </span>
-                    <button onClick={() => {
-                      const csv = 'Nome;Corsi Fatti;Mancanti;Networker\n' + reportData.accademia.senzaCorsiBase.map(p => {
-                        const fatti = p.corsiBase.length;
-                        const mancanti = 3 - fatti;
-                        return `${p.nome};${fatti}/3;${mancanti};${p.networker}`;
-                      }).join('\n');
-                      const blob = new Blob([csv], {type: 'text/csv'}); const url = URL.createObjectURL(blob);
-                      const link = document.createElement('a'); link.href = url; link.download = 'ivd_senza_corsi_base.csv'; link.click();
-                    }} style={{ padding: '4px 10px', background: DS.colors.warning, color: '#FFF', border: 'none', borderRadius: 6, fontSize: 10, cursor: 'pointer', fontWeight: 600 }}>
-                      <Download size={14} /> CSV
-                    </button>
-                  </div>
-                  <div style={{ fontSize: 11, color: DS.colors.gray600, marginBottom: 10 }}>
-                    IVD che non hanno completato i 3 corsi base Energy Broker
-                  </div>
-                  <div style={{ maxHeight: 150, overflowY: 'auto' }}>
-                    {reportData.accademia.senzaCorsiBase.slice(0, 8).map((p, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', fontSize: 11, background: i % 2 === 0 ? '#FFF' : 'transparent', borderRadius: 4 }}>
-                        <span style={{ fontWeight: 500, color: DS.colors.gray800 }}>{p.nome}</span>
-                        <span style={{ color: p.corsiBase.length === 0 ? DS.colors.danger : DS.colors.warning, fontWeight: 600 }}>{p.corsiBase.length}/3</span>
-                      </div>
-                    ))}
-                    {reportData.accademia.senzaCorsiBase.length > 8 && (
-                      <div style={{ fontSize: 10, color: DS.colors.gray500, fontStyle: 'italic', padding: '6px 8px' }}>...e altri {reportData.accademia.senzaCorsiBase.length - 8}</div>
-                    )}
-                  </div>
+                <div style={{ fontSize: 10, color: DS.colors.gray600, marginBottom: 8 }}>
+                  Privacy non attiva! Contattare Networker per farla attivare
                 </div>
-              )}
-            </div>
-            
-            {/* TOP PRODOTTI ACCADEMIA */}
-            <div style={{ marginTop: 20, background: '#FAFAFA', borderRadius: 16, padding: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: DS.colors.gray700, marginBottom: 12 }}>Top 10 Prodotti Accademia</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-                {(reportData.accademia.prodotti || []).slice(0, 10).map(([prodotto, count], i) => {
-                  const maxCount = reportData.accademia.prodotti[0]?.[1] || 1;
-                  const pct = Math.round(count / maxCount * 100);
-                  return (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: '#FFF', borderRadius: 8, border: '1px solid #E5E7EB' }}>
-                      <span style={{ width: 22, height: 22, borderRadius: '50%', background: i < 3 ? '#E91E63' : '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: i < 3 ? '#FFF' : '#666' }}>{i + 1}</span>
-                      <span style={{ flex: 1, fontSize: 10, color: DS.colors.gray700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{prodotto.length > 35 ? prodotto.substring(0, 35) + '...' : prodotto}</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#E91E63' }}>{count}</span>
+                <div style={{ maxHeight: 150, overflowY: 'auto' }}>
+                  {(reportData.accademia.ivdInvisibili || []).slice(0, 8).map((ivd, i) => (
+                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '6px 8px', fontSize: 11, background: i % 2 === 0 ? '#FFF' : 'transparent', borderRadius: 4 }}>
+                      <span style={{ fontWeight: 500, color: DS.colors.gray800 }}>{ivd.nome}</span>
+                      <span style={{ color: DS.colors.danger, fontWeight: 600 }}>{ivd.networker}</span>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
             </div>
+            
+            {/* ALERT CORSI BASE NON COMPLETATI - Solo Nuovi IVD */}
+            {reportData.accademia.senzaCorsiBase?.length > 0 && (
+              <div style={{ marginTop: 20, background: '#FFFBEB', borderRadius: 16, padding: 16, border: '2px solid #FDE68A' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: DS.colors.warning, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <BookOpen size={18} /> Nuovi IVD senza Corsi Base Energy Broker ({reportData.accademia.senzaCorsiBase.length})
+                  </span>
+                  <button onClick={() => {
+                    const csv = 'Nome;Corsi Base Fatti;Presenze;Networker\n' + reportData.accademia.senzaCorsiBase.map(p => `${p.nome};${p.corsiBase.length}/3;${p.presenze};${p.networker}`).join('\n');
+                    const blob = new Blob([csv], {type: 'text/csv'}); const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a'); link.href = url; link.download = 'nuovi_ivd_senza_corsi_base.csv'; link.click();
+                  }} style={{ padding: '4px 10px', background: DS.colors.warning, color: '#FFF', border: 'none', borderRadius: 6, fontSize: 10, cursor: 'pointer', fontWeight: 600 }}>
+                    <Download size={14} /> CSV
+                  </button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                  {reportData.accademia.senzaCorsiBase.slice(0, 9).map((p, i) => (
+                    <div key={i} style={{ padding: '10px', background: '#FFF', borderRadius: 8, border: '1px solid #FDE68A' }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: DS.colors.gray800, marginBottom: 4 }}>{p.nome}</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
+                        <span style={{ color: p.corsiBase.length === 0 ? DS.colors.danger : DS.colors.warning, fontWeight: 700 }}>{p.corsiBase.length}/3 base</span>
+                        <span style={{ color: DS.colors.gray500 }}>{p.networker}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
         
@@ -6807,8 +6870,8 @@ export default function Home() {
                 </div>
                 <div>
                   <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }}><Star size={16} /> PUNTI TOTALI EFFETTIVI</div>
-                  <div style={{ fontSize: 36, fontWeight: 800 }}>{ (reportData.fatturato.fv.effettivi.punti + reportData.fatturato.la.accettatiPunti.punti).toLocaleString('it-IT')}</div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>FV positivi + LA accettati</div>
+                  <div style={{ fontSize: 36, fontWeight: 800 }}>{ ((reportData.fatturato.fv.accettatiPunti?.punti || 0) + (reportData.fatturato.la.accettatiPunti?.punti || 0)).toLocaleString('it-IT')}</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>FV accettati + LA accettati</div>
                 </div>
                 <div>
                   <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }}><BarChart3 size={16} /> PUNTI TOTALI INSERITI</div>
@@ -6926,14 +6989,16 @@ export default function Home() {
             </p>
           </div>
           
-          <Button 
-            onClick={screenshotAllSections}
-            variant="primary"
-            size="lg"
-            icon={Download}
-          >
-            Scarica Tutte le Slide (ZIP)
-          </Button>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <Button 
+              onClick={screenshotAllSections}
+              variant="primary"
+              size="lg"
+              icon={Download}
+            >
+              Scarica Tutte le Slide (ZIP)
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -7041,7 +7106,7 @@ export default function Home() {
         </div>
         
         {/* Footer versione */}
-        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v17.2</p>
+        <p style={{ color: '#CCC', fontSize: 11, marginTop: 30, textAlign: 'center', letterSpacing: '1px' }}>v17.3</p>
       </div>
     </div></>);
 
@@ -7277,7 +7342,7 @@ export default function Home() {
           </div>
         )}
       </main>
-      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v17.2 • Leader Ranking</footer>
+      <footer style={{ textAlign: 'center', padding: 20, color: '#999', fontSize: 12 }}>v17.3 • Leader Ranking</footer>
     </div></>);
 
   // PREVIEW
